@@ -90,4 +90,17 @@ impl<'a> Reader<'a> {
             None => None
         }
     }
+
+    pub fn skip_and_get_input(&mut self, num_bytes: usize)
+                              -> Option<Input<'a>> {
+        match self.i.checked_add(num_bytes) {
+            Some(new_i) if new_i <= self.input.bytes.len() => {
+                let ret =
+                    Some(Input { bytes: &self.input.bytes[self.i..new_i] });
+                self.i = new_i;
+                ret
+            },
+            _ => None
+        }
+    }
 }

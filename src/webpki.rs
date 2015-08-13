@@ -12,4 +12,10 @@
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
+mod der;
 mod input;
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Error {
+    BadDER,
+}
