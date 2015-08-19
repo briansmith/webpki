@@ -14,6 +14,7 @@
 
 use super::Error;
 use super::input::*;
+use time::{Timespec, Tm};
 
 const CONSTRUCTED : u8 = 1 << 5;
 const CONTEXT_SPECIFIC : u8 = 2 << 6;
@@ -168,4 +169,93 @@ pub fn optional_null(input: &mut Reader) -> Result<(), Error> {
         return Ok(());
     }
     null(input)
+}
+
+pub fn time_choice<'a>(input: &mut Reader<'a>) -> Result<Timespec, Error> {
+    let is_utc_time = input.peek(Tag::UTCTime as u8);
+    let expected_tag = if is_utc_time { Tag::UTCTime }
+                       else { Tag::GeneralizedTime };
+
+    fn read_digit(inner: &mut Reader) -> Result<i32, Error> {
+        let b = try!(inner.read_byte().ok_or(Error::BadDERTime));
+        if b < b'0' || b > b'9' {
+            return Err(Error::BadDERTime);
+        }
+        Ok((b - b'0') as i32)
+    }
+
+    fn read_two_digits(inner: &mut Reader, min: i32, max: i32)
+                       -> Result<i32, Error> {
+        let hi = try!(read_digit(inner));
+        let lo = try!(read_digit(inner));
+        let value = (hi * 10) + lo;
+        if value < min || value > max {
+            return Err(Error::BadDERTime);
+        }
+        Ok(value)
+    }
+
+    nested(input, expected_tag, |value| {
+        let (year_hi, year_lo) =
+            if is_utc_time {
+                let lo = try!(read_two_digits(value, 0, 99));
+                let hi = if lo >= 50 { 19 } else { 20 };
+                (hi, lo)
+            } else {
+                let hi = try!(read_two_digits(value, 0, 99));
+                let lo = try!(read_two_digits(value, 0, 99));
+                (hi, lo)
+            };
+
+        let year = (year_hi * 100) + year_lo;
+        // We don't support dates before January 1, 1970 because that is the
+        // Unix epoch. It is likely that other software won't deal well with
+        // certificates that have dates before the epoch.
+        if year < 1970 {
+            return Err(Error::BadDERTime);
+        }
+
+        let month = try!(read_two_digits(value, 1, 12));
+        let days_in_month = match month {
+            1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
+            4 | 6 | 9 | 11 => 30,
+            2 =>
+                if (year % 4 == 0) &&
+                    ((year % 100 != 0) || (year % 400 == 0)) {
+                    29
+                } else {
+                    28
+                },
+            _ => unreachable!() // `read_two_digits` already bounds-checked it.
+        };
+
+        let day_of_month = try!(read_two_digits(value, 1, days_in_month));
+        let hours = try!(read_two_digits(value, 0, 23));
+        let minutes = try!(read_two_digits(value, 0, 59));
+        let seconds = try!(read_two_digits(value, 0, 59));
+
+        let time_zone = try!(value.read_byte().ok_or(Error::BadDERTime));
+        if time_zone != b'Z' {
+            return Err(Error::BadDERTime);
+        }
+
+        // XXX: We need to audit the `time` crate for correctness.
+        let tm = Tm {
+            tm_year: year - 1900,
+            tm_mon: month - 1,
+            tm_mday: day_of_month,
+            tm_hour: hours,
+            tm_min: minutes,
+            tm_sec: seconds,
+            tm_nsec: 0,
+
+            // These should all be ignored by `to_timespec`.
+            tm_wday: 0,
+            tm_yday: 0,
+            tm_isdst: 0,
+            tm_utcoff: 0,
+        };
+
+        Ok(tm.to_timespec())
+    })
 }
