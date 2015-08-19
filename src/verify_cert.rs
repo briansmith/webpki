@@ -12,45 +12,29 @@
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-extern crate ring;
-extern crate time;
+use super::Error;
+use super::der;
+use super::input::Reader;
+use time::Timespec;
 
-#[cfg(test)]
-extern crate rustc_serialize;
+// https://tools.ietf.org/html/rfc5280#section-4.1.2.5
+fn check_validity(input: &mut Reader, time: Timespec) -> Result<(), Error> {
+    let not_before = try!(der::time_choice(input));
+    let not_after = try!(der::time_choice(input));
 
-mod cert;
-mod der;
-mod input;
-mod signed_data;
-mod verify_cert;
+    if not_before > not_after {
+        return Err(Error::InvalidCertValidity);
+    }
+    if time < not_before {
+        return Err(Error::CertNotValidYet);
+    }
+    if time > not_after {
+        return Err(Error::CertExpired);
+    }
 
-use input::Input;
+    // TODO: mozilla::pkix allows the TrustDomain to check not_before and
+    // not_after, to enforce things like a maximum validity period. We should
+    // do something similar.
 
-
-pub enum PublicKey<'a> {
-    EC(Input<'a>, &'static ring::EllipticCurve),
-    RSA(Input<'a>)
-}
-
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum Error {
-    BadDER,
-    BadDERTime,
-    BadSignature,
-    CertExpired,
-    CertNotValidYet,
-    ExtensionValueInvalid,
-    Fatal(FatalError),
-    InvalidCertValidity,
-    SignatureAlgorithmMismatch,
-    UnsupportedCertVersion,
-    UnsupportedCriticalExtension,
-    UnsupportedEllipticCurve,
-    UnsupportedKeyAlgorithm,
-    UnsupportedSignatureAlgorithm,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum FatalError {
-    ImpossibleState,
+    Ok(())
 }
