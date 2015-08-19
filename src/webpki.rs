@@ -13,6 +13,7 @@
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 extern crate ring;
+extern crate time;
 
 #[cfg(test)]
 extern crate rustc_serialize;
@@ -33,6 +34,7 @@ pub enum PublicKey<'a> {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Error {
     BadDER,
+    BadDERTime,
     BadSignature,
     ExtensionValueInvalid,
     Fatal(FatalError),
