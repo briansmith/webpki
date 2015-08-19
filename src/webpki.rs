@@ -12,10 +12,34 @@
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
+extern crate ring;
+
+#[cfg(test)]
+extern crate rustc_serialize;
+
 mod der;
 mod input;
+mod signed_data;
+
+use input::Input;
+
+
+pub enum PublicKey<'a> {
+    EC(Input<'a>, &'static ring::EllipticCurve),
+    RSA(Input<'a>)
+}
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Error {
     BadDER,
+    BadSignature,
+    Fatal(FatalError),
+    UnsupportedEllipticCurve,
+    UnsupportedKeyAlgorithm,
+    UnsupportedSignatureAlgorithm,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum FatalError {
+    ImpossibleState,
 }

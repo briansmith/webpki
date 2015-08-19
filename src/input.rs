@@ -64,10 +64,21 @@ impl<'a> Input<'a> {
         }
         Some(Input { bytes: bytes })
     }
+
+    pub fn as_slice_less_safe(&self) -> &[u8] { self.bytes }
+
+    pub fn is_empty(&self) -> bool { self.bytes.len() == 0 }
 }
 
+pub fn input_equals(a: Input, b: &[u8]) -> bool { a.bytes == b }
+
+#[derive(Debug)]
 pub struct Reader<'a> {
     input: Input<'a>,
+    i: usize
+}
+
+pub struct Mark {
     i: usize
 }
 
@@ -80,6 +91,22 @@ impl<'a> Reader<'a> {
     }
 
     pub fn at_end(&self) -> bool { self.i == self.input.bytes.len() }
+
+    pub fn get_input_between_marks(&self, mark1: Mark, mark2: Mark)
+                                   -> Option<Input<'a>> {
+        Some(Input { bytes: &self.input.bytes[mark1.i..mark2.i] })
+    }
+
+    pub fn mark(&self) -> Mark {
+        Mark { i: self.i }
+    }
+
+    pub fn peek(&self, b: u8) -> bool {
+        match self.input.bytes.get(self.i) {
+            Some(actual_b) => return b == *actual_b,
+            None => false
+        }
+    }
 
     pub fn read_byte(&mut self) -> Option<u8> {
         match self.input.bytes.get(self.i) {
@@ -102,5 +129,11 @@ impl<'a> Reader<'a> {
             },
             _ => None
         }
+    }
+
+    pub fn skip_to_end(&mut self) -> Input<'a> {
+        let result = Input { bytes: &self.input.bytes[self.i..] };
+        self.i = self.input.bytes.len();
+        result
     }
 }
