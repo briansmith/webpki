@@ -25,6 +25,12 @@ version = "0.1.0"
 name = "webpki"
 path = "src/webpki.rs"
 
+[dependencies]
+rustc-serialize = "0.3.15"
+
+[dependencies.ring]
+git = "https://github.com/briansmith/ring"
+
 [profile.release]
 opt-level = 3
 debug = true
