@@ -24,7 +24,7 @@ mod input;
 mod signed_data;
 mod verify_cert;
 
-use input::Input;
+pub use input::Input;
 
 
 pub enum PublicKey<'a> {
@@ -47,6 +47,7 @@ pub enum Error {
     PathLenConstraintViolated,
     SignatureAlgorithmMismatch,
     RequiredEKUNotFound,
+    UnknownIssuer,
     UnsupportedCertVersion,
     UnsupportedCriticalExtension,
     UnsupportedEllipticCurve,
@@ -57,4 +58,11 @@ pub enum Error {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum FatalError {
     ImpossibleState,
+    InvalidTrustAnchor,
+}
+
+pub struct TrustAnchor<'a> {
+    pub subject: &'a [u8],
+    pub spki: &'a [u8],
+    pub name_constraints: Option<&'a [u8]>
 }

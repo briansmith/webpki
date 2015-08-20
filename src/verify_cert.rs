@@ -12,23 +12,139 @@
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-use super::Error;
-use super::cert::{Cert, EndEntityOrCA};
+use super::{Error, FatalError, TrustAnchor};
+use super::cert::{Cert, EndEntityOrCA, parse_cert};
 use super::der;
 use super::input::*;
 use time::Timespec;
 
+fn build_chain<'a>(cert: &Cert<'a>, intermediate_certs: &[Input<'a>],
+                   trust_anchors: &'a [TrustAnchor], time: Timespec,
+                   sub_ca_count: usize, required_eku_if_present: KeyPurposeId)
+                   -> Result<(), Error> {
+    let used_as_ca = used_as_ca(&cert.ee_or_ca);
+
+    try!(check_issuer_independent_properties(cert, time, used_as_ca,
+                                             sub_ca_count,
+                                             required_eku_if_present));
+
+    // TODO: HPKP checks.
+
+    match used_as_ca {
+        UsedAsCA::Yes => {
+            const MAX_SUB_CA_COUNT: usize = 6;
+
+            if sub_ca_count >= MAX_SUB_CA_COUNT {
+                return Err(Error::UnknownIssuer);
+            }
+        },
+        UsedAsCA::No => {
+            assert_eq!(0, sub_ca_count);
+        }
+    }
+
+    // TODO: revocation.
+
+    match loop_while_non_fatal_error(trust_anchors,
+                                     |trust_anchor: &TrustAnchor<'a>| {
+        let trust_anchor_subject =
+                try!(Input::new(trust_anchor.subject)
+                         .ok_or(Error::Fatal(FatalError::InvalidTrustAnchor)));
+        if cert.issuer != trust_anchor_subject {
+            return Err(Error::UnknownIssuer);
+        }
+
+        let name_constraints =
+            match trust_anchor.name_constraints {
+                Some(name_constraints) => {
+                    let name_constraints =
+                        try!(Input::new(name_constraints)
+                             .ok_or(Error::Fatal(FatalError::InvalidTrustAnchor)));
+                    Some(name_constraints)
+                },
+                None => None
+            };
+
+        try!(read_all_optional(name_constraints, Error::BadDER,
+                               |value| check_name_constraints(value, &cert)));
+
+        let trust_anchor_spki =
+            try!(Input::new(trust_anchor.spki).ok_or(Error::BadDER));
+
+        // TODO: try!(check_distrust(trust_anchor_subject,
+        //                           trust_anchor_spki));
+
+        try!(check_signatures(cert, trust_anchor_spki));
+
+        Ok(())
+    }) {
+        Ok(()) => {
+            return Ok(());
+        },
+        err @ Err(Error::Fatal(..)) => {
+            return err;
+        },
+        Err(..) => {
+            // If the error is not fatal, then keep going.
+        }
+    }
+
+    loop_while_non_fatal_error(intermediate_certs, |cert_der: &Input| {
+        let potential_issuer =
+            try!(parse_cert(*cert_der, EndEntityOrCA::CA(&cert)));
+
+        if potential_issuer.subject != cert.issuer {
+            return Err(Error::UnknownIssuer)
+        }
+
+        // Prevent loops; see RFC 4158 section 5.2.
+        let mut prev = cert;
+        loop {
+            if potential_issuer.spki == prev.spki &&
+               potential_issuer.subject == prev.subject {
+                return Err(Error::UnknownIssuer);
+            }
+            match &prev.ee_or_ca {
+                &EndEntityOrCA::EndEntity => { break; },
+                &EndEntityOrCA::CA(child_cert) => { prev = child_cert; }
+            }
+        }
+
+        try!(read_all_optional(potential_issuer.name_constraints, Error::BadDER,
+                               |value| check_name_constraints(value, &cert)));
+
+        let next_sub_ca_count = match used_as_ca {
+            UsedAsCA::No => sub_ca_count,
+            UsedAsCA::Yes => sub_ca_count + 1
+        };
+
+        build_chain(&potential_issuer, intermediate_certs, trust_anchors,
+                    time, next_sub_ca_count, required_eku_if_present)
+    })
+}
+
+fn check_name_constraints(_name_constraints: Option<&mut Reader>,
+                          _cert_chain: &Cert) -> Result<(), Error> {
+    unimplemented!();
+}
+
+fn check_signatures(_cert_chain: &Cert, _trust_anchor_key: Input)
+                    -> Result<(), Error> {
+    unimplemented!();
+}
+
 fn check_issuer_independent_properties<'a>(
-        cert: &Cert<'a>, time: Timespec, sub_ca_count: usize,
-        required_eku_if_present: KeyPurposeId) -> Result<(), Error> {
+        cert: &Cert<'a>, time: Timespec, used_as_ca: UsedAsCA,
+        sub_ca_count: usize, required_eku_if_present: KeyPurposeId)
+        -> Result<(), Error> {
+    // TODO: try!(check_distrust(trust_anchor_subject,
+    //                           trust_anchor_spki));
     // TODO: Check signature algorithm like mozilla::pkix.
     // TODO: Check SPKI like mozilla::pkix.
     // TODO: check for active distrust like mozilla::pkix.
 
     // See the comment in `remember_extensions` for why we don't check the
     // KeyUsage extension.
-
-    let used_as_ca = used_as_ca(&cert.ee_or_ca);
 
     try!(read_all(cert.validity, Error::BadDER,
                   |value| check_validity(value, time)));
@@ -107,6 +223,7 @@ fn check_basic_constraints(input: Option<&mut Reader>, used_as_ca: UsedAsCA,
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct KeyPurposeId {
     oid_value: &'static [u8]
 }
@@ -190,4 +307,23 @@ fn check_eku(input: Option<&mut Reader>, used_as_ca: UsedAsCA,
             Ok(())
         }
     }
+}
+
+fn loop_while_non_fatal_error<V, F>(values: V, f: F) -> Result<(), Error>
+                                    where V: IntoIterator,
+                                          F: Fn(V::Item) -> Result<(), Error> {
+    for v in values {
+        match f(v) {
+            Ok(()) => {
+                return Ok(());
+            },
+            err @ Err(Error::Fatal(..)) => {
+                return err;
+            },
+            Err(..) => {
+                // If the error is not fatal, then keep going.
+            }
+        }
+    }
+    Err(Error::UnknownIssuer)
 }

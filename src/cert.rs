@@ -26,15 +26,15 @@ pub struct Cert<'a> {
     pub ee_or_ca: EndEntityOrCA<'a>,
 
     signed_data: SignedData<'a>,
-    issuer: Input<'a>,
+    pub issuer: Input<'a>,
     pub validity: Input<'a>,
-    subject: Input<'a>,
-    spki: Input<'a>,
+    pub subject: Input<'a>,
+    pub spki: Input<'a>,
 
     authority_info_access: Option<Input<'a>>,
     pub basic_constraints: Option<Input<'a>>,
     pub eku: Option<Input<'a>>,
-    name_constraints: Option<Input<'a>>,
+    pub name_constraints: Option<Input<'a>>,
     subject_alt_name: Option<Input<'a>>,
 }
 
