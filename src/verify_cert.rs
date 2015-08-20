@@ -15,7 +15,7 @@
 use super::Error;
 use super::cert::EndEntityOrCA;
 use super::der;
-use super::input::Reader;
+use super::input::*;
 use time::Timespec;
 
 // https://tools.ietf.org/html/rfc5280#section-4.1.2.5
@@ -80,5 +80,90 @@ fn check_basic_constraints(input: Option<&mut Reader>, used_as_ca: UsedAsCA,
         (UsedAsCA::Yes, true, Some(len)) if sub_ca_count > len =>
             Err(Error::PathLenConstraintViolated),
         _ => Ok(())
+    }
+}
+
+pub struct KeyPurposeId {
+    oid_value: &'static [u8]
+}
+
+// id-pkix            OBJECT IDENTIFIER ::= { 1 3 6 1 5 5 7 }
+// id-kp              OBJECT IDENTIFIER ::= { id-pkix 3 }
+
+// id-kp-serverAuth   OBJECT IDENTIFIER ::= { id-kp 1 }
+static EKU_SERVER_AUTH: KeyPurposeId = KeyPurposeId {
+    oid_value: &[(40 * 1) + 3, 6, 1, 5, 5, 7, 3, 1]
+};
+
+// id-kp-OCSPSigning  OBJECT IDENTIFIER ::= { id-kp 9 }
+pub static EKU_OCSP_SIGNING: KeyPurposeId = KeyPurposeId {
+    oid_value: &[(40 * 1) + 3, 6, 1, 5, 5, 7, 3, 9]
+};
+
+// id-Netscape        OBJECT IDENTIFIER ::= { 2 16 840 1 113730 }
+// id-Netscape-policy OBJECT IDENTIFIER ::= { id-Netscape 4 }
+// id-Netscape-stepUp OBJECT IDENTIFIER ::= { id-Netscape-policy 1 }
+static EKU_NETSCAPE_SERVER_STEP_UP: KeyPurposeId = KeyPurposeId {
+    oid_value: &[(40 * 2) + 16, 128 + 6, 72, 1, 128 + 6, 128 + 120, 66, 4, 1 ]
+};
+
+// https://tools.ietf.org/html/rfc5280#section-4.2.1.12
+//
+// Notable Differences from RFC 5280:
+//
+// * We follow the convention established by Microsoft's implementation and
+//   mozilla::pkix of treating the EKU extension in a CA certificate as a
+//   restriction on the allowable EKUs for certificates issued by that CA. RFC
+//   5280 doesn't prescribe any meaning to the EKU extension when a certificate
+//   is being used as a CA certificate.
+//
+// * We do not recognize anyExtendedKeyUsage. NSS and mozilla::pkix do not
+//   recognize it either.
+//
+// * We treat id-Netscape-stepUp as being equivalent to id-kp-serverAuth in CA
+//   certificates (only). Comodo has issued certificates that require this
+//   behavior that don't expire until June 2020. See
+//   https://bugzilla.mozilla.org/show_bug.cgi?id=982292.
+fn check_eku(input: Option<&mut Reader>, used_as_ca: UsedAsCA,
+             required_eku_if_present: KeyPurposeId) -> Result<(), Error> {
+    match input {
+        Some(input) => {
+            let match_step_up = match used_as_ca {
+                UsedAsCA::Yes if required_eku_if_present.oid_value ==
+                                 EKU_SERVER_AUTH.oid_value => true,
+                _ => false
+            };
+
+            loop {
+                let value =
+                    try!(der::expect_tag_and_get_input(input, der::Tag::OID));
+                if input_equals(value, required_eku_if_present.oid_value) ||
+                   (match_step_up &&
+                    input_equals(value, EKU_NETSCAPE_SERVER_STEP_UP.oid_value)) {
+                    input.skip_to_end();
+                    break;
+                }
+                if input.at_end() {
+                    return Err(Error::RequiredEKUNotFound);
+                }
+            }
+            Ok(())
+        },
+        None => {
+            // http://tools.ietf.org/html/rfc6960#section-4.2.2.2:
+            // "OCSP signing delegation SHALL be designated by the inclusion of
+            // id-kp-OCSPSigning in an extended key usage certificate extension
+            // included in the OCSP response signer's certificate."
+            //
+            // A missing EKU extension generally means "any EKU", but it is
+            // important that id-kp-OCSPSigning is explicit so that a normal
+            // end-entity certificate isn't able to sign trusted OCSP responses
+            // for itself or for other certificates issued by its issuing CA.
+            if required_eku_if_present.oid_value == EKU_OCSP_SIGNING.oid_value {
+                return Err(Error::RequiredEKUNotFound);
+            }
+
+            Ok(())
+        }
     }
 }

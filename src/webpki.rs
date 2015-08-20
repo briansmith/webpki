@@ -46,6 +46,7 @@ pub enum Error {
     InvalidCertValidity,
     PathLenConstraintViolated,
     SignatureAlgorithmMismatch,
+    RequiredEKUNotFound,
     UnsupportedCertVersion,
     UnsupportedCriticalExtension,
     UnsupportedEllipticCurve,
