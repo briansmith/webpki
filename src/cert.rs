@@ -25,7 +25,7 @@ pub enum EndEntityOrCA<'a> {
 pub struct Cert<'a> {
     pub ee_or_ca: EndEntityOrCA<'a>,
 
-    signed_data: SignedData<'a>,
+    pub signed_data: SignedData<'a>,
     pub issuer: Input<'a>,
     pub validity: Input<'a>,
     pub subject: Input<'a>,

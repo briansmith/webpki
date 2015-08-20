@@ -16,6 +16,7 @@ use super::{Error, FatalError, TrustAnchor};
 use super::cert::{Cert, EndEntityOrCA, parse_cert};
 use super::der;
 use super::input::*;
+use super::signed_data::{parse_spki_value, verify_signed_data};
 use time::Timespec;
 
 fn build_chain<'a>(cert: &Cert<'a>, intermediate_certs: &[Input<'a>],
@@ -128,9 +129,28 @@ fn check_name_constraints(_name_constraints: Option<&mut Reader>,
     unimplemented!();
 }
 
-fn check_signatures(_cert_chain: &Cert, _trust_anchor_key: Input)
+fn check_signatures(cert_chain: &Cert, trust_anchor_key: Input)
                     -> Result<(), Error> {
-    unimplemented!();
+    let mut spki = trust_anchor_key;
+    let mut cert = cert_chain;
+    loop {
+        try!(read_all(spki, Error::BadDER, |spki_value| {
+            let public_key = try!(parse_spki_value(spki_value));
+            verify_signed_data(&public_key, &cert.signed_data)
+        }));
+
+        // TODO: check revocation
+
+        match &cert.ee_or_ca {
+            &EndEntityOrCA::CA(child_cert) => {
+                spki = cert.spki;
+                cert = child_cert;
+            },
+            &EndEntityOrCA::EndEntity => { break; }
+        }
+    }
+
+    Ok(())
 }
 
 fn check_issuer_independent_properties<'a>(
