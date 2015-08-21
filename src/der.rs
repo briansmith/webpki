@@ -16,8 +16,8 @@ use super::Error;
 use super::input::*;
 use time::{Timespec, Tm};
 
-const CONSTRUCTED : u8 = 1 << 5;
-const CONTEXT_SPECIFIC : u8 = 2 << 6;
+pub const CONSTRUCTED : u8 = 1 << 5;
+pub const CONTEXT_SPECIFIC : u8 = 2 << 6;
 
 #[derive(Clone, Copy, PartialEq)]
 #[repr(u8)]
