@@ -20,6 +20,7 @@ extern crate rustc_serialize;
 
 mod cert;
 mod der;
+mod name;
 mod input;
 mod signed_data;
 mod verify_cert;
