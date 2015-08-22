@@ -26,7 +26,7 @@ mod signed_data;
 mod verify_cert;
 
 pub use input::Input;
-
+pub use name::verify_cert_dns_name;
 
 pub enum PublicKey<'a> {
     EC(Input<'a>, &'static ring::EllipticCurve),
@@ -40,11 +40,13 @@ pub enum Error {
     BadSignature,
     CAUsedAsEndEntity,
     CertExpired,
+    CertNotValidForName,
     CertNotValidYet,
     EndEntityUsedAsCA,
     ExtensionValueInvalid,
     Fatal(FatalError),
     InvalidCertValidity,
+    InvalidReferenceName,
     PathLenConstraintViolated,
     SignatureAlgorithmMismatch,
     RequiredEKUNotFound,

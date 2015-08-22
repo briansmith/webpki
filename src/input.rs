@@ -135,6 +135,10 @@ impl<'a> Reader<'a> {
         }
     }
 
+    pub fn skip(&mut self, num_bytes: usize) -> Option<()> {
+        self.skip_and_get_input(num_bytes).map(|_| ())
+    }
+
     pub fn skip_and_get_input(&mut self, num_bytes: usize)
                               -> Option<Input<'a>> {
         match self.i.checked_add(num_bytes) {

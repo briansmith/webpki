@@ -35,7 +35,7 @@ pub struct Cert<'a> {
     pub basic_constraints: Option<Input<'a>>,
     pub eku: Option<Input<'a>>,
     pub name_constraints: Option<Input<'a>>,
-    subject_alt_name: Option<Input<'a>>,
+    pub subject_alt_name: Option<Input<'a>>,
 }
 
 pub fn parse_cert<'a>(cert_der: Input<'a>, ee_or_ca: EndEntityOrCA<'a>)
