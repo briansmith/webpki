@@ -12,10 +12,10 @@
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-use super::cert::{EndEntityOrCA, parse_cert};
+use super::cert::{Cert, EndEntityOrCA, parse_cert};
 use super::der;
 use super::Error;
-use super::input::{Input, Reader};
+use super::input::*;
 
 
 // Verify that the given end-entity cert, which is assumed to have been already
@@ -44,6 +44,175 @@ pub fn verify_cert_dns_name(cert_der: Input, dns_name: Input)
         }
         NameIteration::KeepGoing
     })
+}
+
+// https://tools.ietf.org/html/rfc5280#section-4.2.1.10
+pub fn check_name_constraints<'a>(input: Option<&mut Reader<'a>>,
+                                  subordinate_certs: &Cert)
+                                  -> Result<(), Error> {
+    let input = match input {
+        Some(input) => input,
+        None => { return Ok(()); }
+    };
+
+    fn parse_subtrees<'b>(inner: &mut Reader<'b>, subtrees_tag: der::Tag)
+                          -> Result<Option<Input<'b>>, Error> {
+        if !inner.peek(subtrees_tag as u8) {
+            return Ok(None);
+        }
+        let subtrees = try!(der::nested(inner, subtrees_tag, |tagged| {
+            der::expect_tag_and_get_input(tagged, der::Tag::Sequence)
+        }));
+        Ok(Some(subtrees))
+    }
+
+    let permitted_subtrees =
+        try!(parse_subtrees(input, der::Tag::ContextSpecificConstructed0));
+    let excluded_subtrees =
+        try!(parse_subtrees(input, der::Tag::ContextSpecificConstructed1));
+
+    let mut child = subordinate_certs;
+    loop {
+        try!(iterate_names(child.subject, child.subject_alt_name, Ok(()),
+                           &|name| check_presented_id_conforms_to_constraints(
+                                        name, permitted_subtrees,
+                                        excluded_subtrees)));
+
+        child = match child.ee_or_ca {
+            EndEntityOrCA::CA(child_cert) => child_cert,
+            EndEntityOrCA::EndEntity => { break; }
+        };
+    }
+
+    Ok(())
+}
+
+fn check_presented_id_conforms_to_constraints(name: GeneralName,
+                                              permitted_subtrees: Option<Input>,
+                                              excluded_subtrees: Option<Input>)
+                                              -> NameIteration {
+    match check_presented_id_conforms_to_constraints_in_subtree(
+            name, Subtrees::PermittedSubtrees, permitted_subtrees) {
+        stop @ NameIteration::Stop(..) => { return stop; },
+        NameIteration::KeepGoing => ()
+    };
+
+    check_presented_id_conforms_to_constraints_in_subtree(
+        name, Subtrees::ExcludedSubtrees, excluded_subtrees)
+}
+
+#[derive(Clone, Copy)]
+enum Subtrees {
+    PermittedSubtrees,
+    ExcludedSubtrees
+}
+
+fn check_presented_id_conforms_to_constraints_in_subtree(
+        name: GeneralName, subtrees: Subtrees, constraints: Option<Input>)
+        -> NameIteration {
+    let mut constraints = match constraints {
+        Some(constraints) => Reader::new(constraints),
+        None => { return NameIteration::KeepGoing; }
+    };
+
+    let mut has_permitted_subtrees_match = false;
+    let mut has_permitted_subtrees_mismatch = false;
+
+    loop {
+        // http://tools.ietf.org/html/rfc5280#section-4.2.1.10: "Within this
+        // profile, the minimum and maximum fields are not used with any name
+        // forms, thus, the minimum MUST be zero, and maximum MUST be absent."
+        //
+        // Since the default value isn't allowed to be encoded according to the
+        // DER encoding rules for DEFAULT, this is equivalent to saying that
+        // neither minimum or maximum must be encoded.
+        fn general_subtree<'b>(input: &mut Reader<'b>)
+                               -> Result<GeneralName<'b>, Error> {
+            let general_subtree =
+                try!(der::expect_tag_and_get_input(input,
+                                                   der::Tag::Sequence));
+            read_all(general_subtree, Error::BadDER,
+                     |subtree| general_name(subtree))
+        }
+
+        let base = match general_subtree(&mut constraints) {
+            Ok(base) => base,
+            Err(err) => { return NameIteration::Stop(Err(err)); }
+        };
+
+        let matches = match (name, base) {
+            (GeneralName::DNSName(name),
+             GeneralName::DNSName(base)) =>
+                presented_dns_id_matches_reference_dns_id(
+                    name, IDRole::NameConstraint, base)
+                        .ok_or(Error::BadDER),
+
+            (GeneralName::DirectoryName(name),
+             GeneralName::DirectoryName(base)) =>
+                presented_directory_name_matches_constraint(name, base),
+
+            (GeneralName::IPAddress(name),
+             GeneralName::IPAddress(base)) =>
+                presented_ip_address_matches_constraint(name, base),
+
+            // RFC 4280 says "If a name constraints extension that is marked as
+            // critical imposes constraints on a particular name form, and an
+            // instance of that name form appears in the subject field or
+            // subjectAltName extension of a subsequent certificate, then the
+            // application MUST either process the constraint or reject the
+            // certificate." Later, the CABForum agreed to support non-critical
+            // constraints, so it is important to reject the cert without
+            // considering whether the name constraint it critical.
+            (GeneralName::Unsupported(name_tag),
+             GeneralName::Unsupported(base_tag)) if name_tag == base_tag =>
+                Err(Error::NameConstraintViolation),
+
+            _ => Ok(false)
+        };
+
+        match (subtrees, matches) {
+            (Subtrees::PermittedSubtrees, Ok(true)) => {
+                has_permitted_subtrees_match = true;
+            },
+
+            (Subtrees::PermittedSubtrees, Ok(false)) => {
+                has_permitted_subtrees_mismatch = true;
+            },
+
+            (Subtrees::ExcludedSubtrees, Ok(true)) => {
+                return NameIteration::Stop(Err(Error::NameConstraintViolation));
+            },
+
+            (Subtrees::ExcludedSubtrees, Ok(false)) => (),
+
+            (_, Err(err)) => {
+                return NameIteration::Stop(Err(err));
+            }
+        }
+
+        if constraints.at_end() {
+            break;
+        }
+    }
+
+    if has_permitted_subtrees_mismatch && !has_permitted_subtrees_match {
+        // If there was any entry of the given type in permittedSubtrees, then
+        // it required that at least one of them must match. Since none of them
+        // did, we have a failure.
+        NameIteration::Stop(Err(Error::NameConstraintViolation))
+    } else {
+        NameIteration::KeepGoing
+    }
+}
+
+fn presented_directory_name_matches_constraint(_name: Input, _constraint: Input)
+                                               -> Result<bool, Error> {
+    unimplemented!();
+}
+
+fn presented_ip_address_matches_constraint(_name: Input, _constraint: Input)
+                                           -> Result<bool, Error> {
+    unimplemented!();
 }
 
 #[derive(Clone, Copy)]
@@ -86,6 +255,7 @@ fn iterate_names(subject: Input, subject_alt_name: Option<Input>,
 // don't even store the value. Also, the meaning of a `GeneralName` in a name
 // constraint is different than the meaning of the identically-represented
 // `GeneralName` in other contexts.
+#[derive(Clone, Copy)]
 enum GeneralName<'a> {
     DNSName(Input<'a>),
     DirectoryName(Input<'a>),

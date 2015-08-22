@@ -47,6 +47,7 @@ pub enum Error {
     Fatal(FatalError),
     InvalidCertValidity,
     InvalidReferenceName,
+    NameConstraintViolation,
     PathLenConstraintViolated,
     SignatureAlgorithmMismatch,
     RequiredEKUNotFound,
