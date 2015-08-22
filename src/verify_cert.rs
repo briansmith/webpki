@@ -15,6 +15,7 @@
 use super::{Error, FatalError, TrustAnchor};
 use super::cert::{Cert, EndEntityOrCA, parse_cert};
 use super::der;
+use super::name::check_name_constraints;
 use super::input::*;
 use super::signed_data::{parse_spki_value, verify_signed_data};
 use time::Timespec;
@@ -122,11 +123,6 @@ fn build_chain<'a>(cert: &Cert<'a>, intermediate_certs: &[Input<'a>],
         build_chain(&potential_issuer, intermediate_certs, trust_anchors,
                     time, next_sub_ca_count, required_eku_if_present)
     })
-}
-
-fn check_name_constraints(_name_constraints: Option<&mut Reader>,
-                          _cert_chain: &Cert) -> Result<(), Error> {
-    unimplemented!();
 }
 
 fn check_signatures(cert_chain: &Cert, trust_anchor_key: Input)
