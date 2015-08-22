@@ -46,8 +46,8 @@ pub fn expect_tag_and_get_input<'a>(input: &mut Reader<'a>, tag: Tag)
     Ok(inner)
 }
 
-fn read_tag_and_get_input<'a>(input: &mut Reader<'a>)
-                              -> Result<(u8, Input<'a>), Error> {
+pub fn read_tag_and_get_input<'a>(input: &mut Reader<'a>)
+                                  -> Result<(u8, Input<'a>), Error> {
     let tag = try!(input.read_byte().ok_or(Error::BadDER));
     if (tag & 0x1F) == 0x1F {
         return Err(Error::BadDER) // High tag number form is not allowed.
