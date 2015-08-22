@@ -210,9 +210,53 @@ fn presented_directory_name_matches_constraint(_name: Input, _constraint: Input)
     unimplemented!();
 }
 
-fn presented_ip_address_matches_constraint(_name: Input, _constraint: Input)
+
+// https://tools.ietf.org/html/rfc5280#section-4.2.1.10 says:
+//
+//     For IPv4 addresses, the iPAddress field of GeneralName MUST contain
+//     eight (8) octets, encoded in the style of RFC 4632 (CIDR) to represent
+//     an address range [RFC4632].  For IPv6 addresses, the iPAddress field
+//     MUST contain 32 octets similarly encoded.  For example, a name
+//     constraint for "class C" subnet 192.0.2.0 is represented as the
+//     octets C0 00 02 00 FF FF FF 00, representing the CIDR notation
+//     192.0.2.0/24 (mask 255.255.255.0).
+fn presented_ip_address_matches_constraint(name: Input, constraint: Input)
                                            -> Result<bool, Error> {
-    unimplemented!();
+    if name.len() != 4 && name.len() != 16 {
+        return Err(Error::BadDER);
+    }
+    if constraint.len() != 8 && constraint.len() != 32 {
+        return Err(Error::BadDER);
+    }
+
+    // an IPv4 address never matches an IPv6 constraint, and vice versa.
+    if name.len() * 2 != constraint.len() {
+        return Ok(false);
+    }
+
+    let (constraint_address, constraint_mask) =
+        try!(read_all(constraint, Error::BadDER, |value| {
+            let address = value.skip_and_get_input(constraint.len() / 2).unwrap();
+            let mask = value.skip_and_get_input(constraint.len() / 2).unwrap();
+            Ok((address, mask))
+        }));
+
+    let mut name = Reader::new(name);
+    let mut constraint_address = Reader::new(constraint_address);
+    let mut constraint_mask = Reader::new(constraint_mask);
+    loop {
+        let name_byte = name.read_byte().unwrap();
+        let constraint_address_byte = constraint_address.read_byte().unwrap();
+        let constraint_mask_byte = constraint_mask.read_byte().unwrap();
+        if ((name_byte ^ constraint_address_byte) & constraint_mask_byte) != 0 {
+            return Ok(false);
+        }
+        if name.at_end() {
+            break;
+        }
+    }
+
+    return Ok(true);
 }
 
 #[derive(Clone, Copy)]
