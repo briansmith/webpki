@@ -149,7 +149,8 @@ fn check_presented_id_conforms_to_constraints_in_subtree(
 
             (GeneralName::DirectoryName(name),
              GeneralName::DirectoryName(base)) =>
-                presented_directory_name_matches_constraint(name, base),
+                presented_directory_name_matches_constraint(name, base,
+                                                            subtrees),
 
             (GeneralName::IPAddress(name),
              GeneralName::IPAddress(base)) =>
@@ -205,11 +206,16 @@ fn check_presented_id_conforms_to_constraints_in_subtree(
     }
 }
 
-fn presented_directory_name_matches_constraint(_name: Input, _constraint: Input)
-                                               -> Result<bool, Error> {
-    unimplemented!();
+// TODO: document this.
+fn presented_directory_name_matches_constraint<'a>(name: Input<'a>,
+                                                   constraint: Input<'a>,
+                                                   subtrees: Subtrees)
+                                                   -> Result<bool, Error> {
+    match subtrees {
+        Subtrees::PermittedSubtrees => Ok(name == constraint),
+        Subtrees::ExcludedSubtrees => Ok(true),
+    }
 }
-
 
 // https://tools.ietf.org/html/rfc5280#section-4.2.1.10 says:
 //
