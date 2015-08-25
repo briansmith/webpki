@@ -12,7 +12,44 @@
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-#[derive(Copy, Clone)]
+/// Calls `read` with the given input as a `Reader`, ensuring that `read`
+/// consumed the entire input. If `read` does not consume the entire input,
+/// `incomplete_read` is returned.
+pub fn read_all<'a, F, R, E>(input: Input<'a>, incomplete_read: E, read: F)
+                             -> Result<R, E>
+                             where F: FnOnce(&mut Reader<'a>) -> Result<R, E> {
+    let mut input = Reader::new(input);
+    let result = try!(read(&mut input));
+    if input.at_end() {
+        Ok(result)
+    } else {
+        Err(incomplete_read)
+    }
+}
+
+/// Calls `read` with the given input as a `Reader`, ensuring that `read`
+/// consumed the entire input. When `input` is `None`, `read` will be called
+/// with `None`.
+pub fn read_all_optional<'a, F, R, E>(input: Option<Input<'a>>,
+                                      incomplete_read: E, read: F)
+                                      -> Result<R, E>
+                                      where F: FnOnce(Option<&mut Reader>)
+                                                      -> Result<R, E> {
+    match input {
+        Some(input) => {
+            let mut input = Reader::new(input);
+            let result = try!(read(Option::Some(&mut input)));
+            if input.at_end() {
+                Ok(result)
+            } else {
+                Err(incomplete_read)
+            }
+        },
+        None => read(Option::None)
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Input<'a> {
     bytes: &'a [u8]
 }
@@ -50,17 +87,6 @@ impl<'a> Reader<'a> {
                 self.i += 1; // safe from overflow; see Input::new.
                 Some(*b)
             }
-            None => None
-        }
-    }
-
-    pub fn skip_reader(&mut self, num_bytes: usize) -> Option<Reader<'a>> {
-        match self.i.checked_add(num_bytes) {
-            Some(new_i) => {
-                let ret = Some(Reader { input: self.input, i: self.i });
-                self.i = new_i;
-                ret
-            },
             None => None
         }
     }
