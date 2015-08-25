@@ -20,6 +20,14 @@ use super::input::*;
 use super::signed_data::{parse_spki_value, verify_signed_data};
 use time::Timespec;
 
+pub fn verify_tls_cert(cert: Input, intermediate_certs: &[Input],
+                       trust_anchors: &[TrustAnchor], time: Timespec)
+                       -> Result<(), Error> {
+    let cert = try!(parse_cert(cert, EndEntityOrCA::EndEntity));
+    build_chain(&cert, intermediate_certs, trust_anchors, time, 0,
+                EKU_SERVER_AUTH)
+}
+
 fn build_chain<'a>(cert: &Cert<'a>, intermediate_certs: &[Input<'a>],
                    trust_anchors: &'a [TrustAnchor], time: Timespec,
                    sub_ca_count: usize, required_eku_if_present: KeyPurposeId)
