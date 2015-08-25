@@ -27,6 +27,7 @@ mod verify_cert;
 
 pub use input::Input;
 pub use name::verify_cert_dns_name;
+pub use verify_cert::verify_tls_cert;
 
 pub enum PublicKey<'a> {
     EC(Input<'a>, &'static ring::EllipticCurve),
