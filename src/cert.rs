@@ -213,7 +213,11 @@ fn remember_extension<'a>(cert: &mut Cert<'a>, extn_id: Input, value: Input<'a>)
             return Err(Error::ExtensionValueInvalid);
         }
         None => {
-            *out = Some(value)
+            // All the extensions that we care about are wrapped in a SEQUENCE.
+            let sequence_value = try!(read_all(value, Error::BadDER, |value| {
+                der::expect_tag_and_get_input(value, der::Tag::Sequence)
+            }));
+            *out = Some(sequence_value);
         }
     }
 
