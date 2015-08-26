@@ -13,10 +13,34 @@
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 use super::Error;
-use super::cert::EndEntityOrCA;
+use super::cert::{Cert, EndEntityOrCA};
 use super::der;
 use super::input::*;
 use time::Timespec;
+
+fn check_issuer_independent_properties<'a>(
+        cert: &Cert<'a>, time: Timespec, sub_ca_count: usize,
+        required_eku_if_present: KeyPurposeId) -> Result<(), Error> {
+    // TODO: Check signature algorithm like mozilla::pkix.
+    // TODO: Check SPKI like mozilla::pkix.
+    // TODO: check for active distrust like mozilla::pkix.
+
+    // See the comment in `remember_extensions` for why we don't check the
+    // KeyUsage extension.
+
+    let used_as_ca = used_as_ca(&cert.ee_or_ca);
+
+    try!(read_all(cert.validity, Error::BadDER,
+                  |value| check_validity(value, time)));
+    try!(read_all_optional(cert.basic_constraints, Error::BadDER,
+                           |value| check_basic_constraints(value, used_as_ca,
+                                                           sub_ca_count)));
+    try!(read_all_optional(cert.eku, Error::BadDER,
+                           |value| check_eku(value, used_as_ca,
+                                             required_eku_if_present)));
+
+    Ok(())
+}
 
 // https://tools.ietf.org/html/rfc5280#section-4.1.2.5
 fn check_validity(input: &mut Reader, time: Timespec) -> Result<(), Error> {
@@ -43,10 +67,10 @@ fn check_validity(input: &mut Reader, time: Timespec) -> Result<(), Error> {
 #[derive(Clone, Copy)]
 enum UsedAsCA { Yes, No }
 
-fn used_as_ca(ee_or_ca: EndEntityOrCA) -> UsedAsCA {
+fn used_as_ca(ee_or_ca: &EndEntityOrCA) -> UsedAsCA {
     match ee_or_ca {
-        EndEntityOrCA::EndEntity => UsedAsCA::No,
-        EndEntityOrCA::CA(..) => UsedAsCA::Yes
+        &EndEntityOrCA::EndEntity => UsedAsCA::No,
+        &EndEntityOrCA::CA(..) => UsedAsCA::Yes
     }
 }
 
