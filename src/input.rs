@@ -80,7 +80,7 @@ impl<'a> Input<'a> {
         Some(Input { bytes: bytes })
     }
 
-    pub fn as_slice_less_safe(&self) -> &[u8] { self.bytes }
+    pub fn as_slice_less_safe(&self) -> &'a [u8] { self.bytes }
 
     pub fn is_empty(&self) -> bool { self.bytes.len() == 0 }
 
