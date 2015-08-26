@@ -18,7 +18,7 @@ use super::input::*;
 const CONSTRUCTED : u8 = 1 << 5;
 const CONTEXT_SPECIFIC : u8 = 2 << 6;
 
-#[derive(PartialEq)]
+#[derive(Clone, Copy, PartialEq)]
 #[repr(u8)]
 pub enum Tag {
     Boolean = 0x01,
@@ -93,6 +93,33 @@ pub fn nested<'a, F, R>(input: &mut Reader<'a>, tag: Tag, decoder: F)
     read_all(inner, Error::BadDER, decoder)
 }
 
+// TODO: investigate taking decoder as a reference to reduce generated code
+// size.
+pub fn nested_mut<'a, F, R>(input: &mut Reader<'a>, tag: Tag, decoder: F)
+                            -> Result<R, Error>
+                            where F : FnMut(&mut Reader<'a>)
+                                      -> Result<R, Error> {
+    let inner = try!(expect_tag_and_get_input(input, tag));
+    read_all_mut(inner, Error::BadDER, decoder)
+}
+
+// TODO: investigate taking decoder as a reference to reduce generated code
+// size.
+pub fn nested_of_mut<'a, F>(input: &mut Reader<'a>, outer_tag: Tag,
+                            inner_tag: Tag, mut decoder: F) -> Result<(), Error>
+                            where F : FnMut(&mut Reader<'a>)
+                                      -> Result<(), Error> {
+    nested_mut(input, outer_tag, |outer| {
+        loop {
+            try!(nested_mut(outer, inner_tag, |inner| decoder(inner)));
+            if outer.at_end() {
+                break;
+            }
+        }
+        Ok(())
+    })
+}
+
 pub fn bit_string_with_no_unused_bits<'a>(input: &mut Reader<'a>)
                                           -> Result<Input<'a>, Error> {
     nested(input, Tag::BitString, |value| {
@@ -104,12 +131,36 @@ pub fn bit_string_with_no_unused_bits<'a>(input: &mut Reader<'a>)
     })
 }
 
-pub fn null(input: &mut Reader) -> Result<(), Error> {
-    let contents = try!(expect_tag_and_get_input(input, Tag::Null));
-    if !contents.is_empty() {
-        return Err(Error::BadDER);
+// Like mozilla::pkix, we accept the the non-conformant explicit encoding of
+// the default value (false) for compatibility with real-world certificates.
+pub fn optional_boolean(input: &mut Reader) -> Result<bool, Error> {
+    if !input.peek(Tag::Boolean as u8) {
+        return Ok(false);
     }
-    Ok(())
+    nested(input, Tag::Boolean, |input| {
+        match input.read_byte() {
+            Some(0xff) => Ok(true),
+            Some(0x00) => Ok(false),
+            _ => Err(Error::BadDER)
+        }
+    })
+}
+
+// This parser will only parse values between 0..127. mozilla::pkix found
+// experimentally that the need to parse larger values is not useful.
+pub fn integer(input: &mut Reader) -> Result<u8, Error> {
+    nested(input, Tag::Integer, |value| {
+        let first_byte = try!(value.read_byte().ok_or(Error::BadDER));
+        if (first_byte & 0x80) != 0 {
+            // We don't accept negative values
+            return Err(Error::BadDER);
+        }
+        Ok(first_byte)
+    })
+}
+
+pub fn null(input: &mut Reader) -> Result<(), Error> {
+    nested(input, Tag::Null, |_| Ok(()))
 }
 
 pub fn optional_null(input: &mut Reader) -> Result<(), Error> {
