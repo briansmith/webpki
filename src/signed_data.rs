@@ -19,7 +19,7 @@ use ring;
 
 pub struct SignedData<'a> {
     data: Input<'a>,
-    algorithm: Input<'a>,
+    pub algorithm: Input<'a>,
     signature: Input<'a>,
 }
 

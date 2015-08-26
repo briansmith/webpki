@@ -17,6 +17,7 @@ extern crate ring;
 #[cfg(test)]
 extern crate rustc_serialize;
 
+mod cert;
 mod der;
 mod input;
 mod signed_data;
@@ -33,7 +34,11 @@ pub enum PublicKey<'a> {
 pub enum Error {
     BadDER,
     BadSignature,
+    ExtensionValueInvalid,
     Fatal(FatalError),
+    SignatureAlgorithmMismatch,
+    UnsupportedCertVersion,
+    UnsupportedCriticalExtension,
     UnsupportedEllipticCurve,
     UnsupportedKeyAlgorithm,
     UnsupportedSignatureAlgorithm,

@@ -27,6 +27,21 @@ pub fn read_all<'a, F, R, E>(input: Input<'a>, incomplete_read: E, read: F)
     }
 }
 
+/// Like `read_all`, except taking an `FnMut`.
+pub fn read_all_mut<'a, F, R, E>(input: Input<'a>, incomplete_read: E, mut read: F)
+                                 -> Result<R, E>
+                                 where F: FnMut(&mut Reader<'a>)
+                                                -> Result<R, E> {
+    let mut input = Reader::new(input);
+    let result = try!(read(&mut input));
+    if input.at_end() {
+        Ok(result)
+    } else {
+        Err(incomplete_read)
+    }
+}
+
+
 /// Calls `read` with the given input as a `Reader`, ensuring that `read`
 /// consumed the entire input. When `input` is `None`, `read` will be called
 /// with `None`.
@@ -68,6 +83,8 @@ impl<'a> Input<'a> {
     pub fn as_slice_less_safe(&self) -> &[u8] { self.bytes }
 
     pub fn is_empty(&self) -> bool { self.bytes.len() == 0 }
+
+    pub fn len(&self) -> usize { self.bytes.len() }
 }
 
 pub fn input_equals(a: Input, b: &[u8]) -> bool { a.bytes == b }
