@@ -19,6 +19,7 @@ extern crate time;
 extern crate rustc_serialize;
 
 pub mod input;
+pub mod trust_anchor_util;
 
 mod cert;
 mod der;
@@ -67,6 +68,16 @@ pub enum FatalError {
     InvalidTrustAnchor,
 }
 
+/// A trust anchor (a.k.a. root CA).
+///
+/// Traditionally, certificate verification libraries have represented trust
+/// anchors as full X.509 root certificates. However, those certificates
+/// contain a lot more data than is needed for verifying certificates. The
+/// `TrustAnchor` representation allows an application to store just the
+/// essential elements of trust anchors. The `webpki::trust_anchor_util` module
+/// provides functions for converting X.509 certificates to to the minimized
+/// `TrustAnchor` representation, either at runtime or in a build script.
+#[derive(Debug)]
 pub struct TrustAnchor<'a> {
     pub subject: &'a [u8],
     pub spki: &'a [u8],
