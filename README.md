@@ -13,7 +13,7 @@ What is libwebpki?
 
 libwebpki is a library that validates Web PKI (TLS/SSL) certificates. libwebpki
 is designed to provide a **full** implementation of the client side of the
-**Web PKI** to a diverse rnage of applications and devices,
+**Web PKI** to a diverse range of applications and devices,
 including embedded (IoT) applications, mobile apps, desktop applications, and
 server infrastructure. libwebpki is intended to not only be the best
 implementation of the Web PKI, but to also *precisely define* what the Web PKI
