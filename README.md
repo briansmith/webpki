@@ -99,12 +99,3 @@ Travis CI is used for Linux and Mac OS X. Appveyor is used for Windows.
     <td><a title="Build Status" href=https://ci.appveyor.com/project/briansmith/webpki/branch/wip><img src=https://ci.appveyor.com/api/projects/status/oypnhn7d5c8lpplw/branch/wip?svg=true></a>
 </tr>
 </table>
-
-
-
-This Branch, ```wip```, Will Be Rebased
-=======================================
-
-This is a very early prototype of the code. The commits on this ```wip```
-branch will be rebased as people review the code. In a couple of weeks, the
-```master``` permanent branch will be created.
