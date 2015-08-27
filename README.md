@@ -75,3 +75,36 @@ Please report bugs either as pull requests or as issues in [the issue
 tracker](https://github.com/briansmith/webpki/issues). libwebpki has a
 **full disclosure** vulnerability policy. **Please do NOT attempt to report
 any security vulnerability in this code privately to anybody.**
+
+
+
+Online Automated Testing
+========================
+
+Travis CI is used for Linux and Mac OS X. Appveyor is used for Windows.
+
+<table>
+<tr><th>OS</th><th>Arch.</th><th>Compilers</th><th>Status</th>
+<tr><td>Linux</td>
+    <td>x86, x64<td>GCC 4.8, 4.9, 5; Clang 3.4, 3.5, 3.6</td>
+    <td rowspan=2><a title="Build Status" href=https://travis-ci.org/briansmith/webpki><img src=https://travis-ci.org/briansmith/webpki.svg?branch=master></a>
+</tr>
+<tr><td>Mac OS X x64</td>
+    <td>x86, x64</td>
+    <td>Apple Clang 6.0 (based on Clang 3.5)</td>
+</tr>
+<tr><td>Windows</td>
+    <td>x86, x64</td>
+    <td>MSVC 2013 (12.0), 2015 (14.0)</td>
+    <td><a title="Build Status" href=https://ci.appveyor.com/project/briansmith/webpki/branch/master><img src=https://ci.appveyor.com/api/projects/status/3wq9p54r9iym05rm/branch/master?svg=true></a>
+</tr>
+</table>
+
+
+
+This Branch, ```wip```, Will Be Rebased
+=======================================
+
+This is a very early prototype of the code. The commits on this ```wip```
+branch will be rebased as people review the code. In a couple of weeks, the
+```master``` permanent branch will be created.
