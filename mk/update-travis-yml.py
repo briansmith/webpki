@@ -100,7 +100,6 @@ def format_entries():
 # line does not get cut off in the Travis CI UI.
 entry_template = """
     - env: TARGET_X=%(target)s CC_X=%(cc)s CXX_X=%(cxx)s MODE_X=%(mode)s
-      language: rust
       os: %(os)s
       rust: %(channel)s"""
 
