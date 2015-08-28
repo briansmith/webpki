@@ -188,7 +188,7 @@ fn check_validity(input: &mut Reader, time: Timespec) -> Result<(), Error> {
     let not_after = try!(der::time_choice(input));
 
     if not_before > not_after {
-        return Err(Error::InvalidCertValidity);
+        return Err(Error::InvalidValidityPeriod);
     }
     if time < not_before {
         return Err(Error::CertNotValidYet);
