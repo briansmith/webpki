@@ -125,7 +125,7 @@ pub struct Mark {
 impl<'a> Reader<'a> {
     /// Construct a new Reader for the given input. Use `read_all`,
     /// `read_all_mut`, or `read_all_optional` instead of `Reader::new`
-    // whenever possible.
+    /// whenever possible.
     #[inline]
     pub fn new(input: Input<'a>) -> Reader<'a> {
         Reader { input: input.value, i: 0 }
