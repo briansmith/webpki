@@ -31,7 +31,6 @@ pub struct Cert<'a> {
     pub subject: Input<'a>,
     pub spki: Input<'a>,
 
-    authority_info_access: Option<Input<'a>>,
     pub basic_constraints: Option<Input<'a>>,
     pub eku: Option<Input<'a>>,
     pub name_constraints: Option<Input<'a>>,
@@ -80,7 +79,6 @@ pub fn parse_cert<'a>(cert_der: Input<'a>, ee_or_ca: EndEntityOrCA<'a>)
             subject: subject,
             spki: spki,
 
-            authority_info_access: None,
             basic_constraints: None,
             eku: None,
             name_constraints: None,
@@ -148,63 +146,40 @@ enum Understood { Yes, No }
 
 fn remember_extension<'a>(cert: &mut Cert<'a>, extn_id: Input, value: Input<'a>)
                           -> Result<Understood, Error> {
-    // python DottedOIDToCode.py id-ce-basicConstraints 2.5.29.19
-    const ID_CE_BASICCONSTRAINTS: [u8; 3] = [
-        0x55, 0x1d, 0x13
-    ];
-
-    // python DottedOIDToCode.py id-ce-extKeyUsage 2.5.29.37
-    const ID_CE_EXTKEYUSAGE: [u8; 3] = [
-        0x55, 0x1d, 0x25
-    ];
-
-    // python DottedOIDToCode.py id-ce-keyUsage 2.5.29.15
-    const ID_CE_KEYUSAGE: [u8; 3] = [
-        0x55, 0x1d, 0x0f
-    ];
-
-    // python DottedOIDToCode.py id-ce-nameConstraints 2.5.29.30
-    const ID_CE_NAMECONSTRAINTS: [u8; 3] = [
-        0x55, 0x1d, 0x1e
-    ];
-
-    // python DottedOIDToCode.py id-ce-subjectAltName 2.5.29.17
-    const ID_CE_SUBJECTALTNAME: [u8; 3] = [
-        0x55, 0x1d, 0x11
-    ];
-
-    // python DottedOIDToCode.py id-pe-authorityInfoAccess 1.3.6.1.5.5.7.1.1
-    const ID_PE_AUTHORITYINFOACCESS: [u8; 8] = [
-        0x2b, 0x06, 0x01, 0x05, 0x05, 0x07, 0x01, 0x01
-    ];
-
     // We don't do anything with certificate policies so we can safely ignore
     // all policy-related stuff. We assume that the policy-related extensions
     // are not marked critical.
 
-    // TODO: Replace this with pattern matching that deals with common
-    // subexpressions.
-    let out =
-        if input_equals(extn_id, &ID_CE_KEYUSAGE) {
-            // We ignore the KeyUsag eextension. For CA certificates,
-            // BasicConstraints.cA makes KeyUsage redundant. Firefox and other
-            // common browsers do not check KeyUsage for end-entities, though
-            // it would be kind of nice to ensure that a KeyUsage without the
-            // keyEncipherment bit could not be used for RSA key exchange.
-            return Ok(Understood::Yes);
-        } else if input_equals(extn_id, &ID_CE_BASICCONSTRAINTS) {
-            &mut cert.basic_constraints
-        } else if input_equals(extn_id, &ID_CE_EXTKEYUSAGE) {
-            &mut cert.eku
-        } else if input_equals(extn_id, &ID_CE_NAMECONSTRAINTS) {
-            &mut cert.name_constraints
-        } else if input_equals(extn_id, &ID_CE_SUBJECTALTNAME) {
-            &mut cert.subject_alt_name
-        } else if input_equals(extn_id, &ID_PE_AUTHORITYINFOACCESS) {
-            &mut cert.authority_info_access
-        } else {
-            return Ok(Understood::No);
-        };
+    // id-ce 2.5.29
+    static ID_CE: [u8; 2] = oid![2, 5, 29];
+
+    if extn_id.len() != ID_CE.len() + 1 ||
+       !extn_id.as_slice_less_safe().starts_with(&ID_CE) {
+        return Ok(Understood::No);
+    }
+
+    let out = match *extn_id.as_slice_less_safe().last().unwrap() {
+        // id-ce-keyUsage 2.5.29.15. We ignore the KeyUsage extension. For CA
+        // certificates, BasicConstraints.cA makes KeyUsage redundant. Firefox
+        // and other common browsers do not check KeyUsage for end-entities,
+        // though it would be kind of nice to ensure that a KeyUsage without
+        // the keyEncipherment bit could not be used for RSA key exchange.
+        15 => { return Ok(Understood::Yes); },
+
+        // id-ce-subjectAltName 2.5.29.17
+        17 => &mut cert.subject_alt_name,
+
+        // id-ce-basicConstraints 2.5.29.19
+        19 => &mut cert.basic_constraints,
+
+        // id-ce-nameConstraints 2.5.29.30
+        30 => &mut cert.name_constraints,
+
+        // id-ce-extKeyUsage 2.5.29.37
+        37 => &mut cert.eku,
+
+        _ => { return Ok(Understood::No); }
+    };
 
     match *out {
         Some(..) => {

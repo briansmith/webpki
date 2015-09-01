@@ -18,11 +18,13 @@ extern crate time;
 #[cfg(test)]
 extern crate rustc_serialize;
 
+#[macro_use]
+mod der;
+
 pub mod input;
 pub mod trust_anchor_util;
 
 mod cert;
-mod der;
 mod name;
 mod signed_data;
 mod verify_cert;

@@ -24,6 +24,7 @@ pub struct SignedData<'a> {
 }
 
 #[allow(non_camel_case_types)]
+#[derive(Clone, Copy)]
 enum PublicKeyAlgorithm {
     ECDSA,
     RSA_PKCS1,
@@ -32,101 +33,71 @@ enum PublicKeyAlgorithm {
 fn signature_algorithm_identifier_value(input: &mut Reader)
         -> Result<(PublicKeyAlgorithm, ring::SignatureDigestAlgorithm),
                   Error> {
-    // RFC 5758 Section 3.2 (ECDSA with SHA-2), and RFC 3279 Section 2.2.3
-    // (ECDSA with SHA-1) say that parameters must be omitted.
-    //
-    // RFC 4055 Section 5 and RFC 3279 Section 2.2.1 both say that parameters
-    // for RSA must be encoded as NULL; we relax that requirement by allowing
-    // the NULL to be omitted, to match all the other signature algorithms we
-    // support and for compatibility.
-
     let algorithm_id = try!(der::expect_tag_and_get_input(input,
                                                           der::Tag::OID));
 
-    // RFC 5758 Section 3.2 (ecdsa-with-SHA224 is intentionally excluded)
-    // python DottedOIDToCode.py ecdsa-with-SHA256 1.2.840.10045.4.3.2
-    const ECDSA_WITH_SHA256: [u8; 8] = [
-        0x2a, 0x86, 0x48, 0xce, 0x3d, 0x04, 0x03, 0x02
-    ];
-    // python DottedOIDToCode.py ecdsa-with-SHA384 1.2.840.10045.4.3.3
-    const ECDSA_WITH_SHA384: [u8; 8] = [
-        0x2a, 0x86, 0x48, 0xce, 0x3d, 0x04, 0x03, 0x03
-    ];
-    // python DottedOIDToCode.py ecdsa-with-SHA512 1.2.840.10045.4.3.4
-    const ECDSA_WITH_SHA512: [u8; 8] = [
-        0x2a, 0x86, 0x48, 0xce, 0x3d, 0x04, 0x03, 0x04
+    static OID_MAPPING: [(&'static [u8],
+                          PublicKeyAlgorithm,
+                          &'static [(u8, ring::SignatureDigestAlgorithm)]); 4] =
+    [
+        (&oid_1_2_840_10045![4, 3],
+         PublicKeyAlgorithm::ECDSA,
+         &[(2, ring::SignatureDigestAlgorithm::SHA256),
+           (3, ring::SignatureDigestAlgorithm::SHA384),
+           (4, ring::SignatureDigestAlgorithm::SHA512)]),
+
+        (&oid_1_2_840_113549![1, 1],
+         PublicKeyAlgorithm::RSA_PKCS1,
+         &[(11, ring::SignatureDigestAlgorithm::SHA256),
+           (12, ring::SignatureDigestAlgorithm::SHA384),
+           (13, ring::SignatureDigestAlgorithm::SHA512),
+           (5,  ring::SignatureDigestAlgorithm::SHA1)]),
+
+        (&oid_1_2_840_10045![4, 1],
+         PublicKeyAlgorithm::ECDSA,
+         &[(1, ring::SignatureDigestAlgorithm::SHA1)]),
+
+        // NIST Open Systems Environment (OSE) Implementor's Workshop (OIW)
+        // http://www.oiw.org/agreements/stable/12s-9412.txt (no longer works).
+        // http://www.imc.org/ietf-pkix/old-archive-97/msg01166.html
+        // We need to support this non-PKIX OID for compatibility.
+        (&oid!(1, 3, 14, 3, 2),
+         PublicKeyAlgorithm::RSA_PKCS1,
+         &[(29, ring::SignatureDigestAlgorithm::SHA1)]),
     ];
 
-    // RFC 4055 Section 5 (sha224WithRSAEncryption is intentionally excluded)
-    // python DottedOIDToCode.py sha256WithRSAEncryption 1.2.840.113549.1.1.11
-    // (name tweaked)
-    const SHA256_WITH_RSA_ENCRYPTION: [u8; 9] = [
-        0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x0b
-    ];
-    // python DottedOIDToCode.py sha384WithRSAEncryption 1.2.840.113549.1.1.12
-    // (name tweaked)
-    const SHA384_WITH_RSA_ENCRYPTION: [u8; 9] = [
-        0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x0c
-    ];
-    // python DottedOIDToCode.py sha512WithRSAEncryption 1.2.840.113549.1.1.13
-    // (name tweaked)
-    const SHA512_WITH_RSA_ENCRYPTION: [u8; 9] = [
-        0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x0d
-    ];
+    for &(prefix, public_key_alg, mappings) in OID_MAPPING.iter() {
+        if algorithm_id.len() != prefix.len() + 1 {
+            continue;
+        }
+        let bytes = algorithm_id.as_slice_less_safe();
+        if !bytes.starts_with(prefix) {
+            continue;
+        }
+        let suffix = bytes.last().unwrap();
 
-    // RFC 3279 Section 2.2.1
-    // python DottedOIDToCode.py sha-1WithRSAEncryption 1.2.840.113549.1.1.5
-    // (name tweaked)
-    const SHA1_WITH_RSA_ENCRYPTION: [u8; 9] = [
-        0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x05
-    ];
+        return match mappings.iter().find(|&n| n.0 == *suffix) {
+            Some(&(_, digest_alg)) => {
+                // RFC 5758 Section 3.2 (ECDSA with SHA-2), and RFC 3279
+                // Section 2.2.3 (ECDSA with SHA-1) say that parameters must be
+                // omitted. RFC 4055 Section 5 and RFC 3279 Section 2.2.1 both
+                // say that parameters for RSA must be encoded as NULL; we
+                // relax that requirement by allowing the NULL to be omitted,
+                // to match all the other signature algorithms we support and
+                // for compatibility.
+                match public_key_alg {
+                    PublicKeyAlgorithm::RSA_PKCS1 =>
+                        try!(der::optional_null(input)),
+                    _ => (),
+                }
+                Ok((public_key_alg, digest_alg))
+            },
 
-    // NIST Open Systems Environment (OSE) Implementor's Workshop (OIW)
-    // http://www.oiw.org/agreements/stable/12s-9412.txt (no longer works).
-    // http://www.imc.org/ietf-pkix/old-archive-97/msg01166.html
-    // We need to support this this non-PKIX OID for compatibility.
-    // python DottedOIDToCode.py sha1WithRSASignature 1.3.14.3.2.29 (name
-    // tweaked)
-    const SHA1_WITH_RSA_SIGNATURE: [u8; 5] = [
-      0x2b, 0x0e, 0x03, 0x02, 0x1d
-    ];
-
-    // RFC 3279 Section 2.2.3
-    // python DottedOIDToCode.py ecdsa-with-SHA1 1.2.840.10045.4.1
-    const ECDSA_WITH_SHA1: [u8; 7] = [
-      0x2a, 0x86, 0x48, 0xce, 0x3d, 0x04, 0x01
-    ];
-
-    // In order of approximate commonality.
-    let (public_key_algorithm, digest_algorithm) =
-        if input_equals(algorithm_id, &SHA256_WITH_RSA_ENCRYPTION) {
-            try!(der::optional_null(input));
-            (PublicKeyAlgorithm::RSA_PKCS1, ring::SignatureDigestAlgorithm::SHA256)
-        } else if input_equals(algorithm_id, &ECDSA_WITH_SHA256) {
-            (PublicKeyAlgorithm::ECDSA, ring::SignatureDigestAlgorithm::SHA256)
-        } else if input_equals(algorithm_id, &SHA1_WITH_RSA_ENCRYPTION) {
-            try!(der::optional_null(input));
-            (PublicKeyAlgorithm::RSA_PKCS1, ring::SignatureDigestAlgorithm::SHA1)
-        } else if input_equals(algorithm_id, &ECDSA_WITH_SHA1) {
-            (PublicKeyAlgorithm::ECDSA, ring::SignatureDigestAlgorithm::SHA1)
-        } else if input_equals(algorithm_id, &ECDSA_WITH_SHA384) {
-            (PublicKeyAlgorithm::ECDSA, ring::SignatureDigestAlgorithm::SHA384)
-        } else if input_equals(algorithm_id, &ECDSA_WITH_SHA512) {
-            (PublicKeyAlgorithm::ECDSA, ring::SignatureDigestAlgorithm::SHA512)
-        } else if input_equals(algorithm_id, &SHA384_WITH_RSA_ENCRYPTION) {
-            try!(der::optional_null(input));
-            (PublicKeyAlgorithm::RSA_PKCS1, ring::SignatureDigestAlgorithm::SHA384)
-        } else if input_equals(algorithm_id, &SHA512_WITH_RSA_ENCRYPTION) {
-            try!(der::optional_null(input));
-            (PublicKeyAlgorithm::RSA_PKCS1, ring::SignatureDigestAlgorithm::SHA512)
-        } else if input_equals(algorithm_id, &SHA1_WITH_RSA_SIGNATURE) {
-            try!(der::optional_null(input));
-            (PublicKeyAlgorithm::RSA_PKCS1, ring::SignatureDigestAlgorithm::SHA1)
-        } else {
-            return Err(Error::UnsupportedSignatureAlgorithm);
+            None => Err(Error::UnsupportedSignatureAlgorithm)
         };
+    }
 
-    Ok((public_key_algorithm, digest_algorithm))
+    Err(Error::UnsupportedSignatureAlgorithm)
 }
 
 // Parses the concatenation of tbs||signatureAlgorithm||signatureValue that is
@@ -187,25 +158,14 @@ pub fn parse_spki_value<'a>(input: &mut Reader<'a>)
         try!(der::bit_string_with_no_unused_bits(input));
 
     read_all(algorithm, Error::BadDER, |algorithm| {
-        // RFC 3279 Section 2.3.1
-        // python DottedOIDToCode.py rsaEncryption 1.2.840.113549.1.1.1
-        // (name tweaked)
-        const RSA_ENCRYPTION: [u8; 9] = [
-            0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x01
-        ];
-
-        // RFC 3279 Section 2.3.5 and RFC 5480 Section 2.1.1
-        // python DottedOIDToCode.py id-ecPublicKey 1.2.840.10045.2.1
-        // (name tweaked)
-        const ID_EC_PUBLIC_KEY: [u8; 7] = [
-            0x2a, 0x86, 0x48, 0xce, 0x3d, 0x02, 0x01
-        ];
-
         let algorithm_oid =
             try!(der::expect_tag_and_get_input(algorithm, der::Tag::OID));
-        if input_equals(algorithm_oid, &ID_EC_PUBLIC_KEY) {
+        if input_equals(algorithm_oid, &oid_1_2_840_10045![2, 1]) {
+            // id-ecPublicKey from RFC 3279 Section 2.3.5 & RFC 5480 Section
+            // 2.1.1
             make_ec_public_key(algorithm, subject_public_key)
-        } else if input_equals(algorithm_oid, &RSA_ENCRYPTION) {
+        } else if input_equals(algorithm_oid, &oid_1_2_840_113549![1, 1, 1]) {
+            // rsaEncryption from RFC 3279 Section 2.3.1
             make_rsa_public_key(algorithm, subject_public_key)
         } else {
             Err(Error::UnsupportedKeyAlgorithm)
@@ -220,33 +180,15 @@ fn make_ec_public_key<'a>(algorithm: &mut Reader, spk: Input<'a>) ->
     // only supported the NamedCurve form, where the curve is identified by an
     // OID.
 
-    // RFC 5480
-    // python DottedOIDToCode.py secp256r1 1.2.840.10045.3.1.7
-    const SECP256R1: [u8; 8] = [
-        0x2a, 0x86, 0x48, 0xce, 0x3d, 0x03, 0x01, 0x07
-    ];
-
-    // RFC 5480
-    // python DottedOIDToCode.py secp384r1 1.3.132.0.34
-    const SECP384R1: [u8; 5] = [
-        0x2b, 0x81, 0x04, 0x00, 0x22
-    ];
-
-    // RFC 5480
-    // python DottedOIDToCode.py secp521r1 1.3.132.0.35
-    const SECP521R1: [u8; 5] = [
-        0x2b, 0x81, 0x04, 0x00, 0x23
-    ];
-
     let named_curve_oid_value =
         try!(der::expect_tag_and_get_input(algorithm, der::Tag::OID));
 
     let curve: &'static ring::EllipticCurve =
-        if input_equals(named_curve_oid_value, &SECP256R1) {
+        if input_equals(named_curve_oid_value, &oid_1_2_840_10045![3, 1, 7]) {
             &ring::CURVE_P256
-        } else if input_equals(named_curve_oid_value, &SECP384R1) {
+        } else if input_equals(named_curve_oid_value, &oid_1_3_132![0, 34]) {
             &ring::CURVE_P384
-        } else if input_equals(named_curve_oid_value, &SECP521R1) {
+        } else if input_equals(named_curve_oid_value, &oid_1_3_132![0, 35]) {
             &ring::CURVE_P521
         } else {
             return Err(Error::UnsupportedEllipticCurve);
