@@ -76,6 +76,7 @@ tracker](https://github.com/briansmith/webpki/issues). libwebpki has a
 **full disclosure** vulnerability policy. **Please do NOT attempt to report
 any security vulnerability in this code privately to anybody.**
 
+[Reasoning](https://twitter.com/BRIAN_____/status/638496865017704448): If there's a bug in this code, it will likely be worth $100,000+, and I don't have $100K to give out.
 
 
 Online Automated Testing
