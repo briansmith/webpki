@@ -545,11 +545,13 @@ fn presented_dns_id_matches_reference_dns_id(presented_dns_id: Input,
         if presented.skip(1).is_none() {
             unreachable!();
         }
+
         loop {
-            match reference.read_byte() {
-                None => { return Some(false); },
-                Some(b'.') => { break; },
-                Some(..) => (),
+            if reference.read_byte().is_none() {
+                return Some(false);
+            }
+            if reference.peek(b'.') {
+                break;
             }
         }
     }
