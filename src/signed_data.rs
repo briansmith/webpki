@@ -15,7 +15,7 @@
 use super::{Error, FatalError, PublicKey};
 use super::der;
 use super::input::*;
-use ring;
+use ring::*;
 
 pub struct SignedData<'a> {
     data: Input<'a>,
@@ -31,31 +31,31 @@ enum PublicKeyAlgorithm {
 }
 
 fn signature_algorithm_identifier_value(input: &mut Reader)
-        -> Result<(PublicKeyAlgorithm, ring::SignatureDigestAlgorithm),
+        -> Result<(PublicKeyAlgorithm, &'static digest::Algorithm),
                   Error> {
     let algorithm_id = try!(der::expect_tag_and_get_input(input,
                                                           der::Tag::OID));
 
-    static OID_MAPPING: [(&'static [u8],
-                          PublicKeyAlgorithm,
-                          &'static [(u8, ring::SignatureDigestAlgorithm)]); 4] =
+    static OID_MAPPING:
+        [(&'static [u8], PublicKeyAlgorithm,
+          &'static [(u8, &'static digest::Algorithm)]); 4] =
     [
         (&oid_1_2_840_10045![4, 3],
          PublicKeyAlgorithm::ECDSA,
-         &[(2, ring::SignatureDigestAlgorithm::SHA256),
-           (3, ring::SignatureDigestAlgorithm::SHA384),
-           (4, ring::SignatureDigestAlgorithm::SHA512)]),
+         &[(2, &digest::SHA256),
+           (3, &digest::SHA384),
+           (4, &digest::SHA512)]),
 
         (&oid_1_2_840_113549![1, 1],
          PublicKeyAlgorithm::RSA_PKCS1,
-         &[(11, ring::SignatureDigestAlgorithm::SHA256),
-           (12, ring::SignatureDigestAlgorithm::SHA384),
-           (13, ring::SignatureDigestAlgorithm::SHA512),
-           (5,  ring::SignatureDigestAlgorithm::SHA1)]),
+         &[(11, &digest::SHA256),
+           (12, &digest::SHA384),
+           (13, &digest::SHA512),
+           (5,  &digest::SHA1)]),
 
         (&oid_1_2_840_10045![4, 1],
          PublicKeyAlgorithm::ECDSA,
-         &[(1, ring::SignatureDigestAlgorithm::SHA1)]),
+         &[(1, &digest::SHA1)]),
 
         // NIST Open Systems Environment (OSE) Implementor's Workshop (OIW)
         // http://www.oiw.org/agreements/stable/12s-9412.txt (no longer works).
@@ -63,7 +63,7 @@ fn signature_algorithm_identifier_value(input: &mut Reader)
         // We need to support this non-PKIX OID for compatibility.
         (&oid!(1, 3, 14, 3, 2),
          PublicKeyAlgorithm::RSA_PKCS1,
-         &[(29, ring::SignatureDigestAlgorithm::SHA1)]),
+         &[(29, &digest::SHA1)]),
     ];
 
     for &(prefix, public_key_alg, mappings) in OID_MAPPING.iter() {
@@ -183,13 +183,13 @@ fn make_ec_public_key<'a>(algorithm: &mut Reader, spk: Input<'a>) ->
     let named_curve_oid_value =
         try!(der::expect_tag_and_get_input(algorithm, der::Tag::OID));
 
-    let curve: &'static ring::EllipticCurve =
+    let curve: &'static ecc::EllipticCurve =
         if input_equals(named_curve_oid_value, &oid_1_2_840_10045![3, 1, 7]) {
-            &ring::CURVE_P256
+            &ecc::CURVE_P256
         } else if input_equals(named_curve_oid_value, &oid_1_3_132![0, 34]) {
-            &ring::CURVE_P384
+            &ecc::CURVE_P384
         } else if input_equals(named_curve_oid_value, &oid_1_3_132![0, 35]) {
-            &ring::CURVE_P521
+            &ecc::CURVE_P521
         } else {
             return Err(Error::UnsupportedEllipticCurve);
         };
@@ -218,28 +218,9 @@ fn make_rsa_public_key<'a>(algorithm: &mut Reader<'a>, spk: Input<'a>)
     Ok(PublicKey::RSA(spk))
 }
 
-// TODO: Replace the use of Vec<u8> with the use of a type that does not use
-// the heap.
-fn digest_data(digest_alg: ring::SignatureDigestAlgorithm, input: Input)
-               -> Vec<u8> {
-    let mut result = Vec::<u8>::new();
-    let input_as_slice = input.as_slice_less_safe();
-    match digest_alg {
-        ring::SignatureDigestAlgorithm::SHA256 =>
-            result.extend(&ring::digest::<ring::SHA256>(input_as_slice)[..]),
-        ring::SignatureDigestAlgorithm::SHA384 =>
-            result.extend(&ring::digest::<ring::SHA384>(input_as_slice)[..]),
-        ring::SignatureDigestAlgorithm::SHA512 =>
-            result.extend(&ring::digest::<ring::SHA512>(input_as_slice)[..]),
-        ring::SignatureDigestAlgorithm::SHA1 =>
-            result.extend(&ring::digest::<ring::SHA1>(input_as_slice)[..])
-    };
-    result
-}
-
 pub fn verify_signed_data(public_key: &PublicKey, signed_data: &SignedData)
                           -> Result<(), Error> {
-    let (public_key_alg, digest_alg) =
+    let (public_key_alg, ref digest_alg) =
         try!(read_all(signed_data.algorithm, Error::BadDER,
                       signature_algorithm_identifier_value));
 
@@ -248,17 +229,17 @@ pub fn verify_signed_data(public_key: &PublicKey, signed_data: &SignedData)
     // implementations and also so it can choose which algorithms and
     // parameters are acceptable. We should eventually so similar.
 
-    let digest = digest_data(digest_alg, signed_data.data);
+    let digest = digest::digest(digest_alg,
+                                signed_data.data.as_slice_less_safe());
 
     let verified = match (public_key_alg, public_key) {
         (PublicKeyAlgorithm::ECDSA, &PublicKey::EC(public_point, curve)) =>
-            ring::verify_ecdsa_signed_digest_asn1(
-                digest_alg, &digest[..],
-                signed_data.signature.as_slice_less_safe(), curve,
+            ecc::verify_ecdsa_signed_digest_asn1(
+                curve, &digest, signed_data.signature.as_slice_less_safe(),
                 public_point.as_slice_less_safe()),
         (PublicKeyAlgorithm::RSA_PKCS1, &PublicKey::RSA(rsa_public_key)) =>
-            ring::verify_rsa_pkcs1_signed_digest_asn1(digest_alg, &digest[..],
-                signed_data.signature.as_slice_less_safe(),
+            rsa::verify_rsa_pkcs1_signed_digest_asn1(
+                &digest, signed_data.signature.as_slice_less_safe(),
                 rsa_public_key.as_slice_less_safe()),
         _ => Err(()) // The algorithms do not match.
     };

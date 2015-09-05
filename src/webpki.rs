@@ -34,7 +34,7 @@ pub use name::verify_cert_dns_name;
 pub use verify_cert::verify_tls_cert;
 
 pub enum PublicKey<'a> {
-    EC(Input<'a>, &'static ring::EllipticCurve),
+    EC(Input<'a>, &'static ring::ecc::EllipticCurve),
     RSA(Input<'a>)
 }
 
