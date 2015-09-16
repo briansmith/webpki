@@ -87,7 +87,7 @@ Travis CI is used for Linux and Mac OS X. Appveyor is used for Windows.
 <tr><th>OS</th><th>Arch.</th><th>Compilers</th><th>Status</th>
 <tr><td>Linux</td>
     <td>x86, x64<td>GCC 4.8, 4.9, 5; Clang 3.4, 3.5, 3.6</td>
-    <td rowspan=2><a title="Build Status" href=https://travis-ci.org/briansmith/webpki><img src=https://travis-ci.org/briansmith/webpki.svg?branch=wip></a>
+    <td rowspan=2><a title="Build Status" href=https://travis-ci.org/briansmith/webpki><img src=https://travis-ci.org/briansmith/webpki.svg?branch=master></a>
 </tr>
 <tr><td>Mac OS X x64</td>
     <td>x86, x64</td>
@@ -96,6 +96,6 @@ Travis CI is used for Linux and Mac OS X. Appveyor is used for Windows.
 <tr><td>Windows</td>
     <td>x86, x64</td>
     <td>MSVC 2013 (12.0), 2015 (14.0)</td>
-    <td><a title="Build Status" href=https://ci.appveyor.com/project/briansmith/webpki/branch/wip><img src=https://ci.appveyor.com/api/projects/status/oypnhn7d5c8lpplw/branch/wip?svg=true></a>
+    <td><a title="Build Status" href=https://ci.appveyor.com/project/briansmith/webpki/branch/master><img src=https://ci.appveyor.com/api/projects/status/oypnhn7d5c8lpplw/branch/master?svg=true></a>
 </tr>
 </table>
