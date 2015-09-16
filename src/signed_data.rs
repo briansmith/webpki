@@ -249,8 +249,6 @@ pub fn verify_signed_data(public_key: &PublicKey, signed_data: &SignedData)
 
 #[cfg(test)]
 mod tests {
-    extern crate rustc_serialize;
-
     use rustc_serialize::base64::FromBase64;
     use std;
     use std::fs;
