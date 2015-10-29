@@ -19,7 +19,7 @@ import shutil
 
 latest_clang = "clang-3.7"
 
-channels = [
+rusts = [
     "beta",
     "nightly",
     "stable",
@@ -80,11 +80,11 @@ targets = {
 }
 
 def format_entries():
-    return "\n".join([format_entry(os, target, compiler, channel, mode)
+    return "\n".join([format_entry(os, target, compiler, rust, mode)
                       for os in oss
                       for target in targets[os]
                       for compiler in compilers[os]
-                      for channel in channels
+                      for rust in rusts
                       for mode in modes
                       # XXX: 32-bit GCC 4.9 does not work because Travis does
                       # not have g++-4.9-multilib whitelisted for use.
@@ -100,8 +100,8 @@ def format_entries():
 # line does not get cut off in the Travis CI UI.
 entry_template = """
     - env: TARGET_X=%(target)s CC_X=%(cc)s CXX_X=%(cxx)s MODE_X=%(mode)s
-      os: %(os)s
-      rust: %(channel)s"""
+      rust: %(rust)s
+      os: %(os)s"""
 
 entry_packages_template = """
       addons:
@@ -113,7 +113,7 @@ entry_sources_template = """
           sources:
             %(sources)s"""
 
-def format_entry(os, target, compiler, channel, mode):
+def format_entry(os, target, compiler, rust, mode):
     target_words = target.split("-")
     arch = target_words[0]
     vendor = target_words[1]
@@ -144,7 +144,7 @@ def format_entry(os, target, compiler, channel, mode):
             "cxx" : cxx,
             "mode" : mode,
             "packages" : "\n            ".join(prefix_all("- ", packages)),
-            "channel" : channel,
+            "rust" : rust,
             "sources" : "\n            ".join(prefix_all("- ", sources)),
             "target" : target,
             "os" : os,

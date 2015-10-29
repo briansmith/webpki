@@ -8,7 +8,8 @@ SET PATH=C:\Program Files (x86)\MSBuild\%TOOLCHAIN_VERSION%\Bin;%PATH%
 set VCVARSALL="C:\Program Files (x86)\Microsoft Visual Studio %TOOLCHAIN_VERSION%\VC\vcvarsall.bat"
 
 if [%Platform%] NEQ [x64] goto win32
-set RUST_TAR_GZ_BASE=rust-%RUST%-x86_64-pc-windows-msvc
+set TARGET_ARCH=x86_64
+set TARGET_PROGRAM_FILES=%ProgramFiles%
 call %VCVARSALL% amd64
 if %ERRORLEVEL% NEQ 0 exit 1
 goto download
@@ -16,7 +17,8 @@ goto download
 :win32
 echo on
 if [%Platform%] NEQ [Win32] exit 1
-set RUST_TAR_GZ_BASE=rust-%RUST%-i686-pc-windows-msvc
+set TARGET_ARCH=i686
+set TARGET_PROGRAM_FILES=%ProgramFiles(x86)%
 call %VCVARSALL% amd64_x86
 if %ERRORLEVEL% NEQ 0 exit 1
 goto download
@@ -24,28 +26,26 @@ goto download
 :download
 REM vcvarsall turns echo off
 echo on
-set RUST_URL=https://static.rust-lang.org/dist/%RUST_TAR_GZ_BASE%.tar.gz
+set RUST_URL=https://static.rust-lang.org/dist/rust-%RUST%-%TARGET_ARCH%-pc-windows-msvc.msi
 echo Downloading %RUST_URL%...
 mkdir build
-powershell -Command "(New-Object Net.WebClient).DownloadFile('%RUST_URL%', 'build\%RUST_TAR_GZ_BASE%.tar.gz')"
+powershell -Command "(New-Object Net.WebClient).DownloadFile('%RUST_URL%', 'build\rust-%RUST%-%TARGET_ARCH%-pc-windows-msvc.msi')"
 if %ERRORLEVEL% NEQ 0 (
   echo ...downloading failed.
   exit 1
 )
 
-pushd build
-7z x -y %RUST_TAR_GZ_BASE%.tar.gz > nul
+start /wait msiexec /i build\rust-%RUST%-%TARGET_ARCH%-pc-windows-msvc.msi INSTALLDIR="%TARGET_PROGRAM_FILES%\Rust %RUST%" /quiet /qn /norestart
 if %ERRORLEVEL% NEQ 0 exit 1
-7z x -y %RUST_TAR_GZ_BASE%.tar > nul
-if %ERRORLEVEL% NEQ 0 exit 1
-popd
 
-set PATH=%cd%\build\%RUST_TAR_GZ_BASE%\rustc\bin;%cd%\build\%RUST_TAR_GZ_BASE%\cargo\bin;%PATH%
+set PATH="%TARGET_PROGRAM_FILES%\Rust %RUST%\bin";%PATH%
 
 if [%Configuration%] == [Release] set CARGO_MODE=--release
 
 set
 
+link /?
+cl /?
 rustc --version
 cargo --version
 
