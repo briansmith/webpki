@@ -189,7 +189,7 @@ mod no_panic {
 /// A wrapper around a slice that exposes no functions that can panic.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct NoPanicSlice<'a> {
-    bytes: &'a [u8]    
+    bytes: &'a [u8]
 }
 
 impl<'a> NoPanicSlice<'a> {
@@ -211,7 +211,7 @@ impl<'a> NoPanicSlice<'a> {
         } else {
             None
         }
-    }    
+    }
 
     #[inline]
     pub fn as_slice_less_safe(&self) -> &'a [u8] { self.bytes }

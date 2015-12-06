@@ -423,7 +423,7 @@ mod tests {
     fn parse_test_signed_data(file_name: &str) -> TestSignedData {
         let path =
             PathBuf::from("third-party/chromium/data/verify_signed_data")
-	        .join(file_name);
+                .join(file_name);
         let file = fs::File::open(path).unwrap();
         let mut lines = BufReader::new(&file).lines();
 
