@@ -12,11 +12,11 @@
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
+use ring::input::*;
 use super::{Error, FatalError, TrustAnchor};
 use super::cert::{Cert, EndEntityOrCA, parse_cert};
 use super::der;
 use super::name::check_name_constraints;
-use super::input::*;
 use super::signed_data::{parse_spki_value, verify_signed_data};
 use time::Timespec;
 
@@ -59,7 +59,8 @@ fn build_chain<'a>(cert: &Cert<'a>, intermediate_certs: &[Input<'a>],
                                      |trust_anchor: &TrustAnchor<'a>| {
         let trust_anchor_subject =
                 try!(Input::new(trust_anchor.subject)
-                         .ok_or(Error::Fatal(FatalError::InvalidTrustAnchor)));
+                        .map_err(|_|
+                            Error::Fatal(FatalError::InvalidTrustAnchor)));
         if cert.issuer != trust_anchor_subject {
             return Err(Error::UnknownIssuer);
         }
@@ -69,7 +70,8 @@ fn build_chain<'a>(cert: &Cert<'a>, intermediate_certs: &[Input<'a>],
                 Some(name_constraints) => {
                     let name_constraints =
                         try!(Input::new(name_constraints)
-                             .ok_or(Error::Fatal(FatalError::InvalidTrustAnchor)));
+                             .map_err(|_|
+                                Error::Fatal(FatalError::InvalidTrustAnchor)));
                     Some(name_constraints)
                 },
                 None => None
@@ -79,7 +81,7 @@ fn build_chain<'a>(cert: &Cert<'a>, intermediate_certs: &[Input<'a>],
                                |value| check_name_constraints(value, &cert)));
 
         let trust_anchor_spki =
-            try!(Input::new(trust_anchor.spki).ok_or(Error::BadDER));
+            try!(Input::new(trust_anchor.spki).map_err(|_| Error::BadDER));
 
         // TODO: try!(check_distrust(trust_anchor_subject,
         //                           trust_anchor_spki));

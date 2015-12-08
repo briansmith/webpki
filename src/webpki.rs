@@ -21,7 +21,6 @@ extern crate rustc_serialize;
 #[macro_use]
 mod der;
 
-pub mod input;
 pub mod trust_anchor_util;
 
 mod cert;
@@ -29,9 +28,10 @@ mod name;
 mod signed_data;
 mod verify_cert;
 
-pub use input::Input;
 pub use name::verify_cert_dns_name;
 pub use verify_cert::verify_tls_cert;
+
+use ring::input::Input;
 
 pub enum PublicKey<'a> {
     EC(Input<'a>, &'static ring::ecc::EllipticCurve),

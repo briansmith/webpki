@@ -14,9 +14,9 @@
 
 //! Utilities for efficiently embedding trust anchors in programs.
 
+use ring::input::*;
 use super::{Error, TrustAnchor};
 use super::cert::{EndEntityOrCA, parse_cert};
-use super::input::*;
 
 /// Interprets the given DER-encoded certificate as a `TrustAnchor`. The
 /// certificate is not validated. In particular, there is no check that the

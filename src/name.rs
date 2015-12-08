@@ -12,10 +12,10 @@
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
+use ring::input::*;
 use super::cert::{Cert, EndEntityOrCA, parse_cert};
 use super::der;
 use super::Error;
-use super::input::*;
 
 
 // Verify that the given end-entity cert, which is assumed to have been already
@@ -60,7 +60,8 @@ pub fn check_name_constraints<'a>(input: Option<&mut Reader<'a>>,
         if !inner.peek(subtrees_tag as u8) {
             return Ok(None);
         }
-        let subtrees = try!(der::nested(inner, subtrees_tag, |tagged| {
+        let subtrees = try!(der::nested(inner, subtrees_tag,
+                                        Error::BadDER, |tagged| {
             der::expect_tag_and_get_input(tagged, der::Tag::Sequence)
         }));
         Ok(Some(subtrees))
@@ -318,7 +319,7 @@ enum GeneralName<'a> {
 }
 
 fn general_name<'a>(input: &mut Reader<'a>) -> Result<GeneralName<'a>, Error> {
-    use der::{CONSTRUCTED, CONTEXT_SPECIFIC};
+    use ring::der::{CONSTRUCTED, CONTEXT_SPECIFIC};
     const OTHER_NAME_TAG: u8 = CONTEXT_SPECIFIC | CONSTRUCTED | 0;
     const RFC822_NAME_TAG: u8 = CONTEXT_SPECIFIC | 1;
     const DNS_NAME_TAG: u8 = CONTEXT_SPECIFIC | 2;
@@ -521,15 +522,15 @@ fn presented_dns_id_matches_reference_dns_id(presented_dns_id: Input,
             //
             if reference.peek(b'.') {
                 if presented.skip(presented_dns_id.len() -
-                                  reference_dns_id.len()).is_none() {
+                                  reference_dns_id.len()).is_err() {
                     unreachable!();
                 }
             } else {
                 if presented.skip(presented_dns_id.len() -
-                                 reference_dns_id.len() - 1).is_none() {
+                                 reference_dns_id.len() - 1).is_err() {
                     unreachable!();
                 }
-                if presented.read_byte() != Some(b'.') {
+                if presented.read_byte() != Ok(b'.') {
                     return Some(false);
                 }
             }
@@ -542,12 +543,12 @@ fn presented_dns_id_matches_reference_dns_id(presented_dns_id: Input,
 
     // Only allow wildcard labels that consist only of '*'.
     if presented.peek(b'*') {
-        if presented.skip(1).is_none() {
+        if presented.skip(1).is_err() {
             unreachable!();
         }
 
         loop {
-            if reference.read_byte().is_none() {
+            if reference.read_byte().is_err() {
                 return Some(false);
             }
             if reference.peek(b'.') {
@@ -559,7 +560,7 @@ fn presented_dns_id_matches_reference_dns_id(presented_dns_id: Input,
     loop {
         let presented_byte =
             match (presented.read_byte(), reference.read_byte()) {
-                (Some(p), Some(r)) if p == r => p,
+                (Ok(p), Ok(r)) if p == r => p,
                 _ => { return Some(false); }
             };
 
@@ -577,7 +578,7 @@ fn presented_dns_id_matches_reference_dns_id(presented_dns_id: Input,
     if !reference.at_end() {
         if reference_dns_id_role != IDRole::NameConstraint {
             match reference.read_byte() {
-                Some(b'.') => (),
+                Ok(b'.') => (),
                 _ => { return Some(false); }
             };
         }
@@ -643,8 +644,8 @@ fn is_valid_dns_id(hostname: Input, id_role: IDRole,
                      input.peek(b'*');
     let mut is_first_byte = !is_wildcard;
     if is_wildcard {
-        if input.read_byte() != Some(b'*') ||
-           input.read_byte() != Some(b'.') {
+        if input.read_byte() != Ok(b'*') ||
+           input.read_byte() != Ok(b'.') {
             return false;
         }
         dot_count += 1;
@@ -654,7 +655,7 @@ fn is_valid_dns_id(hostname: Input, id_role: IDRole,
         const MAX_LABEL_LENGTH: usize = 63;
 
         match input.read_byte() {
-            Some(b'-') => {
+            Ok(b'-') => {
                 if label_length == 0 {
                     return false; // Labels must not start with a hyphen.
                 }
@@ -666,7 +667,7 @@ fn is_valid_dns_id(hostname: Input, id_role: IDRole,
                 }
             },
 
-            Some(b'0'...b'9') => {
+            Ok(b'0'...b'9') => {
                 if label_length == 0 {
                     label_is_all_numeric = true;
                 }
@@ -677,7 +678,7 @@ fn is_valid_dns_id(hostname: Input, id_role: IDRole,
                 }
             },
 
-            Some(b'a'...b'z') | Some(b'A'...b'Z') | Some(b'_') => {
+            Ok(b'a'...b'z') | Ok(b'A'...b'Z') | Ok(b'_') => {
                 label_is_all_numeric = false;
                 label_ends_with_hyphen = false;
                 label_length += 1;
@@ -686,7 +687,7 @@ fn is_valid_dns_id(hostname: Input, id_role: IDRole,
                 }
             },
 
-            Some(b'.') => {
+            Ok(b'.') => {
                 dot_count += 1;
                 if label_length == 0 &&
                    (id_role != IDRole::NameConstraint || !is_first_byte) {
@@ -738,10 +739,10 @@ fn is_valid_dns_id(hostname: Input, id_role: IDRole,
         // A-Label. The consequence of this is that we effectively discriminate
         // against users of languages that cannot be encoded with ASCII.
         let mut maybe_idn = Reader::new(hostname);
-        if maybe_idn.read_byte() == Some(b'x') &&
-           maybe_idn.read_byte() == Some(b'n') &&
-           maybe_idn.read_byte() == Some(b'-') &&
-           maybe_idn.read_byte() == Some(b'-') {
+        if maybe_idn.read_byte() == Ok(b'x') &&
+           maybe_idn.read_byte() == Ok(b'n') &&
+           maybe_idn.read_byte() == Ok(b'-') &&
+           maybe_idn.read_byte() == Ok(b'-') {
             return false;
         }
     }

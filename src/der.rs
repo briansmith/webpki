@@ -12,107 +12,53 @@
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
+use ring;
+pub use ring::der::{
+    CONSTRUCTED,
+    nested,
+    Tag,
+};
+use ring::input::*;
 use super::Error;
-use super::input::*;
 use time::{Timespec, Tm};
 
-pub const CONSTRUCTED : u8 = 1 << 5;
-pub const CONTEXT_SPECIFIC : u8 = 2 << 6;
-
-#[derive(Clone, Copy, PartialEq)]
-#[repr(u8)]
-pub enum Tag {
-    Boolean = 0x01,
-    Integer = 0x02,
-    BitString = 0x03,
-    OctetString = 0x04,
-    Null = 0x05,
-    OID = 0x06,
-    Sequence = CONSTRUCTED | 0x10, // 0x30
-    UTCTime = 0x17,
-    GeneralizedTime = 0x18,
-
-    ContextSpecificConstructed0 = CONTEXT_SPECIFIC | CONSTRUCTED | 0,
-    ContextSpecificConstructed1 = CONTEXT_SPECIFIC | CONSTRUCTED | 1,
-    ContextSpecificConstructed3 = CONTEXT_SPECIFIC | CONSTRUCTED | 3,
-}
-
+// TODO: Get rid of this. This is just here to make it easier to adapt to the
+// movement of the core DER functionality from libwebpki to *ring*.
+#[inline(always)]
 pub fn expect_tag_and_get_input<'a>(input: &mut Reader<'a>, tag: Tag)
                                     -> Result<Input<'a>, Error> {
-    let (actual_tag, inner) = try!(read_tag_and_get_input(input));
-    if (tag as usize) != (actual_tag as usize) {
-        return Err(Error::BadDER);
-    }
-    Ok(inner)
+    ring::der::expect_tag_and_get_value(input, tag).map_err(|_| Error::BadDER)
 }
 
+// TODO: Get rid of this. This is just here to make it easier to adapt to the
+// movement of the core DER functionality from libwebpki to *ring*.
+#[inline(always)]
 pub fn read_tag_and_get_input<'a>(input: &mut Reader<'a>)
                                   -> Result<(u8, Input<'a>), Error> {
-    let tag = try!(input.read_byte().ok_or(Error::BadDER));
-    if (tag & 0x1F) == 0x1F {
-        return Err(Error::BadDER) // High tag number form is not allowed.
-    }
-
-    // If the high order bit of the first byte is set to zero then the length
-    // is encoded in the seven remaining bits of that byte. Otherwise, those
-    // seven bits represent the number of bytes used to encode the length.
-    let length = match try!(input.read_byte().ok_or(Error::BadDER)) {
-        n if (n & 0x80) == 0 => n as usize,
-        0x81 => {
-            let second_byte = try!(input.read_byte().ok_or(Error::BadDER));
-            if second_byte < 128 {
-                return Err(Error::BadDER) // Not the canonical encoding.
-            }
-            second_byte as usize
-        },
-        0x82 => {
-            let second_byte = try!(input.read_byte().ok_or(Error::BadDER))
-                              as usize;
-            let third_byte = try!(input.read_byte().ok_or(Error::BadDER))
-                             as usize;
-            let combined = (second_byte << 8) | third_byte;
-            if combined < 256 {
-                return Err(Error::BadDER); // Not the canonical encoding.
-            }
-            combined
-        },
-        _ => {
-            return Err(Error::BadDER); // We don't support longer lengths.
-        }
-    };
-
-    let inner = try!(input.skip_and_get_input(length).ok_or(Error::BadDER));
-    Ok((tag, inner))
+    ring::der::read_tag_and_get_value(input).map_err(|_| Error::BadDER)
 }
 
 // TODO: investigate taking decoder as a reference to reduce generated code
 // size.
-pub fn nested<'a, F, R>(input: &mut Reader<'a>, tag: Tag, decoder: F)
-                        -> Result<R, Error>
-                        where F : FnOnce(&mut Reader<'a>) -> Result<R, Error> {
-    let inner = try!(expect_tag_and_get_input(input, tag));
-    read_all(inner, Error::BadDER, decoder)
+#[inline(always)]
+pub fn nested_mut<'a, F, R, E: Copy>(input: &mut Reader<'a>, tag: Tag, error: E,
+                                     decoder: F) -> Result<R, E>
+                                     where F : FnMut(&mut Reader<'a>)
+                                                     -> Result<R, E> {
+    let inner = try!(expect_tag_and_get_input(input, tag).map_err(|_| error));
+    read_all_mut(inner, error, decoder).map_err(|_| error)
 }
 
 // TODO: investigate taking decoder as a reference to reduce generated code
 // size.
-pub fn nested_mut<'a, F, R>(input: &mut Reader<'a>, tag: Tag, decoder: F)
-                            -> Result<R, Error>
-                            where F : FnMut(&mut Reader<'a>)
-                                      -> Result<R, Error> {
-    let inner = try!(expect_tag_and_get_input(input, tag));
-    read_all_mut(inner, Error::BadDER, decoder)
-}
-
-// TODO: investigate taking decoder as a reference to reduce generated code
-// size.
-pub fn nested_of_mut<'a, F>(input: &mut Reader<'a>, outer_tag: Tag,
-                            inner_tag: Tag, mut decoder: F) -> Result<(), Error>
-                            where F : FnMut(&mut Reader<'a>)
-                                      -> Result<(), Error> {
-    nested_mut(input, outer_tag, |outer| {
+pub fn nested_of_mut<'a, F, E: Copy>(input: &mut Reader<'a>, outer_tag: Tag,
+                                     inner_tag: Tag, error: E, mut decoder: F)
+                                     -> Result<(), E>
+                                     where F : FnMut(&mut Reader<'a>)
+                                            -> Result<(), E> {
+    nested_mut(input, outer_tag, error, |outer| {
         loop {
-            try!(nested_mut(outer, inner_tag, |inner| decoder(inner)));
+            try!(nested_mut(outer, inner_tag, error, |inner| decoder(inner)));
             if outer.at_end() {
                 break;
             }
@@ -123,8 +69,9 @@ pub fn nested_of_mut<'a, F>(input: &mut Reader<'a>, outer_tag: Tag,
 
 pub fn bit_string_with_no_unused_bits<'a>(input: &mut Reader<'a>)
                                           -> Result<Input<'a>, Error> {
-    nested(input, Tag::BitString, |value| {
-        let unused_bits_at_end = try!(value.read_byte().ok_or(Error::BadDER));
+    nested(input, Tag::BitString, Error::BadDER, |value| {
+        let unused_bits_at_end =
+            try!(value.read_byte().map_err(|_| Error::BadDER));
         if unused_bits_at_end != 0 {
             return Err(Error::BadDER);
         }
@@ -138,10 +85,10 @@ pub fn optional_boolean(input: &mut Reader) -> Result<bool, Error> {
     if !input.peek(Tag::Boolean as u8) {
         return Ok(false);
     }
-    nested(input, Tag::Boolean, |input| {
+    nested(input, Tag::Boolean, Error::BadDER, |input| {
         match input.read_byte() {
-            Some(0xff) => Ok(true),
-            Some(0x00) => Ok(false),
+            Ok(0xff) => Ok(true),
+            Ok(0x00) => Ok(false),
             _ => Err(Error::BadDER)
         }
     })
@@ -150,8 +97,8 @@ pub fn optional_boolean(input: &mut Reader) -> Result<bool, Error> {
 // This parser will only parse values between 0..127. mozilla::pkix found
 // experimentally that the need to parse larger values is not useful.
 pub fn integer(input: &mut Reader) -> Result<u8, Error> {
-    nested(input, Tag::Integer, |value| {
-        let first_byte = try!(value.read_byte().ok_or(Error::BadDER));
+    nested(input, Tag::Integer, Error::BadDER, |value| {
+        let first_byte = try!(value.read_byte().map_err(|_| Error::BadDER));
         if (first_byte & 0x80) != 0 {
             // We don't accept negative values
             return Err(Error::BadDER);
@@ -161,7 +108,7 @@ pub fn integer(input: &mut Reader) -> Result<u8, Error> {
 }
 
 pub fn null(input: &mut Reader) -> Result<(), Error> {
-    nested(input, Tag::Null, |_| Ok(()))
+    nested(input, Tag::Null, Error::BadDER, |_| Ok(()))
 }
 
 pub fn optional_null(input: &mut Reader) -> Result<(), Error> {
@@ -177,7 +124,7 @@ pub fn time_choice<'a>(input: &mut Reader<'a>) -> Result<Timespec, Error> {
                        else { Tag::GeneralizedTime };
 
     fn read_digit(inner: &mut Reader) -> Result<i32, Error> {
-        let b = try!(inner.read_byte().ok_or(Error::BadDERTime));
+        let b = try!(inner.read_byte().map_err(|_| Error::BadDERTime));
         if b < b'0' || b > b'9' {
             return Err(Error::BadDERTime);
         }
@@ -195,7 +142,7 @@ pub fn time_choice<'a>(input: &mut Reader<'a>) -> Result<Timespec, Error> {
         Ok(value)
     }
 
-    nested(input, expected_tag, |value| {
+    nested(input, expected_tag, Error::BadDER, |value| {
         let (year_hi, year_lo) =
             if is_utc_time {
                 let lo = try!(read_two_digits(value, 0, 99));
@@ -234,7 +181,7 @@ pub fn time_choice<'a>(input: &mut Reader<'a>) -> Result<Timespec, Error> {
         let minutes = try!(read_two_digits(value, 0, 59));
         let seconds = try!(read_two_digits(value, 0, 59));
 
-        let time_zone = try!(value.read_byte().ok_or(Error::BadDERTime));
+        let time_zone = try!(value.read_byte().map_err(|_| Error::BadDERTime));
         if time_zone != b'Z' {
             return Err(Error::BadDERTime);
         }

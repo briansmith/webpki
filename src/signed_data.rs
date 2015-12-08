@@ -14,8 +14,8 @@
 
 use super::{Error, FatalError, PublicKey};
 use super::der;
-use super::input::*;
-use ring::*;
+use ring::{digest, ecc, rsa};
+use ring::input::*;
 
 pub struct SignedData<'a> {
     data: Input<'a>,
@@ -135,7 +135,7 @@ pub fn parse_signed_data<'a>(der: &mut Reader<'a>)
     let tbs = try!(der::expect_tag_and_get_input(der, der::Tag::Sequence));
     let mark2 = der.mark();
     let data = try!(der.get_input_between_marks(mark1, mark2)
-                       .ok_or(Error::Fatal(FatalError::ImpossibleState)));
+                       .map_err(|_| Error::Fatal(FatalError::ImpossibleState)));
     let algorithm = try!(der::expect_tag_and_get_input(der,
                                                        der::Tag::Sequence));
     let signature = try!(der::bit_string_with_no_unused_bits(der));
@@ -256,14 +256,15 @@ mod tests {
     use std::path::PathBuf;
     use super::*;
     use super::super::{der, Error, PublicKey};
-    use super::super::input::{Input, read_all};
+    use ring::input::{Input, read_all};
 
     // TODO: The expected results need to be modified for SHA-1 deprecation
     // and RSA<2048 deprecation.
 
     fn parse_spki<'a>(input: &'a [u8]) -> Result<PublicKey<'a>, Error> {
         read_all(Input::new(input).unwrap(), Error::BadDER, |input| {
-            der::nested(input, der::Tag::Sequence, parse_spki_value)
+            der::nested(input, der::Tag::Sequence, Error::BadDER,
+                        parse_spki_value)
         })
     }
 

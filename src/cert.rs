@@ -12,9 +12,9 @@
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
+use ring::input::*;
 use super::Error;
 use super::der;
-use super::input::*;
 use super::signed_data::{parse_signed_data, SignedData};
 
 pub enum EndEntityOrCA<'a> {
@@ -40,7 +40,8 @@ pub struct Cert<'a> {
 pub fn parse_cert<'a>(cert_der: Input<'a>, ee_or_ca: EndEntityOrCA<'a>)
                       -> Result<Cert<'a>, Error> {
     let (tbs, signed_data) = try!(read_all(cert_der, Error::BadDER, |cert_der| {
-        der::nested(cert_der, der::Tag::Sequence, parse_signed_data)
+        der::nested(cert_der, der::Tag::Sequence, Error::BadDER,
+                    parse_signed_data)
     }));
 
     read_all(tbs, Error::BadDER, |tbs| {
@@ -92,9 +93,9 @@ pub fn parse_cert<'a>(cert_der: Input<'a>, ee_or_ca: EndEntityOrCA<'a>)
         // That has been intentionally omitted.
 
         try!(der::nested_mut(tbs, der::Tag::ContextSpecificConstructed3,
-                             |tagged| {
+                             Error::BadDER, |tagged| {
             der::nested_of_mut(tagged, der::Tag::Sequence, der::Tag::Sequence,
-                               |extension| {
+                               Error::BadDER, |extension| {
                 let extn_id = try!(der::expect_tag_and_get_input(extension,
                                                                  der::Tag::OID));
                 let critical = try!(der::optional_boolean(extension));
@@ -117,7 +118,8 @@ pub fn parse_cert<'a>(cert_der: Input<'a>, ee_or_ca: EndEntityOrCA<'a>)
 // mozilla::pkix supports v1, v2, v3, and v4, including both the implicit
 // (correct) and explicit (incorrect) encoding of v1. We allow only v3.
 fn version3(input: &mut Reader) -> Result<(), Error> {
-    der::nested(input, der::Tag::ContextSpecificConstructed0, |input| {
+    der::nested(input, der::Tag::ContextSpecificConstructed0,
+                Error::BadDER, |input| {
         let version = try!(der::integer(input));
         if version != 2 { // v3
             return Err(Error::UnsupportedCertVersion);
