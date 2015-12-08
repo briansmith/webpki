@@ -21,22 +21,33 @@ extern crate rustc_serialize;
 #[macro_use]
 mod der;
 
-pub mod trust_anchor_util;
-
 mod cert;
 mod name;
 mod signed_data;
+pub mod trust_anchor_util;
 mod verify_cert;
 
+pub use signed_data::{
+    SignatureAlgorithm,
+    ECDSA_P256_SHA1,
+    ECDSA_P256_SHA256,
+    ECDSA_P256_SHA384,
+    ECDSA_P256_SHA512,
+    ECDSA_P384_SHA1,
+    ECDSA_P384_SHA256,
+    ECDSA_P384_SHA384,
+    ECDSA_P384_SHA512,
+    ECDSA_P521_SHA1,
+    ECDSA_P521_SHA256,
+    ECDSA_P521_SHA384,
+    ECDSA_P521_SHA512,
+    RSA_PKCS1_2048_8192_SHA1,
+    RSA_PKCS1_2048_8192_SHA256,
+    RSA_PKCS1_2048_8192_SHA384,
+    RSA_PKCS1_2048_8192_SHA512,
+};
 pub use name::verify_cert_dns_name;
 pub use verify_cert::verify_tls_cert;
-
-use ring::input::Input;
-
-pub enum PublicKey<'a> {
-    EC(Input<'a>, &'static ring::ecc::EllipticCurve),
-    RSA(Input<'a>)
-}
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Error {
@@ -60,7 +71,7 @@ pub enum Error {
     UnsupportedCertVersion,
     UnsupportedCriticalExtension,
     UnsupportedEllipticCurve,
-    UnsupportedKeyAlgorithm,
+    UnsupportedKeyAlgorithmForSignature,
     UnsupportedSignatureAlgorithm,
 }
 

@@ -12,92 +12,15 @@
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-use super::{Error, FatalError, PublicKey};
-use super::der;
-use ring::{digest, ecc, rsa};
 use ring::input::*;
+use ring::signature;
+use super::{Error, FatalError};
+use super::der;
 
 pub struct SignedData<'a> {
     data: Input<'a>,
     pub algorithm: Input<'a>,
     signature: Input<'a>,
-}
-
-#[allow(non_camel_case_types)]
-#[derive(Clone, Copy)]
-enum PublicKeyAlgorithm {
-    ECDSA,
-    RSA_PKCS1,
-}
-
-fn signature_algorithm_identifier_value(input: &mut Reader)
-        -> Result<(PublicKeyAlgorithm, &'static digest::Algorithm),
-                  Error> {
-    let algorithm_id = try!(der::expect_tag_and_get_input(input,
-                                                          der::Tag::OID));
-
-    static OID_MAPPING:
-        [(&'static [u8], PublicKeyAlgorithm,
-          &'static [(u8, &'static digest::Algorithm)]); 4] =
-    [
-        (&oid_1_2_840_10045![4, 3],
-         PublicKeyAlgorithm::ECDSA,
-         &[(2, &digest::SHA256),
-           (3, &digest::SHA384),
-           (4, &digest::SHA512)]),
-
-        (&oid_1_2_840_113549![1, 1],
-         PublicKeyAlgorithm::RSA_PKCS1,
-         &[(11, &digest::SHA256),
-           (12, &digest::SHA384),
-           (13, &digest::SHA512),
-           (5,  &digest::SHA1)]),
-
-        (&oid_1_2_840_10045![4, 1],
-         PublicKeyAlgorithm::ECDSA,
-         &[(1, &digest::SHA1)]),
-
-        // NIST Open Systems Environment (OSE) Implementor's Workshop (OIW)
-        // http://www.oiw.org/agreements/stable/12s-9412.txt (no longer works).
-        // http://www.imc.org/ietf-pkix/old-archive-97/msg01166.html
-        // We need to support this non-PKIX OID for compatibility.
-        (&oid!(1, 3, 14, 3, 2),
-         PublicKeyAlgorithm::RSA_PKCS1,
-         &[(29, &digest::SHA1)]),
-    ];
-
-    for &(prefix, public_key_alg, mappings) in OID_MAPPING.iter() {
-        if algorithm_id.len() != prefix.len() + 1 {
-            continue;
-        }
-        let bytes = algorithm_id.as_slice_less_safe();
-        if !bytes.starts_with(prefix) {
-            continue;
-        }
-        let suffix = bytes.last().unwrap();
-
-        return match mappings.iter().find(|&n| n.0 == *suffix) {
-            Some(&(_, digest_alg)) => {
-                // RFC 5758 Section 3.2 (ECDSA with SHA-2), and RFC 3279
-                // Section 2.2.3 (ECDSA with SHA-1) say that parameters must be
-                // omitted. RFC 4055 Section 5 and RFC 3279 Section 2.2.1 both
-                // say that parameters for RSA must be encoded as NULL; we
-                // relax that requirement by allowing the NULL to be omitted,
-                // to match all the other signature algorithms we support and
-                // for compatibility.
-                match public_key_alg {
-                    PublicKeyAlgorithm::RSA_PKCS1 =>
-                        try!(der::optional_null(input)),
-                    _ => (),
-                }
-                Ok((public_key_alg, digest_alg))
-            },
-
-            None => Err(Error::UnsupportedSignatureAlgorithm)
-        };
-    }
-
-    Err(Error::UnsupportedSignatureAlgorithm)
 }
 
 // Parses the concatenation of tbs||signatureAlgorithm||signatureValue that is
@@ -149,103 +72,313 @@ pub fn parse_signed_data<'a>(der: &mut Reader<'a>)
         }))
 }
 
-/// Parses a SubjectPublicKeyInfo value (without the tag and length).
-pub fn parse_spki_value<'a>(input: &mut Reader<'a>)
-                            -> Result<PublicKey<'a>, Error> {
-    let algorithm =
-        try!(der::expect_tag_and_get_input(input, der::Tag::Sequence));
-    let subject_public_key =
-        try!(der::bit_string_with_no_unused_bits(input));
+/// Verify `signed_data` using the public key in the DER-encoded
+/// SubjectPublicKeyInfo `spki` using one of the algorithms in
+/// `supported_algorithms`.
+///
+/// The algorithm is chosen based on the algorithm information encoded in the
+/// algorithm identifiers in `public_key` and `signed_data.algorithm`. The
+/// ordering of the algorithms in `supported_algorithms` does not really matter,
+/// but generally more common algorithms should go first, as it is scanned
+/// linearly for matches.
+pub fn verify_signed_data(supported_algorithms: &[&SignatureAlgorithm],
+                          spki_value: Input, signed_data: &SignedData)
+                          -> Result<(), Error> {
+    // We need to verify the signature in `signed_data` using the public key
+    // in `public_key`. In order to know which *ring* signature verification
+    // algorithm to use, we need to know the public key algorithm (ECDSA,
+    // RSA PKCS#1, etc.), the curve (if applicable), and the digest algorithm.
+    // `signed_data` identifies only the public key algorithm and the digest
+    // algorithm, and `public_key` identifies only the public key algorithm and
+    // the curve (if any). Thus, we have to combine information from both
+    // inputs to figure out which `ring::signature::VerificationAlgorithm` to
+    // use to verify the signature.
+    //
+    // This is all further complicated by the fact that we don't have any
+    // implicit knowledge about any algorithms or identifiers, since all of
+    // that information is encoded in `supported_algorithms.` In particular, we
+    // avoid hard-coding any of that information so that (link-time) dead code
+    // elimination will work effectively in eliminating code for unused
+    // algorithms.
 
-    read_all(algorithm, Error::BadDER, |algorithm| {
-        let algorithm_oid =
-            try!(der::expect_tag_and_get_input(algorithm, der::Tag::OID));
-        if input_equals(algorithm_oid, &oid_1_2_840_10045![2, 1]) {
-            // id-ecPublicKey from RFC 3279 Section 2.3.5 & RFC 5480 Section
-            // 2.1.1
-            make_ec_public_key(algorithm, subject_public_key)
-        } else if input_equals(algorithm_oid, &oid_1_2_840_113549![1, 1, 1]) {
-            // rsaEncryption from RFC 3279 Section 2.3.1
-            make_rsa_public_key(algorithm, subject_public_key)
-        } else {
-            Err(Error::UnsupportedKeyAlgorithm)
+    // Parse the signature.
+    //
+    let (algorithm_id, parameters) =
+            try!(read_all(signed_data.algorithm, Error::BadDER, |input| {
+        let algorithm_id = try!(der::expect_tag_and_get_input(input,
+                                                              der::Tag::OID));
+        Ok((algorithm_id, input.skip_to_end()))
+    }));
+
+    let mut found_signature_alg_match = false;
+    //let mut found_key_alg_match = false;
+    for supported_alg in supported_algorithms {
+        if !supported_alg.signature_alg_oids.into_iter().any(|oid| {
+            input_equals(algorithm_id, oid)
+        }) {
+            continue;
         }
+
+        if !supported_alg.public_key_alg.shared
+                         .allowed_signature_alg_parameters
+                         .into_iter().any(|allowed_param| {
+            input_equals(parameters, allowed_param)
+        }) {
+            continue;
+        }
+
+        found_signature_alg_match = true;
+
+        let (spki_algorithm_oid, spki_curve_oid, spki_key) =
+            try!(parse_spki_value(spki_value));
+        if !input_equals(spki_algorithm_oid,
+                         supported_alg.public_key_alg.shared
+                                      .spki_algorithm_oid) {
+            continue;
+        }
+
+        match (spki_curve_oid, supported_alg.public_key_alg.curve_oid) {
+            (None, None) => (),
+            (Some(spki_oid), Some(supported_oid))
+                    if input_equals(spki_oid, supported_oid) => (),
+            _ => { continue },
+        };
+
+        return signature::verify(supported_alg.verification_alg, spki_key,
+                                 signed_data.data, signed_data.signature)
+                    .map_err(|_| Error::BadSignature);
+    }
+
+    if found_signature_alg_match {
+        Err(Error::UnsupportedKeyAlgorithmForSignature)
+    } else {
+        Err(Error::UnsupportedSignatureAlgorithm)
+    }
+}
+
+// Parse the public key into an algorithm OID, an optional curve OID, and the
+// key value. The caller needs to check whether these match the
+// `PublicKeyAlgorithm` for the `SignatureAlgorithm` that is matched when
+// parsing the signature.
+fn parse_spki_value<'a>(input: Input<'a>) ->
+                        Result<(Input<'a>, Option<Input<'a>>, Input<'a>),
+                               Error> {
+    read_all(input, Error::BadDER, |input| {
+        let (algorithm_oid, curve_oid) =
+                try!(der::nested(input, der::Tag::Sequence, Error::BadDER,
+                                 |input| {
+            let algorithm_oid =
+                try!(der::expect_tag_and_get_input(input, der::Tag::OID));
+
+            // We only support algorithm identifiers that have either an
+            // OID parameter (id-ecPublicKey using the named curve form as
+            // specified in RFC 5480) or a NULL parameter (RSA as specified
+            // in RFC 3279 Section 2.3.1).
+            let curve_oid = if input.peek(der::Tag::OID as u8) {
+                let curve_oid =
+                    try!(der::expect_tag_and_get_input(input, der::Tag::OID));
+                Some(curve_oid)
+            } else {
+                try!(der::null(input));
+                None
+            };
+            Ok((algorithm_oid, curve_oid))
+        }));
+        let public_key = try!(der::bit_string_with_no_unused_bits(input));
+        Ok((algorithm_oid, curve_oid, public_key))
     })
 }
 
-fn make_ec_public_key<'a>(algorithm: &mut Reader, spk: Input<'a>) ->
-                          Result<PublicKey<'a>, Error> {
-    // An id-ecPublicKey algorithm_identifier has a parameter that identifies
-    // the curve being used. Although RFC 5480 specifies multiple forms, we
-    // only supported the NamedCurve form, where the curve is identified by an
-    // OID.
 
-    let named_curve_oid_value =
-        try!(der::expect_tag_and_get_input(algorithm, der::Tag::OID));
-
-    let curve: &'static ecc::EllipticCurve =
-        if input_equals(named_curve_oid_value, &oid_1_2_840_10045![3, 1, 7]) {
-            &ecc::CURVE_P256
-        } else if input_equals(named_curve_oid_value, &oid_1_3_132![0, 34]) {
-            &ecc::CURVE_P384
-        } else if input_equals(named_curve_oid_value, &oid_1_3_132![0, 35]) {
-            &ecc::CURVE_P521
-        } else {
-            return Err(Error::UnsupportedEllipticCurve);
-        };
-
-    // TODO: Check whether the application wants to allow the curve. For now,
-    // we assume all 3 supported curves are acceptable.
-
-    // NOTE: mozilla::pkix parses the subjectPublicKey and checks whether it
-    // makes sense syntactically (e.g. that only uncompressed points are
-    // accepted). libwebpki instead relies on the crypto library to do that.
-
-    Ok(PublicKey::EC(spk, curve))
+/// A signature algorithm.
+pub struct SignatureAlgorithm {
+    signature_alg_oids: &'static [&'static [u8]],
+    public_key_alg: &'static PublicKeyAlgorithm,
+    verification_alg: &'static (signature::VerificationAlgorithm + Sync),
 }
 
-fn make_rsa_public_key<'a>(algorithm: &mut Reader<'a>, spk: Input<'a>)
-                           -> Result<PublicKey<'a>, Error> {
-    // RFC 3279 Section 2.3.1 says "The parameters field MUST have ASN.1 type
-    // NULL for this algorithm identifier."
-    try!(der::null(algorithm));
+// RFC 5758 Section 3.2 (ECDSA with SHA-2), and RFC 3279 Section 2.2.3 (ECDSA
+// with SHA-1) say that parameters must be omitted. RFC 4055 Section 5 and RFC
+// 3279 Section 2.2.1 both say that parameters for RSA must be encoded as NULL;
+// we relax that requirement by allowing the NULL to be omitted, to match all
+// the other signature algorithms we support and for compatibility.
 
-    // NOTE: mozilla::pkix parses the subjectPublicKey and checks whether it
-    // is syntactically valid. It also asks the TrustDomain if the modulus size
-    // is acceptable. libwebpki instead relies on the crypto library to do
-    // those checks.
+pub static ECDSA_P256_SHA1: SignatureAlgorithm = SignatureAlgorithm {
+    signature_alg_oids: &[ECDSA_SHA1_OID],
+    public_key_alg: &ECDSA_P256,
+    verification_alg: &signature::ECDSA_P256_SHA1,
+};
 
-    Ok(PublicKey::RSA(spk))
+pub static ECDSA_P256_SHA256: SignatureAlgorithm = SignatureAlgorithm {
+    signature_alg_oids: &[ECDSA_SHA256_OID],
+    public_key_alg: &ECDSA_P256,
+    verification_alg: &signature::ECDSA_P256_SHA256,
+};
+
+pub static ECDSA_P256_SHA384: SignatureAlgorithm = SignatureAlgorithm {
+    signature_alg_oids: &[ECDSA_SHA384_OID],
+    public_key_alg: &ECDSA_P256,
+    verification_alg: &signature::ECDSA_P256_SHA384,
+};
+
+pub static ECDSA_P256_SHA512: SignatureAlgorithm = SignatureAlgorithm {
+    signature_alg_oids: &[ECDSA_SHA512_OID],
+    public_key_alg: &ECDSA_P256,
+    verification_alg: &signature::ECDSA_P256_SHA512,
+};
+
+pub static ECDSA_P384_SHA1: SignatureAlgorithm = SignatureAlgorithm {
+    signature_alg_oids: &[ECDSA_SHA1_OID],
+    public_key_alg: &ECDSA_P384,
+    verification_alg: &signature::ECDSA_P384_SHA1,
+};
+
+pub static ECDSA_P384_SHA256: SignatureAlgorithm = SignatureAlgorithm {
+    signature_alg_oids: &[ECDSA_SHA256_OID],
+    public_key_alg: &ECDSA_P384,
+    verification_alg: &signature::ECDSA_P384_SHA256,
+};
+
+pub static ECDSA_P384_SHA384: SignatureAlgorithm = SignatureAlgorithm {
+    signature_alg_oids: &[ECDSA_SHA384_OID],
+    public_key_alg: &ECDSA_P384,
+    verification_alg: &signature::ECDSA_P384_SHA384,
+};
+
+pub static ECDSA_P384_SHA512: SignatureAlgorithm = SignatureAlgorithm {
+    signature_alg_oids: &[ECDSA_SHA512_OID],
+    public_key_alg: &ECDSA_P384,
+    verification_alg: &signature::ECDSA_P384_SHA512,
+};
+
+pub static ECDSA_P521_SHA1: SignatureAlgorithm = SignatureAlgorithm {
+    signature_alg_oids: &[ECDSA_SHA1_OID],
+    public_key_alg: &ECDSA_P521,
+    verification_alg: &signature::ECDSA_P521_SHA1,
+};
+
+pub static ECDSA_P521_SHA256: SignatureAlgorithm = SignatureAlgorithm {
+    signature_alg_oids: &[ECDSA_SHA256_OID],
+    public_key_alg: &ECDSA_P521,
+    verification_alg: &signature::ECDSA_P521_SHA256,
+};
+
+pub static ECDSA_P521_SHA384: SignatureAlgorithm = SignatureAlgorithm {
+    signature_alg_oids: &[ECDSA_SHA384_OID],
+    public_key_alg: &ECDSA_P521,
+    verification_alg: &signature::ECDSA_P521_SHA384,
+};
+
+pub static ECDSA_P521_SHA512: SignatureAlgorithm = SignatureAlgorithm {
+    signature_alg_oids: &[ECDSA_SHA512_OID],
+    public_key_alg: &ECDSA_P521,
+    verification_alg: &signature::ECDSA_P521_SHA512,
+};
+
+
+pub static RSA_PKCS1_2048_8192_SHA1: SignatureAlgorithm = SignatureAlgorithm {
+    signature_alg_oids: &[RSA_PKCS1_SHA1_OID, RSA_PKCS1_SHA1_OSE_OID],
+    public_key_alg: &RSA_PKCS1,
+    verification_alg: &signature::RSA_PKCS1_2048_8192_SHA1,
+};
+
+pub static RSA_PKCS1_2048_8192_SHA256: SignatureAlgorithm = SignatureAlgorithm {
+    signature_alg_oids: &[RSA_PKCS1_SHA256_OID],
+    public_key_alg: &RSA_PKCS1,
+    verification_alg: &signature::RSA_PKCS1_2048_8192_SHA256,
+};
+
+pub static RSA_PKCS1_2048_8192_SHA384: SignatureAlgorithm = SignatureAlgorithm {
+    signature_alg_oids: &[RSA_PKCS1_SHA384_OID],
+    public_key_alg: &RSA_PKCS1,
+    verification_alg: &signature::RSA_PKCS1_2048_8192_SHA384,
+};
+
+pub static RSA_PKCS1_2048_8192_SHA512: SignatureAlgorithm = SignatureAlgorithm {
+    signature_alg_oids: &[RSA_PKCS1_SHA512_OID],
+    public_key_alg: &RSA_PKCS1,
+    verification_alg: &signature::RSA_PKCS1_2048_8192_SHA512,
+};
+
+
+struct PublicKeyAlgorithm {
+    shared: &'static PublicKeyAlgorithmSharedInfo,
+    curve_oid: Option<&'static [u8]>,
 }
 
-pub fn verify_signed_data(public_key: &PublicKey, signed_data: &SignedData)
-                          -> Result<(), Error> {
-    let (public_key_alg, ref digest_alg) =
-        try!(read_all(signed_data.algorithm, Error::BadDER,
-                      signature_algorithm_identifier_value));
+static ECDSA_P256: PublicKeyAlgorithm = PublicKeyAlgorithm {
+    shared: &ECDSA_SHARED,
+    curve_oid: Some(&oid_1_2_840_10045![3, 1, 7]),
+};
 
-    // TODO: mozilla::pkix asks the TrustDomain to digest the data and verify
-    // the signature, so that the TrustDomain can choose the crypto
-    // implementations and also so it can choose which algorithms and
-    // parameters are acceptable. We should eventually so similar.
+static ECDSA_P384: PublicKeyAlgorithm = PublicKeyAlgorithm {
+    shared: &ECDSA_SHARED,
+    curve_oid: Some(&oid_1_3_132![0, 34]),
+};
 
-    let digest = digest::digest(digest_alg,
-                                signed_data.data.as_slice_less_safe());
+static ECDSA_P521: PublicKeyAlgorithm = PublicKeyAlgorithm {
+    shared: &ECDSA_SHARED,
+    curve_oid: Some(&oid_1_3_132![0, 35]),
+};
 
-    let verified = match (public_key_alg, public_key) {
-        (PublicKeyAlgorithm::ECDSA, &PublicKey::EC(public_point, curve)) =>
-            ecc::verify_ecdsa_signed_digest_asn1(
-                curve, &digest, signed_data.signature.as_slice_less_safe(),
-                public_point.as_slice_less_safe()),
-        (PublicKeyAlgorithm::RSA_PKCS1, &PublicKey::RSA(rsa_public_key)) =>
-            rsa::verify_rsa_pkcs1_signed_digest_asn1(
-                &digest, signed_data.signature.as_slice_less_safe(),
-                rsa_public_key.as_slice_less_safe()),
-        _ => Err(()) // The algorithms do not match.
-    };
+// RFC 3279 Section 2.3.1 says "The parameters field MUST have ASN.1 type
+// NULL for this algorithm identifier."
+static RSA_PKCS1: PublicKeyAlgorithm = PublicKeyAlgorithm {
+    shared: &RSA_PKCS1_SHARED,
+    curve_oid: None,
+};
 
-    verified.or(Err(Error::BadSignature))
+
+struct PublicKeyAlgorithmSharedInfo {
+    spki_algorithm_oid: &'static [u8],
+
+    /// XXX: Technically, this should be a property of the `SignatureAlgorithm`,
+    /// but it is a property of the `PublicKeyAlgorithm` as an optimization,
+    /// as its value never differs for `SignatureAlgorithm`s that have the same
+    /// `PublicKeyAlgorithm`. However, keep in mind that this applies to the
+    /// `AlgorithmIdentifier` for the *signature*, not the `AlgorithmIdentifier`
+    /// for the `SubjectPublicKeyAlgorithm`.
+    allowed_signature_alg_parameters: &'static [&'static [u8]],
 }
+
+// id-ecPublicKey from RFC 3279 Section 2.3.5 & RFC 5480 Section 2.1.1
+const ECDSA_SHARED: PublicKeyAlgorithmSharedInfo = PublicKeyAlgorithmSharedInfo {
+    spki_algorithm_oid: &oid_1_2_840_10045![2, 1],
+
+    // RFC 5758 Section 3.2 (ECDSA with SHA-2), and RFC 3279 Section 2.2.3
+    // (ECDSA with SHA-1) say that parameters must be omitted in signatures.
+    allowed_signature_alg_parameters: &[&[]],
+};
+
+const RSA_PKCS1_SHARED: PublicKeyAlgorithmSharedInfo =
+        PublicKeyAlgorithmSharedInfo {
+    spki_algorithm_oid: &oid_1_2_840_113549![1, 1, 1],
+
+    // RFC 4055 Section 5 and RFC 3279 Section 2.2.1 both say that parameters
+    // for RSA PKCS#1 must be encoded as NULL; we relax that requirement by
+    // allowing the NULL to be omitted, to match all the other signature
+    // algorithms we support and for compatibility.
+    allowed_signature_alg_parameters: &[&[], &[0x05, 0x00]], // Optional NULL.
+};
+
+// TODO: add documentation for all this stuff.
+
+const ECDSA_SHA1_OID: &'static [u8] = &oid_1_2_840_10045![4, 1, 1];
+const ECDSA_SHA256_OID: &'static [u8] = &oid_1_2_840_10045![4, 3, 2];
+const ECDSA_SHA384_OID: &'static [u8] = &oid_1_2_840_10045![4, 3, 3];
+const ECDSA_SHA512_OID: &'static [u8] = &oid_1_2_840_10045![4, 3, 4];
+
+const RSA_PKCS1_SHA1_OID: &'static [u8] = &oid_1_2_840_113549![1, 1, 5];
+const RSA_PKCS1_SHA256_OID: &'static [u8] = &oid_1_2_840_113549![1, 1, 11];
+const RSA_PKCS1_SHA384_OID: &'static [u8] = &oid_1_2_840_113549![1, 1, 12];
+const RSA_PKCS1_SHA512_OID: &'static [u8] = &oid_1_2_840_113549![1, 1, 13];
+
+// NIST Open Systems Environment (OSE) Implementor's Workshop (OIW)
+// http://www.oiw.org/agreements/stable/12s-9412.txt (no longer works).
+// http://www.imc.org/ietf-pkix/old-archive-97/msg01166.html
+// We need to support this non-PKIX OID for compatibility.
+const RSA_PKCS1_SHA1_OSE_OID: &'static [u8] = &oid!(1, 3, 14, 3, 2, 29);
+
 
 #[cfg(test)]
 mod tests {
@@ -254,85 +387,135 @@ mod tests {
     use std::fs;
     use std::io::{BufRead, BufReader, Lines};
     use std::path::PathBuf;
-    use super::*;
-    use super::super::{der, Error, PublicKey};
+    use super::super::{der, Error, signed_data};
     use ring::input::{Input, read_all};
 
-    // TODO: The expected results need to be modified for SHA-1 deprecation
-    // and RSA<2048 deprecation.
+    // TODO: The expected results need to be modified for SHA-1 deprecation.
 
-    fn parse_spki<'a>(input: &'a [u8]) -> Result<PublicKey<'a>, Error> {
-        read_all(Input::new(input).unwrap(), Error::BadDER, |input| {
-            der::nested(input, der::Tag::Sequence, Error::BadDER,
-                        parse_spki_value)
-        })
+    macro_rules! test_verify_signed_data {
+        ($fn_name:ident, $file_name:expr, $expected_result:expr) => {
+            #[test]
+            fn $fn_name() {
+                test_verify_signed_data($file_name, $expected_result);
+            }
+        }
+    }
+
+    fn test_verify_signed_data(file_name: &str,
+                               expected_result: Result<(), Error>) {
+        let tsd = parse_test_signed_data(file_name);
+        let spki_value = read_all(Input::new(&tsd.spki).unwrap(), Error::BadDER,
+                                  |input| {
+            der::expect_tag_and_get_input(input, der::Tag::Sequence)
+        }).unwrap();
+
+        // we can't use `parse_signed_data` because it requires `data`
+        // to be an ASN.1 SEQUENCE, and that isn't the case with
+        // Chromium's test data. TODO: The test data set should be
+        // expanded with SEQUENCE-wrapped data so that we can actually
+        // test `parse_signed_data`.
+
+        let algorithm = read_all(Input::new(&tsd.algorithm).unwrap(),
+                                    Error::BadDER, |input| {
+            der::expect_tag_and_get_input(input, der::Tag::Sequence)
+        }).unwrap();
+
+        let signature = read_all(Input::new(&tsd.signature).unwrap(),
+                                    Error::BadDER, |input| {
+            der::bit_string_with_no_unused_bits(input)
+        }).unwrap();
+
+        let signed_data = signed_data::SignedData {
+            data: Input::new(&tsd.data).unwrap(),
+            algorithm: algorithm,
+            signature: signature
+        };
+
+        assert_eq!(expected_result,
+                   signed_data::verify_signed_data(
+                        &SUPPORTED_ALGORITHMS_IN_TESTS, spki_value,
+                        &signed_data));
+    }
+
+    // XXX: This is testing code that isn't even in this module.
+    macro_rules! test_verify_signed_data_signature_outer {
+        ($fn_name:ident, $file_name:expr, $expected_result:expr) => {
+            #[test]
+            fn $fn_name() {
+                test_verify_signed_data_signature_outer($file_name,
+                                                        $expected_result);
+            }
+        }
+    }
+
+    fn test_verify_signed_data_signature_outer(file_name: &str,
+                                               expected_error: Error) {
+        let tsd = parse_test_signed_data(file_name);
+        assert_eq!(Err(expected_error),
+                   read_all(Input::new(&tsd.signature).unwrap(), Error::BadDER,
+                            |input| {
+            der::bit_string_with_no_unused_bits(input)
+        }));
     }
 
     macro_rules! test_parse_spki_bad {
         ($fn_name:ident, $file_name:expr, $error:expr) => {
             #[test]
             fn $fn_name() {
-                let tsd = parse_test_signed_data($file_name);
-                match parse_spki(&tsd.spki) {
-                    Ok(_) => unreachable!(),
-                    Err(actual_error) => assert_eq!(actual_error, $error)
-                }
+                test_parse_spki_bad($file_name, $error)
             }
         }
     }
 
-    macro_rules! test_verify_signed_data {
-        ($fn_name:ident, $file_name:expr, $expected_result:expr) => {
+    fn test_parse_spki_bad(file_name: &str, expected_error: Error) {
+        let tsd = parse_test_signed_data(file_name);
+        let spki_value = read_all(Input::new(&tsd.spki).unwrap(),
+                                  Error::BadDER, |input| {
+            der::expect_tag_and_get_input(input, der::Tag::Sequence)
+        }).unwrap();
+        match signed_data::parse_spki_value(spki_value) {
+            Ok(_) => unreachable!(),
+            Err(actual_error) => assert_eq!(expected_error, actual_error)
+        }
+    }
+
+    // XXX: This is testing code that is not even in this module.
+    macro_rules! test_parse_spki_bad_outer {
+        ($fn_name:ident, $file_name:expr, $error:expr) => {
             #[test]
             fn $fn_name() {
-                let tsd = parse_test_signed_data($file_name);
-                let key = parse_spki(&tsd.spki).unwrap();
-
-                // we can't use `parse_signed_data` because it requires `data`
-                // to be an ASN.1 SEQUENCE, and that isn't the case with
-                // Chromium's test data. TODO: The test data set should be
-                // expanded with SEQUENCE-wrapped data so that we can actually
-                // test `parse_signed_data`.
-
-                let algorithm = read_all(Input::new(&tsd.algorithm).unwrap(),
-                                         Error::BadDER, |input| {
-                    der::expect_tag_and_get_input(input, der::Tag::Sequence)
-                }).unwrap();
-
-                let signature = read_all(Input::new(&tsd.signature).unwrap(),
-                                         Error::BadDER, |input| {
-                    der::bit_string_with_no_unused_bits(input)
-                }).unwrap();
-
-                let signed_data = SignedData {
-                    data: Input::new(&tsd.data).unwrap(),
-                    algorithm: algorithm,
-                    signature: signature
-                };
-
-                assert_eq!($expected_result,
-                           verify_signed_data(&key, &signed_data));
+                test_parse_spki_bad_outer($file_name, $error)
             }
         }
     }
 
-    test_parse_spki_bad!(test_ecdsa_prime256v1_sha512_spki_params_null,
-                         "ecdsa-prime256v1-sha512-spki-params-null.pem",
-                         Error::BadDER);
-    // TODO:
-    // test_parse_signed_data_bad!(
-    //     test_ecdsa_prime256v1_sha512_unused_bits_signature,
-    //     "ecdsa-prime256v1-sha512-unused-bits-signature.pem",
-    //     Error::BadDER);
-    test_parse_spki_bad!(test_ecdsa_prime256v1_sha512_using_ecdh_key,
-                         "ecdsa-prime256v1-sha512-using-ecdh-key.pem",
-                         Error::UnsupportedKeyAlgorithm);
-    test_parse_spki_bad!(test_ecdsa_prime256v1_sha512_using_ecmqv_key,
-                         "ecdsa-prime256v1-sha512-using-ecmqv-key.pem",
-                         Error::UnsupportedKeyAlgorithm);
+    fn test_parse_spki_bad_outer(file_name: &str, expected_error: Error) {
+        let tsd = parse_test_signed_data(file_name);
+        assert_eq!(Err(expected_error),
+                   read_all(Input::new(&tsd.spki).unwrap(), Error::BadDER,
+                            |input| {
+            der::expect_tag_and_get_input(input, der::Tag::Sequence)
+        }));
+    }
+
+    // XXX: Some of the BadDER tests should have better error codes, maybe?
+
+    test_verify_signed_data!(test_ecdsa_prime256v1_sha512_spki_params_null,
+                             "ecdsa-prime256v1-sha512-spki-params-null.pem",
+                             Err(Error::UnsupportedKeyAlgorithmForSignature));
+    test_verify_signed_data_signature_outer!(
+        test_ecdsa_prime256v1_sha512_unused_bits_signature,
+        "ecdsa-prime256v1-sha512-unused-bits-signature.pem",
+        Error::BadDER);
+    test_verify_signed_data!(test_ecdsa_prime256v1_sha512_using_ecdh_key,
+                             "ecdsa-prime256v1-sha512-using-ecdh-key.pem",
+                             Err(Error::UnsupportedKeyAlgorithmForSignature));
+    test_verify_signed_data!(test_ecdsa_prime256v1_sha512_using_ecmqv_key,
+                             "ecdsa-prime256v1-sha512-using-ecmqv-key.pem",
+                             Err(Error::UnsupportedKeyAlgorithmForSignature));
     test_verify_signed_data!(test_ecdsa_prime256v1_sha512_using_rsa_algorithm,
                              "ecdsa-prime256v1-sha512-using-rsa-algorithm.pem",
-                             Err(Error::BadSignature));
+                             Err(Error::UnsupportedKeyAlgorithmForSignature));
     test_verify_signed_data!(
         test_ecdsa_prime256v1_sha512_wrong_signature_format,
         "ecdsa-prime256v1-sha512-wrong-signature-format.pem",
@@ -346,49 +529,57 @@ mod tests {
                              "ecdsa-secp384r1-sha256.pem", Ok(()));
     test_verify_signed_data!(test_ecdsa_using_rsa_key,
                              "ecdsa-using-rsa-key.pem",
-                             Err(Error::BadSignature));
+                             Err(Error::UnsupportedKeyAlgorithmForSignature));
 
-    test_parse_spki_bad!(test_rsa_pkcs1_sha1_bad_key_der_length,
-                         "rsa-pkcs1-sha1-bad-key-der-length.pem",
-                         Error::BadDER);
-    test_parse_spki_bad!(test_rsa_pkcs1_sha1_bad_key_der_null,
-                         "rsa-pkcs1-sha1-bad-key-der-null.pem",
-                         Error::BadDER);
-    test_parse_spki_bad!(test_rsa_pkcs1_sha1_key_params_absent,
-                         "rsa-pkcs1-sha1-key-params-absent.pem",
-                         Error::BadDER);
+    test_parse_spki_bad_outer!(test_rsa_pkcs1_sha1_bad_key_der_length,
+                               "rsa-pkcs1-sha1-bad-key-der-length.pem",
+                               Error::BadDER);
+    test_parse_spki_bad_outer!(test_rsa_pkcs1_sha1_bad_key_der_null,
+                               "rsa-pkcs1-sha1-bad-key-der-null.pem",
+                               Error::BadDER);
+    test_verify_signed_data!(test_rsa_pkcs1_sha1_key_params_absent,
+                             "rsa-pkcs1-sha1-key-params-absent.pem",
+                             Err(Error::BadDER));
     test_parse_spki_bad!(test_rsa_pkcs1_sha1_using_pss_key_no_params,
                          "rsa-pkcs1-sha1-using-pss-key-no-params.pem",
-                         Error::UnsupportedKeyAlgorithm);
+                         Error::BadDER);
     test_verify_signed_data!(test_rsa_pkcs1_sha1_wrong_algorithm,
                              "rsa-pkcs1-sha1-wrong-algorithm.pem",
                              Err(Error::BadSignature));
-    test_verify_signed_data!(test_rsa_pkcs1_sha1,
-                             "rsa-pkcs1-sha1.pem", Ok(()));
-    test_verify_signed_data!(test_rsa_pkcs1_sha256,
-                             "rsa-pkcs1-sha256.pem", Ok(()));
-    test_parse_spki_bad!(test_rsa_pkcs1_sha256_key_encoded_ber,
-                         "rsa-pkcs1-sha256-key-encoded-ber.pem",
-                         Error::BadDER);
+    // XXX: RSA PKCS#1 with SHA-1 is a supported algorithm, but we only accept
+    // 2048-8192 bit keys, and this test file is using a 1024 bit key. Thus,
+    // our results differ from Chromium's. TODO: this means we need a 2048+ bit
+    // version of this test.
+    test_verify_signed_data!(test_rsa_pkcs1_sha1, "rsa-pkcs1-sha1.pem",
+                             Err(Error::BadSignature));
+    // XXX: RSA PKCS#1 with SHA-1 is a supported algorithm, but we only accept
+    // 2048-8192 bit keys, and this test file is using a 1024 bit key. Thus,
+    // our results differ from Chromium's. TODO: this means we need a 2048+ bit
+    // version of this test.
+    test_verify_signed_data!(test_rsa_pkcs1_sha256, "rsa-pkcs1-sha256.pem",
+                             Err(Error::BadSignature));
+    test_parse_spki_bad_outer!(test_rsa_pkcs1_sha256_key_encoded_ber,
+                               "rsa-pkcs1-sha256-key-encoded-ber.pem",
+                               Error::BadDER);
     test_parse_spki_bad!(test_rsa_pkcs1_sha256_spki_non_null_params,
                          "rsa-pkcs1-sha256-spki-non-null-params.pem",
                          Error::BadDER);
     test_verify_signed_data!(test_rsa_pkcs1_sha256_using_ecdsa_algorithm,
                              "rsa-pkcs1-sha256-using-ecdsa-algorithm.pem",
-                             Err(Error::BadSignature));
-    test_parse_spki_bad!(test_rsa_pkcs1_sha256_using_id_ea_rsa,
-                         "rsa-pkcs1-sha256-using-id-ea-rsa.pem",
-                         Error::UnsupportedKeyAlgorithm);
+                             Err(Error::UnsupportedKeyAlgorithmForSignature));
+    test_verify_signed_data!(test_rsa_pkcs1_sha256_using_id_ea_rsa,
+                             "rsa-pkcs1-sha256-using-id-ea-rsa.pem",
+                             Err(Error::UnsupportedKeyAlgorithmForSignature));
 
-    // PSS is not supported, so our test results are not the same as Chromium's
-    // test results for these cases.
+    // XXX: PSS is not supported, so our test results are not the same as
+    // Chromium's test results for these cases.
     test_parse_spki_bad!(test_rsa_pss_sha1_salt20_using_pss_key_no_params,
                          "rsa-pss-sha1-salt20-using-pss-key-no-params.pem",
-                         Error::UnsupportedKeyAlgorithm);
-    test_parse_spki_bad!(
+                         Error::BadDER);
+    test_verify_signed_data!(
         test_rsa_pss_sha1_salt20_using_pss_key_with_null_params,
         "rsa-pss-sha1-salt20-using-pss-key-with-null-params.pem",
-        Error::UnsupportedKeyAlgorithm);
+        Err(Error::UnsupportedSignatureAlgorithm));
     test_verify_signed_data!(test_rsa_pss_sha1_salt20, "rsa-pss-sha1-salt20.pem",
                              Err(Error::UnsupportedSignatureAlgorithm));
     test_verify_signed_data!(test_rsa_pss_sha1_wrong_salt,
@@ -397,20 +588,20 @@ mod tests {
     test_verify_signed_data!(test_rsa_pss_sha256_mgf1_sha512_salt33,
                              "rsa-pss-sha256-mgf1-sha512-salt33.pem",
                              Err(Error::UnsupportedSignatureAlgorithm));
-    test_parse_spki_bad!(
+    test_verify_signed_data!(
         test_rsa_pss_sha256_salt10_using_pss_key_with_params,
         "rsa-pss-sha256-salt10-using-pss-key-with-params.pem",
-        Error::UnsupportedKeyAlgorithm);
-    test_parse_spki_bad!(
+        Err(Error::UnsupportedSignatureAlgorithm));
+    test_verify_signed_data!(
         test_rsa_pss_sha256_salt10_using_pss_key_with_wrong_params,
         "rsa-pss-sha256-salt10-using-pss-key-with-wrong-params.pem",
-        Error::UnsupportedKeyAlgorithm);
+        Err(Error::UnsupportedSignatureAlgorithm));
     test_verify_signed_data!(test_rsa_pss_sha256_salt10,
                              "rsa-pss-sha256-salt10.pem",
                              Err(Error::UnsupportedSignatureAlgorithm));
 
     test_verify_signed_data!(test_rsa_using_ec_key, "rsa-using-ec-key.pem",
-                             Err(Error::BadSignature));
+                             Err(Error::UnsupportedKeyAlgorithmForSignature));
     test_verify_signed_data!(test_rsa2048_pkcs1_sha512,
                              "rsa2048-pkcs1-sha512.pem", Ok(()));
 
@@ -466,4 +657,30 @@ mod tests {
 
         base64.from_base64().unwrap()
     }
+
+    static SUPPORTED_ALGORITHMS_IN_TESTS:
+            [&'static signed_data::SignatureAlgorithm; 16] = [
+        // Reasonable algorithms.
+        &signed_data::RSA_PKCS1_2048_8192_SHA256,
+        &signed_data::ECDSA_P256_SHA256,
+        &signed_data::ECDSA_P384_SHA384,
+        &signed_data::RSA_PKCS1_2048_8192_SHA384,
+        &signed_data::RSA_PKCS1_2048_8192_SHA512,
+
+        // Algorithms deprecated because they are annoying (P-521) or because
+        // they are nonsensical combinations.
+        &signed_data::ECDSA_P256_SHA384, // Truncates digest.
+        &signed_data::ECDSA_P256_SHA512, // Truncates digest.
+        &signed_data::ECDSA_P384_SHA256, // Digest is unnecessarily short.
+        &signed_data::ECDSA_P384_SHA512, // Truncates digest.
+        &signed_data::ECDSA_P521_SHA256, // P-521. Digest is unnecessarily short.
+        &signed_data::ECDSA_P521_SHA384, // P-521. Digest is unnecessarily short.
+        &signed_data::ECDSA_P521_SHA512, // P-521.
+
+        // Algorithms deprecated because they are bad.
+        &signed_data::RSA_PKCS1_2048_8192_SHA1, // SHA-1
+        &signed_data::ECDSA_P256_SHA1, // SHA-1
+        &signed_data::ECDSA_P384_SHA1, // SHA-1
+        &signed_data::ECDSA_P521_SHA1, // SHA-1
+    ];
 }

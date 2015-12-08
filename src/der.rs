@@ -111,13 +111,6 @@ pub fn null(input: &mut Reader) -> Result<(), Error> {
     nested(input, Tag::Null, Error::BadDER, |_| Ok(()))
 }
 
-pub fn optional_null(input: &mut Reader) -> Result<(), Error> {
-    if !input.peek(Tag::Null as u8) {
-        return Ok(());
-    }
-    null(input)
-}
-
 pub fn time_choice<'a>(input: &mut Reader<'a>) -> Result<Timespec, Error> {
     let is_utc_time = input.peek(Tag::UTCTime as u8);
     let expected_tag = if is_utc_time { Tag::UTCTime }

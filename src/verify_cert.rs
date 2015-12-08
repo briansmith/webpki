@@ -13,25 +13,27 @@
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 use ring::input::*;
-use super::{Error, FatalError, TrustAnchor};
+use super::{Error, FatalError, SignatureAlgorithm, TrustAnchor};
 use super::cert::{Cert, EndEntityOrCA, parse_cert};
 use super::der;
 use super::name::check_name_constraints;
-use super::signed_data::{parse_spki_value, verify_signed_data};
+use super::signed_data::verify_signed_data;
 use time::Timespec;
 
-pub fn verify_tls_cert(cert: Input, intermediate_certs: &[Input],
-                       trust_anchors: &[TrustAnchor], time: Timespec)
-                       -> Result<(), Error> {
+pub fn verify_tls_cert(supported_sig_algs: &[&SignatureAlgorithm],
+                       trust_anchors: &[TrustAnchor],
+                       intermediate_certs: &[Input], cert: Input,
+                       time: Timespec) -> Result<(), Error> {
     let cert = try!(parse_cert(cert, EndEntityOrCA::EndEntity));
-    build_chain(&cert, intermediate_certs, trust_anchors, time, 0,
-                EKU_SERVER_AUTH)
+    build_chain(EKU_SERVER_AUTH, supported_sig_algs, trust_anchors,
+                intermediate_certs, &cert, time, 0)
 }
 
-fn build_chain<'a>(cert: &Cert<'a>, intermediate_certs: &[Input<'a>],
-                   trust_anchors: &'a [TrustAnchor], time: Timespec,
-                   sub_ca_count: usize, required_eku_if_present: KeyPurposeId)
-                   -> Result<(), Error> {
+fn build_chain<'a>(required_eku_if_present: KeyPurposeId,
+                   supported_sig_algs: &[&SignatureAlgorithm],
+                   trust_anchors: &'a [TrustAnchor],
+                   intermediate_certs: &[Input<'a>], cert: &Cert<'a>,
+                   time: Timespec, sub_ca_count: usize) -> Result<(), Error> {
     let used_as_ca = used_as_ca(&cert.ee_or_ca);
 
     try!(check_issuer_independent_properties(cert, time, used_as_ca,
@@ -86,7 +88,7 @@ fn build_chain<'a>(cert: &Cert<'a>, intermediate_certs: &[Input<'a>],
         // TODO: try!(check_distrust(trust_anchor_subject,
         //                           trust_anchor_spki));
 
-        try!(check_signatures(cert, trust_anchor_spki));
+        try!(check_signatures(supported_sig_algs, cert, trust_anchor_spki));
 
         Ok(())
     }) {
@@ -130,26 +132,26 @@ fn build_chain<'a>(cert: &Cert<'a>, intermediate_certs: &[Input<'a>],
             UsedAsCA::Yes => sub_ca_count + 1
         };
 
-        build_chain(&potential_issuer, intermediate_certs, trust_anchors,
-                    time, next_sub_ca_count, required_eku_if_present)
+        build_chain(required_eku_if_present, supported_sig_algs, trust_anchors,
+                    intermediate_certs, &potential_issuer, time,
+                    next_sub_ca_count)
     })
 }
 
-fn check_signatures(cert_chain: &Cert, trust_anchor_key: Input)
+fn check_signatures(supported_sig_algs: &[&SignatureAlgorithm],
+                    cert_chain: &Cert, trust_anchor_key: Input)
                     -> Result<(), Error> {
-    let mut spki = trust_anchor_key;
+    let mut spki_value = trust_anchor_key;
     let mut cert = cert_chain;
     loop {
-        try!(read_all(spki, Error::BadDER, |spki_value| {
-            let public_key = try!(parse_spki_value(spki_value));
-            verify_signed_data(&public_key, &cert.signed_data)
-        }));
+        try!(verify_signed_data(supported_sig_algs, spki_value,
+                                &cert.signed_data));
 
         // TODO: check revocation
 
         match &cert.ee_or_ca {
             &EndEntityOrCA::CA(child_cert) => {
-                spki = cert.spki;
+                spki_value = cert.spki;
                 cert = child_cert;
             },
             &EndEntityOrCA::EndEntity => { break; }
