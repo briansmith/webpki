@@ -300,6 +300,12 @@ pub static RSA_PKCS1_2048_8192_SHA512: SignatureAlgorithm = SignatureAlgorithm {
     verification_alg: &signature::RSA_PKCS1_2048_8192_SHA512,
 };
 
+pub static RSA_PKCS1_3072_8192_SHA384: SignatureAlgorithm = SignatureAlgorithm {
+    signature_alg_oids: &[RSA_PKCS1_SHA384_OID],
+    public_key_alg: &RSA_PKCS1,
+    verification_alg: &signature::RSA_PKCS1_3072_8192_SHA384,
+};
+
 
 struct PublicKeyAlgorithm {
     shared: &'static PublicKeyAlgorithmSharedInfo,
