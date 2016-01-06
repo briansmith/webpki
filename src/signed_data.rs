@@ -194,7 +194,7 @@ fn parse_spki_value<'a>(input: Input<'a>) ->
 pub struct SignatureAlgorithm {
     signature_alg_oids: &'static [&'static [u8]],
     public_key_alg: &'static PublicKeyAlgorithm,
-    verification_alg: &'static (signature::VerificationAlgorithm + Sync),
+    verification_alg: &'static signature::VerificationAlgorithm,
 }
 
 // RFC 5758 Section 3.2 (ECDSA with SHA-2), and RFC 3279 Section 2.2.3 (ECDSA
