@@ -46,7 +46,7 @@ pub fn parse_cert<'a>(cert_der: Input<'a>, ee_or_ca: EndEntityOrCA<'a>)
 
     read_all(tbs, Error::BadDER, |tbs| {
         try!(version3(tbs));
-        let _serial_number = try!(certificate_serial_number(tbs));
+        try!(certificate_serial_number(tbs));
 
         let signature =
             try!(der::expect_tag_and_get_input(tbs, der::Tag::Sequence));
@@ -128,20 +128,16 @@ fn version3(input: &mut Reader) -> Result<(), Error> {
     })
 }
 
-fn certificate_serial_number<'a>(input: &mut Reader<'a>)
-                                 -> Result<Input<'a>, Error> {
+fn certificate_serial_number<'a>(input: &mut Reader<'a>) -> Result<(), Error> {
     // https://tools.ietf.org/html/rfc5280#section-4.1.2.2:
     // * Conforming CAs MUST NOT use serialNumber values longer than 20 octets."
     // * "The serial number MUST be a positive integer [...]"
 
-    let value = try!(der::expect_tag_and_get_input(input, der::Tag::Integer));
+    let value = try!(der::positive_integer(input));
     if value.len() > 20 {
         return Err(Error::BadDER);
     }
-
-    // TODO: Enforce that the integer value is encoded properly and that it is
-    // a positive integer.
-    Ok(value)
+    Ok(())
 }
 
 enum Understood { Yes, No }

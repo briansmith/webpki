@@ -15,8 +15,10 @@
 use ring;
 pub use ring::der::{
     CONSTRUCTED,
-    nested,
+
     Tag,
+
+    nested,
 };
 use ring::input::*;
 use super::Error;
@@ -105,6 +107,10 @@ pub fn integer(input: &mut Reader) -> Result<u8, Error> {
         }
         Ok(first_byte)
     })
+}
+
+pub fn positive_integer<'a>(input: &'a mut Reader) -> Result<Input<'a>, Error> {
+    ring::der::positive_integer(input).map_err(|_| Error::BadDER)
 }
 
 pub fn null(input: &mut Reader) -> Result<(), Error> {
