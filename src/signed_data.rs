@@ -63,7 +63,6 @@ pub fn parse_signed_data<'a>(der: &mut Reader<'a>)
                                                        der::Tag::Sequence));
     let signature = try!(der::bit_string_with_no_unused_bits(der));
 
-
     Ok((tbs,
         SignedData {
             data: data,
