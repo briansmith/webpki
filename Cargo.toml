@@ -26,11 +26,10 @@ name = "webpki"
 path = "src/webpki.rs"
 
 [dependencies]
+ring = { git = "https://github.com/briansmith/ring" }
 rustc-serialize = "0.3.15"
 time = "0.1"
-
-[dependencies.ring]
-git = "https://github.com/briansmith/ring"
+untrusted = { git = "https://github.com/briansmith/untrusted" }
 
 [profile.bench]
 opt-level = 3

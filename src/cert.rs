@@ -12,10 +12,10 @@
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-use ring::input::*;
 use super::Error;
 use super::der;
 use super::signed_data::{parse_signed_data, SignedData};
+use untrusted;
 
 pub enum EndEntityOrCA<'a> {
     EndEntity,
@@ -26,25 +26,25 @@ pub struct Cert<'a> {
     pub ee_or_ca: EndEntityOrCA<'a>,
 
     pub signed_data: SignedData<'a>,
-    pub issuer: Input<'a>,
-    pub validity: Input<'a>,
-    pub subject: Input<'a>,
-    pub spki: Input<'a>,
+    pub issuer: untrusted::Input<'a>,
+    pub validity: untrusted::Input<'a>,
+    pub subject: untrusted::Input<'a>,
+    pub spki: untrusted::Input<'a>,
 
-    pub basic_constraints: Option<Input<'a>>,
-    pub eku: Option<Input<'a>>,
-    pub name_constraints: Option<Input<'a>>,
-    pub subject_alt_name: Option<Input<'a>>,
+    pub basic_constraints: Option<untrusted::Input<'a>>,
+    pub eku: Option<untrusted::Input<'a>>,
+    pub name_constraints: Option<untrusted::Input<'a>>,
+    pub subject_alt_name: Option<untrusted::Input<'a>>,
 }
 
-pub fn parse_cert<'a>(cert_der: Input<'a>, ee_or_ca: EndEntityOrCA<'a>)
-                      -> Result<Cert<'a>, Error> {
-    let (tbs, signed_data) = try!(read_all(cert_der, Error::BadDER, |cert_der| {
+pub fn parse_cert<'a>(cert_der: untrusted::Input<'a>,
+                      ee_or_ca: EndEntityOrCA<'a>) -> Result<Cert<'a>, Error> {
+    let (tbs, signed_data) = try!(cert_der.read_all(Error::BadDER, |cert_der| {
         der::nested(cert_der, der::Tag::Sequence, Error::BadDER,
                     parse_signed_data)
     }));
 
-    read_all(tbs, Error::BadDER, |tbs| {
+    tbs.read_all(Error::BadDER, |tbs| {
         try!(version3(tbs));
         try!(certificate_serial_number(tbs));
 
@@ -99,7 +99,7 @@ pub fn parse_cert<'a>(cert_der: Input<'a>, ee_or_ca: EndEntityOrCA<'a>)
                 let extn_id = try!(der::expect_tag_and_get_input(extension,
                                                                  der::Tag::OID));
                 let critical = try!(der::optional_boolean(extension));
-                let extn_value: Input<'a> =
+                let extn_value: untrusted::Input<'a> =
                     try!(der::expect_tag_and_get_input(extension,
                                                        der::Tag::OctetString));
                 match try!(remember_extension(&mut cert, extn_id, extn_value)) {
@@ -117,7 +117,7 @@ pub fn parse_cert<'a>(cert_der: Input<'a>, ee_or_ca: EndEntityOrCA<'a>)
 
 // mozilla::pkix supports v1, v2, v3, and v4, including both the implicit
 // (correct) and explicit (incorrect) encoding of v1. We allow only v3.
-fn version3(input: &mut Reader) -> Result<(), Error> {
+fn version3(input: &mut untrusted::Reader) -> Result<(), Error> {
     der::nested(input, der::Tag::ContextSpecificConstructed0,
                 Error::BadDER, |input| {
         let version = try!(der::integer(input));
@@ -128,7 +128,8 @@ fn version3(input: &mut Reader) -> Result<(), Error> {
     })
 }
 
-fn certificate_serial_number<'a>(input: &mut Reader<'a>) -> Result<(), Error> {
+fn certificate_serial_number<'a>(input: &mut untrusted::Reader<'a>)
+                                 -> Result<(), Error> {
     // https://tools.ietf.org/html/rfc5280#section-4.1.2.2:
     // * Conforming CAs MUST NOT use serialNumber values longer than 20 octets."
     // * "The serial number MUST be a positive integer [...]"
@@ -142,7 +143,8 @@ fn certificate_serial_number<'a>(input: &mut Reader<'a>) -> Result<(), Error> {
 
 enum Understood { Yes, No }
 
-fn remember_extension<'a>(cert: &mut Cert<'a>, extn_id: Input, value: Input<'a>)
+fn remember_extension<'a>(cert: &mut Cert<'a>, extn_id: untrusted::Input,
+                          value: untrusted::Input<'a>)
                           -> Result<Understood, Error> {
     // We don't do anything with certificate policies so we can safely ignore
     // all policy-related stuff. We assume that the policy-related extensions
@@ -187,7 +189,7 @@ fn remember_extension<'a>(cert: &mut Cert<'a>, extn_id: Input, value: Input<'a>)
         }
         None => {
             // All the extensions that we care about are wrapped in a SEQUENCE.
-            let sequence_value = try!(read_all(value, Error::BadDER, |value| {
+            let sequence_value = try!(value.read_all(Error::BadDER, |value| {
                 der::expect_tag_and_get_input(value, der::Tag::Sequence)
             }));
             *out = Some(sequence_value);

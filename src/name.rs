@@ -12,17 +12,16 @@
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-use ring::input::*;
 use super::cert::{Cert, EndEntityOrCA, parse_cert};
 use super::der;
 use super::Error;
-
+use untrusted;
 
 // Verify that the given end-entity cert, which is assumed to have been already
 // validated with `verify_cert`, is valid for the given hostname. `hostname` is
 // assumed to a normalized ASCII (punycode if non-ASCII) DNS name.
-pub fn verify_cert_dns_name(cert_der: Input, dns_name: Input)
-                            -> Result<(), Error> {
+pub fn verify_cert_dns_name(cert_der: untrusted::Input,
+                            dns_name: untrusted::Input) -> Result<(), Error> {
     let cert = try!(parse_cert(cert_der, EndEntityOrCA::EndEntity));
 
     if !is_valid_reference_dns_id(dns_name) {
@@ -47,7 +46,7 @@ pub fn verify_cert_dns_name(cert_der: Input, dns_name: Input)
 }
 
 // https://tools.ietf.org/html/rfc5280#section-4.2.1.10
-pub fn check_name_constraints<'a>(input: Option<&mut Reader<'a>>,
+pub fn check_name_constraints<'a>(input: Option<&mut untrusted::Reader<'a>>,
                                   subordinate_certs: &Cert)
                                   -> Result<(), Error> {
     let input = match input {
@@ -55,8 +54,9 @@ pub fn check_name_constraints<'a>(input: Option<&mut Reader<'a>>,
         None => { return Ok(()); }
     };
 
-    fn parse_subtrees<'b>(inner: &mut Reader<'b>, subtrees_tag: der::Tag)
-                          -> Result<Option<Input<'b>>, Error> {
+    fn parse_subtrees<'b>(inner: &mut untrusted::Reader<'b>,
+                          subtrees_tag: der::Tag)
+                          -> Result<Option<untrusted::Input<'b>>, Error> {
         if !inner.peek(subtrees_tag as u8) {
             return Ok(None);
         }
@@ -88,10 +88,9 @@ pub fn check_name_constraints<'a>(input: Option<&mut Reader<'a>>,
     Ok(())
 }
 
-fn check_presented_id_conforms_to_constraints(name: GeneralName,
-                                              permitted_subtrees: Option<Input>,
-                                              excluded_subtrees: Option<Input>)
-                                              -> NameIteration {
+fn check_presented_id_conforms_to_constraints(
+        name: GeneralName, permitted_subtrees: Option<untrusted::Input>,
+        excluded_subtrees: Option<untrusted::Input>) -> NameIteration {
     match check_presented_id_conforms_to_constraints_in_subtree(
             name, Subtrees::PermittedSubtrees, permitted_subtrees) {
         stop @ NameIteration::Stop(..) => { return stop; },
@@ -109,10 +108,10 @@ enum Subtrees {
 }
 
 fn check_presented_id_conforms_to_constraints_in_subtree(
-        name: GeneralName, subtrees: Subtrees, constraints: Option<Input>)
-        -> NameIteration {
+        name: GeneralName, subtrees: Subtrees,
+        constraints: Option<untrusted::Input>) -> NameIteration {
     let mut constraints = match constraints {
-        Some(constraints) => Reader::new(constraints),
+        Some(constraints) => untrusted::Reader::new(constraints),
         None => { return NameIteration::KeepGoing; }
     };
 
@@ -127,13 +126,13 @@ fn check_presented_id_conforms_to_constraints_in_subtree(
         // Since the default value isn't allowed to be encoded according to the
         // DER encoding rules for DEFAULT, this is equivalent to saying that
         // neither minimum or maximum must be encoded.
-        fn general_subtree<'b>(input: &mut Reader<'b>)
+        fn general_subtree<'b>(input: &mut untrusted::Reader<'b>)
                                -> Result<GeneralName<'b>, Error> {
             let general_subtree =
                 try!(der::expect_tag_and_get_input(input,
                                                    der::Tag::Sequence));
-            read_all(general_subtree, Error::BadDER,
-                     |subtree| general_name(subtree))
+            general_subtree.read_all(Error::BadDER,
+                                     |subtree| general_name(subtree))
         }
 
         let base = match general_subtree(&mut constraints) {
@@ -208,10 +207,9 @@ fn check_presented_id_conforms_to_constraints_in_subtree(
 }
 
 // TODO: document this.
-fn presented_directory_name_matches_constraint<'a>(name: Input<'a>,
-                                                   constraint: Input<'a>,
-                                                   subtrees: Subtrees)
-                                                   -> Result<bool, Error> {
+fn presented_directory_name_matches_constraint<'a>(
+        name: untrusted::Input<'a>, constraint: untrusted::Input<'a>,
+        subtrees: Subtrees) -> Result<bool, Error> {
     match subtrees {
         Subtrees::PermittedSubtrees => Ok(name == constraint),
         Subtrees::ExcludedSubtrees => Ok(true),
@@ -227,7 +225,8 @@ fn presented_directory_name_matches_constraint<'a>(name: Input<'a>,
 //     constraint for "class C" subnet 192.0.2.0 is represented as the
 //     octets C0 00 02 00 FF FF FF 00, representing the CIDR notation
 //     192.0.2.0/24 (mask 255.255.255.0).
-fn presented_ip_address_matches_constraint(name: Input, constraint: Input)
+fn presented_ip_address_matches_constraint(name: untrusted::Input,
+                                           constraint: untrusted::Input)
                                            -> Result<bool, Error> {
     if name.len() != 4 && name.len() != 16 {
         return Err(Error::BadDER);
@@ -242,15 +241,15 @@ fn presented_ip_address_matches_constraint(name: Input, constraint: Input)
     }
 
     let (constraint_address, constraint_mask) =
-        try!(read_all(constraint, Error::BadDER, |value| {
+        try!(constraint.read_all(Error::BadDER, |value| {
             let address = value.skip_and_get_input(constraint.len() / 2).unwrap();
             let mask = value.skip_and_get_input(constraint.len() / 2).unwrap();
             Ok((address, mask))
         }));
 
-    let mut name = Reader::new(name);
-    let mut constraint_address = Reader::new(constraint_address);
-    let mut constraint_mask = Reader::new(constraint_mask);
+    let mut name = untrusted::Reader::new(name);
+    let mut constraint_address = untrusted::Reader::new(constraint_address);
+    let mut constraint_mask = untrusted::Reader::new(constraint_mask);
     loop {
         let name_byte = name.read_byte().unwrap();
         let constraint_address_byte = constraint_address.read_byte().unwrap();
@@ -272,12 +271,13 @@ enum NameIteration {
     Stop(Result<(), Error>)
 }
 
-fn iterate_names(subject: Input, subject_alt_name: Option<Input>,
+fn iterate_names(subject: untrusted::Input,
+                 subject_alt_name: Option<untrusted::Input>,
                  result_if_never_stopped_early: Result<(), Error>,
                  f: &Fn(GeneralName) -> NameIteration) -> Result<(), Error> {
     match subject_alt_name {
         Some(subject_alt_name) => {
-            let mut subject_alt_name = Reader::new(subject_alt_name);
+            let mut subject_alt_name = untrusted::Reader::new(subject_alt_name);
             // https://bugzilla.mozilla.org/show_bug.cgi?id=1143085: An empty
             // subjectAltName is not legal, but some certificates have an empty
             // subjectAltName. Since we don't support CN-IDs, the certificate
@@ -308,9 +308,9 @@ fn iterate_names(subject: Input, subject_alt_name: Option<Input>,
 // `GeneralName` in other contexts.
 #[derive(Clone, Copy)]
 enum GeneralName<'a> {
-    DNSName(Input<'a>),
-    DirectoryName(Input<'a>),
-    IPAddress(Input<'a>),
+    DNSName(untrusted::Input<'a>),
+    DirectoryName(untrusted::Input<'a>),
+    IPAddress(untrusted::Input<'a>),
 
     // The value is the `tag & ~(der::CONTEXT_SPECIFIC | der::CONSTRUCTED)` so
     // that the name constraint checking matches tags regardless of whether
@@ -318,7 +318,8 @@ enum GeneralName<'a> {
     Unsupported(u8)
 }
 
-fn general_name<'a>(input: &mut Reader<'a>) -> Result<GeneralName<'a>, Error> {
+fn general_name<'a>(input: &mut untrusted::Reader<'a>)
+                    -> Result<GeneralName<'a>, Error> {
     use ring::der::{CONSTRUCTED, CONTEXT_SPECIFIC};
     const OTHER_NAME_TAG: u8 = CONTEXT_SPECIFIC | CONSTRUCTED | 0;
     const RFC822_NAME_TAG: u8 = CONTEXT_SPECIFIC | 1;
@@ -469,10 +470,9 @@ fn general_name<'a>(input: &mut Reader<'a>) -> Result<GeneralName<'a>, Error> {
 // [4] Feedback on the lack of clarify in the definition that never got
 //     incorporated into the spec:
 //     https://www.ietf.org/mail-archive/web/pkix/current/msg21192.html
-fn presented_dns_id_matches_reference_dns_id(presented_dns_id: Input,
-                                             reference_dns_id_role: IDRole,
-                                             reference_dns_id: Input)
-                                             -> Option<bool> {
+fn presented_dns_id_matches_reference_dns_id(
+        presented_dns_id: untrusted::Input, reference_dns_id_role: IDRole,
+        reference_dns_id: untrusted::Input) -> Option<bool> {
     if !is_valid_dns_id(presented_dns_id, IDRole::PresentedID,
                         AllowWildcards::Yes) {
         return None;
@@ -483,8 +483,8 @@ fn presented_dns_id_matches_reference_dns_id(presented_dns_id: Input,
         return None;
     }
 
-    let mut presented = Reader::new(presented_dns_id);
-    let mut reference = Reader::new(reference_dns_id);
+    let mut presented = untrusted::Reader::new(presented_dns_id);
+    let mut reference = untrusted::Reader::new(reference_dns_id);
 
     match reference_dns_id_role {
         IDRole::ReferenceID => (),
@@ -606,7 +606,7 @@ enum IDRole {
   NameConstraint,
 }
 
-fn is_valid_reference_dns_id(hostname: Input) -> bool {
+fn is_valid_reference_dns_id(hostname: untrusted::Input) -> bool {
     is_valid_dns_id(hostname, IDRole::ReferenceID, AllowWildcards::No)
 }
 
@@ -620,13 +620,13 @@ fn is_valid_reference_dns_id(hostname: Input) -> bool {
 //
 // https://bugzilla.mozilla.org/show_bug.cgi?id=1136616: As an exception to the
 // requirement above, underscores are also allowed in names for compatibility.
-fn is_valid_dns_id(hostname: Input, id_role: IDRole,
+fn is_valid_dns_id(hostname: untrusted::Input, id_role: IDRole,
                    allow_wildcards: AllowWildcards) -> bool {
     if hostname.len() > 255 {
         return false;
     }
 
-    let mut input = Reader::new(hostname);
+    let mut input = untrusted::Reader::new(hostname);
 
     if id_role == IDRole::NameConstraint && input.at_end() {
         return true;
@@ -738,7 +738,7 @@ fn is_valid_dns_id(hostname: Input, id_role: IDRole,
         // XXX: RFC6125 says that we shouldn't accept wildcards within an IDN
         // A-Label. The consequence of this is that we effectively discriminate
         // against users of languages that cannot be encoded with ASCII.
-        let mut maybe_idn = Reader::new(hostname);
+        let mut maybe_idn = untrusted::Reader::new(hostname);
         if maybe_idn.read_byte() == Ok(b'x') &&
            maybe_idn.read_byte() == Ok(b'n') &&
            maybe_idn.read_byte() == Ok(b'-') &&

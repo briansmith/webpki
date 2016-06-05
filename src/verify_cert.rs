@@ -12,7 +12,7 @@
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-use ring::input::*;
+use untrusted;
 use super::{Error, FatalError, SignatureAlgorithm, TrustAnchor};
 use super::cert::{Cert, EndEntityOrCA, parse_cert};
 use super::der;
@@ -22,7 +22,8 @@ use time::Timespec;
 
 pub fn verify_tls_cert(supported_sig_algs: &[&SignatureAlgorithm],
                        trust_anchors: &[TrustAnchor],
-                       intermediate_certs: &[Input], cert: Input,
+                       intermediate_certs: &[untrusted::Input],
+                       cert: untrusted::Input,
                        time: Timespec) -> Result<(), Error> {
     let cert = try!(parse_cert(cert, EndEntityOrCA::EndEntity));
     build_chain(EKU_SERVER_AUTH, supported_sig_algs, trust_anchors,
@@ -32,7 +33,7 @@ pub fn verify_tls_cert(supported_sig_algs: &[&SignatureAlgorithm],
 fn build_chain<'a>(required_eku_if_present: KeyPurposeId,
                    supported_sig_algs: &[&SignatureAlgorithm],
                    trust_anchors: &'a [TrustAnchor],
-                   intermediate_certs: &[Input<'a>], cert: &Cert<'a>,
+                   intermediate_certs: &[untrusted::Input<'a>], cert: &Cert<'a>,
                    time: Timespec, sub_ca_count: usize) -> Result<(), Error> {
     let used_as_ca = used_as_ca(&cert.ee_or_ca);
 
@@ -60,7 +61,7 @@ fn build_chain<'a>(required_eku_if_present: KeyPurposeId,
     match loop_while_non_fatal_error(trust_anchors,
                                      |trust_anchor: &TrustAnchor<'a>| {
         let trust_anchor_subject =
-                try!(Input::new(trust_anchor.subject)
+                try!(untrusted::Input::new(trust_anchor.subject)
                         .map_err(|_|
                             Error::Fatal(FatalError::InvalidTrustAnchor)));
         if cert.issuer != trust_anchor_subject {
@@ -71,7 +72,7 @@ fn build_chain<'a>(required_eku_if_present: KeyPurposeId,
             match trust_anchor.name_constraints {
                 Some(name_constraints) => {
                     let name_constraints =
-                        try!(Input::new(name_constraints)
+                        try!(untrusted::Input::new(name_constraints)
                              .map_err(|_|
                                 Error::Fatal(FatalError::InvalidTrustAnchor)));
                     Some(name_constraints)
@@ -79,11 +80,13 @@ fn build_chain<'a>(required_eku_if_present: KeyPurposeId,
                 None => None
             };
 
-        try!(read_all_optional(name_constraints, Error::BadDER,
-                               |value| check_name_constraints(value, &cert)));
+        try!(untrusted::read_all_optional(
+                name_constraints, Error::BadDER,
+                |value| check_name_constraints(value, &cert)));
 
         let trust_anchor_spki =
-            try!(Input::new(trust_anchor.spki).map_err(|_| Error::BadDER));
+            try!(untrusted::Input::new(trust_anchor.spki)
+                    .map_err(|_| Error::BadDER));
 
         // TODO: try!(check_distrust(trust_anchor_subject,
         //                           trust_anchor_spki));
@@ -103,7 +106,7 @@ fn build_chain<'a>(required_eku_if_present: KeyPurposeId,
         }
     }
 
-    loop_while_non_fatal_error(intermediate_certs, |cert_der: &Input| {
+    loop_while_non_fatal_error(intermediate_certs, |cert_der| {
         let potential_issuer =
             try!(parse_cert(*cert_der, EndEntityOrCA::CA(&cert)));
 
@@ -124,8 +127,9 @@ fn build_chain<'a>(required_eku_if_present: KeyPurposeId,
             }
         }
 
-        try!(read_all_optional(potential_issuer.name_constraints, Error::BadDER,
-                               |value| check_name_constraints(value, &cert)));
+        try!(untrusted::read_all_optional(
+                potential_issuer.name_constraints, Error::BadDER,
+                |value| check_name_constraints(value, &cert)));
 
         let next_sub_ca_count = match used_as_ca {
             UsedAsCA::No => sub_ca_count,
@@ -139,7 +143,7 @@ fn build_chain<'a>(required_eku_if_present: KeyPurposeId,
 }
 
 fn check_signatures(supported_sig_algs: &[&SignatureAlgorithm],
-                    cert_chain: &Cert, trust_anchor_key: Input)
+                    cert_chain: &Cert, trust_anchor_key: untrusted::Input)
                     -> Result<(), Error> {
     let mut spki_value = trust_anchor_key;
     let mut cert = cert_chain;
@@ -174,20 +178,21 @@ fn check_issuer_independent_properties<'a>(
     // See the comment in `remember_extensions` for why we don't check the
     // KeyUsage extension.
 
-    try!(read_all(cert.validity, Error::BadDER,
-                  |value| check_validity(value, time)));
-    try!(read_all_optional(cert.basic_constraints, Error::BadDER,
-                           |value| check_basic_constraints(value, used_as_ca,
-                                                           sub_ca_count)));
-    try!(read_all_optional(cert.eku, Error::BadDER,
-                           |value| check_eku(value, used_as_ca,
-                                             required_eku_if_present)));
+    try!(cert.validity.read_all(Error::BadDER,
+                                |value| check_validity(value, time)));
+    try!(untrusted::read_all_optional(
+            cert.basic_constraints, Error::BadDER,
+            |value| check_basic_constraints(value, used_as_ca, sub_ca_count)));
+    try!(untrusted::read_all_optional(
+            cert.eku, Error::BadDER,
+            |value| check_eku(value, used_as_ca, required_eku_if_present)));
 
     Ok(())
 }
 
 // https://tools.ietf.org/html/rfc5280#section-4.1.2.5
-fn check_validity(input: &mut Reader, time: Timespec) -> Result<(), Error> {
+fn check_validity(input: &mut untrusted::Reader, time: Timespec)
+                  -> Result<(), Error> {
     let not_before = try!(der::time_choice(input));
     let not_after = try!(der::time_choice(input));
 
@@ -219,8 +224,9 @@ fn used_as_ca(ee_or_ca: &EndEntityOrCA) -> UsedAsCA {
 }
 
 // https://tools.ietf.org/html/rfc5280#section-4.2.1.9
-fn check_basic_constraints(input: Option<&mut Reader>, used_as_ca: UsedAsCA,
-                           sub_ca_count: usize) -> Result<(), Error> {
+fn check_basic_constraints(input: Option<&mut untrusted::Reader>,
+                           used_as_ca: UsedAsCA, sub_ca_count: usize)
+                           -> Result<(), Error> {
     let (is_ca, path_len_constraint) = match input {
         Some(input) => {
             let is_ca = try!(der::optional_boolean(input));
@@ -293,7 +299,7 @@ static EKU_NETSCAPE_SERVER_STEP_UP: KeyPurposeId = KeyPurposeId {
 //   certificates (only). Comodo has issued certificates that require this
 //   behavior that don't expire until June 2020. See
 //   https://bugzilla.mozilla.org/show_bug.cgi?id=982292.
-fn check_eku(input: Option<&mut Reader>, used_as_ca: UsedAsCA,
+fn check_eku(input: Option<&mut untrusted::Reader>, used_as_ca: UsedAsCA,
              required_eku_if_present: KeyPurposeId) -> Result<(), Error> {
     match input {
         Some(input) => {
@@ -306,9 +312,9 @@ fn check_eku(input: Option<&mut Reader>, used_as_ca: UsedAsCA,
             loop {
                 let value =
                     try!(der::expect_tag_and_get_input(input, der::Tag::OID));
-                if input_equals(value, required_eku_if_present.oid_value) ||
+                if value == required_eku_if_present.oid_value ||
                    (match_step_up &&
-                    input_equals(value, EKU_NETSCAPE_SERVER_STEP_UP.oid_value)) {
+                    value == EKU_NETSCAPE_SERVER_STEP_UP.oid_value) {
                     input.skip_to_end();
                     break;
                 }

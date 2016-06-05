@@ -12,15 +12,15 @@
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-use ring::input::*;
 use ring::signature;
 use super::{Error, FatalError};
 use super::der;
+use untrusted;
 
 pub struct SignedData<'a> {
-    data: Input<'a>,
-    pub algorithm: Input<'a>,
-    signature: Input<'a>,
+    data: untrusted::Input<'a>,
+    pub algorithm: untrusted::Input<'a>,
+    signature: untrusted::Input<'a>,
 }
 
 // Parses the concatenation of tbs||signatureAlgorithm||signatureValue that is
@@ -52,8 +52,9 @@ pub struct SignedData<'a> {
 // The return value's first component is the contents of
 // `tbsCertificate`/`tbsResponseData`; the second component is a `SignedData`
 // structure that can be passed to `verify_signed_data`.
-pub fn parse_signed_data<'a>(der: &mut Reader<'a>)
-                             -> Result<(Input<'a>, SignedData<'a>), Error> {
+pub fn parse_signed_data<'a>(der: &mut untrusted::Reader<'a>)
+                             -> Result<(untrusted::Input<'a>, SignedData<'a>),
+                                       Error> {
     let mark1 = der.mark();
     let tbs = try!(der::expect_tag_and_get_input(der, der::Tag::Sequence));
     let mark2 = der.mark();
@@ -81,8 +82,8 @@ pub fn parse_signed_data<'a>(der: &mut Reader<'a>)
 /// but generally more common algorithms should go first, as it is scanned
 /// linearly for matches.
 pub fn verify_signed_data(supported_algorithms: &[&SignatureAlgorithm],
-                          spki_value: Input, signed_data: &SignedData)
-                          -> Result<(), Error> {
+                          spki_value: untrusted::Input,
+                          signed_data: &SignedData) -> Result<(), Error> {
     // We need to verify the signature in `signed_data` using the public key
     // in `public_key`. In order to know which *ring* signature verification
     // algorithm to use, we need to know the public key algorithm (ECDSA,
@@ -103,7 +104,7 @@ pub fn verify_signed_data(supported_algorithms: &[&SignatureAlgorithm],
     // Parse the signature.
     //
     let (algorithm_id, parameters) =
-            try!(read_all(signed_data.algorithm, Error::BadDER, |input| {
+            try!(signed_data.algorithm.read_all(Error::BadDER, |input| {
         let algorithm_id = try!(der::expect_tag_and_get_input(input,
                                                               der::Tag::OID));
         Ok((algorithm_id, input.skip_to_end()))
@@ -112,17 +113,14 @@ pub fn verify_signed_data(supported_algorithms: &[&SignatureAlgorithm],
     let mut found_signature_alg_match = false;
     //let mut found_key_alg_match = false;
     for supported_alg in supported_algorithms {
-        if !supported_alg.signature_alg_oids.into_iter().any(|oid| {
-            input_equals(algorithm_id, oid)
-        }) {
+        if !supported_alg.signature_alg_oids.into_iter()
+                                            .any(|oid| algorithm_id == *oid) {
             continue;
         }
 
         if !supported_alg.public_key_alg.shared
                          .allowed_signature_alg_parameters
-                         .into_iter().any(|allowed_param| {
-            input_equals(parameters, allowed_param)
-        }) {
+                         .into_iter().any(|allowed| parameters == *allowed) {
             continue;
         }
 
@@ -130,16 +128,15 @@ pub fn verify_signed_data(supported_algorithms: &[&SignatureAlgorithm],
 
         let (spki_algorithm_oid, spki_curve_oid, spki_key) =
             try!(parse_spki_value(spki_value));
-        if !input_equals(spki_algorithm_oid,
-                         supported_alg.public_key_alg.shared
-                                      .spki_algorithm_oid) {
+        if spki_algorithm_oid !=
+                supported_alg.public_key_alg.shared.spki_algorithm_oid {
             continue;
         }
 
         match (spki_curve_oid, supported_alg.public_key_alg.curve_oid) {
             (None, None) => (),
             (Some(spki_oid), Some(supported_oid))
-                    if input_equals(spki_oid, supported_oid) => (),
+                    if spki_oid == supported_oid => (),
             _ => { continue },
         };
 
@@ -159,10 +156,12 @@ pub fn verify_signed_data(supported_algorithms: &[&SignatureAlgorithm],
 // key value. The caller needs to check whether these match the
 // `PublicKeyAlgorithm` for the `SignatureAlgorithm` that is matched when
 // parsing the signature.
-fn parse_spki_value<'a>(input: Input<'a>) ->
-                        Result<(Input<'a>, Option<Input<'a>>, Input<'a>),
+fn parse_spki_value<'a>(input: untrusted::Input<'a>) ->
+                        Result<(untrusted::Input<'a>,
+                                Option<untrusted::Input<'a>>,
+                                untrusted::Input<'a>),
                                Error> {
-    read_all(input, Error::BadDER, |input| {
+    input.read_all(Error::BadDER, |input| {
         let (algorithm_oid, curve_oid) =
                 try!(der::nested(input, der::Tag::Sequence, Error::BadDER,
                                  |input| {
@@ -361,10 +360,10 @@ mod tests {
     use rustc_serialize::base64::FromBase64;
     use std;
     use std::fs;
-    use std::io::{BufRead, BufReader, Lines};
+    use std::io::{BufRead, BufReader};
     use std::path::PathBuf;
     use super::super::{der, Error, signed_data};
-    use ring::input::{Input, read_all};
+    use untrusted;
 
     // TODO: The expected results need to be modified for SHA-1 deprecation.
 
@@ -380,8 +379,8 @@ mod tests {
     fn test_verify_signed_data(file_name: &str,
                                expected_result: Result<(), Error>) {
         let tsd = parse_test_signed_data(file_name);
-        let spki_value = read_all(Input::new(&tsd.spki).unwrap(), Error::BadDER,
-                                  |input| {
+        let spki_value = untrusted::Input::new(&tsd.spki).unwrap();
+        let spki_value = spki_value.read_all(Error::BadDER, |input| {
             der::expect_tag_and_get_input(input, der::Tag::Sequence)
         }).unwrap();
 
@@ -391,18 +390,18 @@ mod tests {
         // expanded with SEQUENCE-wrapped data so that we can actually
         // test `parse_signed_data`.
 
-        let algorithm = read_all(Input::new(&tsd.algorithm).unwrap(),
-                                    Error::BadDER, |input| {
+        let algorithm = untrusted::Input::new(&tsd.algorithm).unwrap();
+        let algorithm = algorithm.read_all(Error::BadDER, |input| {
             der::expect_tag_and_get_input(input, der::Tag::Sequence)
         }).unwrap();
 
-        let signature = read_all(Input::new(&tsd.signature).unwrap(),
-                                    Error::BadDER, |input| {
+        let signature = untrusted::Input::new(&tsd.signature).unwrap();
+        let signature = signature.read_all(Error::BadDER, |input| {
             der::bit_string_with_no_unused_bits(input)
         }).unwrap();
 
         let signed_data = signed_data::SignedData {
-            data: Input::new(&tsd.data).unwrap(),
+            data: untrusted::Input::new(&tsd.data).unwrap(),
             algorithm: algorithm,
             signature: signature
         };
@@ -427,9 +426,9 @@ mod tests {
     fn test_verify_signed_data_signature_outer(file_name: &str,
                                                expected_error: Error) {
         let tsd = parse_test_signed_data(file_name);
+        let signature = untrusted::Input::new(&tsd.signature).unwrap();
         assert_eq!(Err(expected_error),
-                   read_all(Input::new(&tsd.signature).unwrap(), Error::BadDER,
-                            |input| {
+                   signature.read_all(Error::BadDER, |input| {
             der::bit_string_with_no_unused_bits(input)
         }));
     }
@@ -445,8 +444,8 @@ mod tests {
 
     fn test_parse_spki_bad(file_name: &str, expected_error: Error) {
         let tsd = parse_test_signed_data(file_name);
-        let spki_value = read_all(Input::new(&tsd.spki).unwrap(),
-                                  Error::BadDER, |input| {
+        let spki_value = untrusted::Input::new(&tsd.spki).unwrap();
+        let spki_value = spki_value.read_all(Error::BadDER, |input| {
             der::expect_tag_and_get_input(input, der::Tag::Sequence)
         }).unwrap();
         match signed_data::parse_spki_value(spki_value) {
@@ -467,9 +466,9 @@ mod tests {
 
     fn test_parse_spki_bad_outer(file_name: &str, expected_error: Error) {
         let tsd = parse_test_signed_data(file_name);
+        let spki = untrusted::Input::new(&tsd.spki).unwrap();
         assert_eq!(Err(expected_error),
-                   read_all(Input::new(&tsd.spki).unwrap(), Error::BadDER,
-                            |input| {
+                   spki.read_all(Error::BadDER, |input| {
             der::expect_tag_and_get_input(input, der::Tag::Sequence)
         }));
     }

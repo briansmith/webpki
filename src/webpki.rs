@@ -18,6 +18,8 @@ extern crate time;
 #[cfg(test)]
 extern crate rustc_serialize;
 
+extern crate untrusted;
+
 #[macro_use]
 mod der;
 

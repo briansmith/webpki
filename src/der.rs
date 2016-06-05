@@ -20,44 +20,46 @@ pub use ring::der::{
 
     nested,
 };
-use ring::input::*;
 use super::Error;
 use time::{Timespec, Tm};
+use untrusted;
 
 // TODO: Get rid of this. This is just here to make it easier to adapt to the
 // movement of the core DER functionality from libwebpki to *ring*.
 #[inline(always)]
-pub fn expect_tag_and_get_input<'a>(input: &mut Reader<'a>, tag: Tag)
-                                    -> Result<Input<'a>, Error> {
+pub fn expect_tag_and_get_input<'a>(input: &mut untrusted::Reader<'a>,
+                                    tag: Tag) ->
+                                    Result<untrusted::Input<'a>, Error> {
     ring::der::expect_tag_and_get_value(input, tag).map_err(|_| Error::BadDER)
 }
 
 // TODO: Get rid of this. This is just here to make it easier to adapt to the
 // movement of the core DER functionality from libwebpki to *ring*.
 #[inline(always)]
-pub fn read_tag_and_get_input<'a>(input: &mut Reader<'a>)
-                                  -> Result<(u8, Input<'a>), Error> {
+pub fn read_tag_and_get_input<'a>(input: &mut untrusted::Reader<'a>)
+                                  -> Result<(u8, untrusted::Input<'a>), Error> {
     ring::der::read_tag_and_get_value(input).map_err(|_| Error::BadDER)
 }
 
 // TODO: investigate taking decoder as a reference to reduce generated code
 // size.
 #[inline(always)]
-pub fn nested_mut<'a, F, R, E: Copy>(input: &mut Reader<'a>, tag: Tag, error: E,
-                                     decoder: F) -> Result<R, E>
-                                     where F : FnMut(&mut Reader<'a>)
+pub fn nested_mut<'a, F, R, E: Copy>(input: &mut untrusted::Reader<'a>,
+                                     tag: Tag, error: E, decoder: F)
+                                     -> Result<R, E>
+                                     where F : FnMut(&mut untrusted::Reader<'a>)
                                                      -> Result<R, E> {
     let inner = try!(expect_tag_and_get_input(input, tag).map_err(|_| error));
-    read_all_mut(inner, error, decoder).map_err(|_| error)
+    inner.read_all_mut(error, decoder).map_err(|_| error)
 }
 
 // TODO: investigate taking decoder as a reference to reduce generated code
 // size.
-pub fn nested_of_mut<'a, F, E: Copy>(input: &mut Reader<'a>, outer_tag: Tag,
-                                     inner_tag: Tag, error: E, mut decoder: F)
-                                     -> Result<(), E>
-                                     where F : FnMut(&mut Reader<'a>)
-                                            -> Result<(), E> {
+pub fn nested_of_mut<'a, F, E: Copy>(input: &mut untrusted::Reader<'a>,
+                                     outer_tag: Tag, inner_tag: Tag, error: E,
+                                     mut decoder: F) -> Result<(), E>
+                                     where F : FnMut(&mut untrusted::Reader<'a>)
+                                                     -> Result<(), E> {
     nested_mut(input, outer_tag, error, |outer| {
         loop {
             try!(nested_mut(outer, inner_tag, error, |inner| decoder(inner)));
@@ -69,8 +71,9 @@ pub fn nested_of_mut<'a, F, E: Copy>(input: &mut Reader<'a>, outer_tag: Tag,
     })
 }
 
-pub fn bit_string_with_no_unused_bits<'a>(input: &mut Reader<'a>)
-                                          -> Result<Input<'a>, Error> {
+pub fn bit_string_with_no_unused_bits<'a>(input: &mut untrusted::Reader<'a>)
+                                          -> Result<untrusted::Input<'a>,
+                                                    Error> {
     nested(input, Tag::BitString, Error::BadDER, |value| {
         let unused_bits_at_end =
             try!(value.read_byte().map_err(|_| Error::BadDER));
@@ -83,7 +86,7 @@ pub fn bit_string_with_no_unused_bits<'a>(input: &mut Reader<'a>)
 
 // Like mozilla::pkix, we accept the the non-conformant explicit encoding of
 // the default value (false) for compatibility with real-world certificates.
-pub fn optional_boolean(input: &mut Reader) -> Result<bool, Error> {
+pub fn optional_boolean(input: &mut untrusted::Reader) -> Result<bool, Error> {
     if !input.peek(Tag::Boolean as u8) {
         return Ok(false);
     }
@@ -98,7 +101,7 @@ pub fn optional_boolean(input: &mut Reader) -> Result<bool, Error> {
 
 // This parser will only parse values between 0..127. mozilla::pkix found
 // experimentally that the need to parse larger values is not useful.
-pub fn integer(input: &mut Reader) -> Result<u8, Error> {
+pub fn integer(input: &mut untrusted::Reader) -> Result<u8, Error> {
     nested(input, Tag::Integer, Error::BadDER, |value| {
         let first_byte = try!(value.read_byte().map_err(|_| Error::BadDER));
         if (first_byte & 0x80) != 0 {
@@ -109,20 +112,22 @@ pub fn integer(input: &mut Reader) -> Result<u8, Error> {
     })
 }
 
-pub fn positive_integer<'a>(input: &'a mut Reader) -> Result<Input<'a>, Error> {
+pub fn positive_integer<'a>(input: &'a mut untrusted::Reader)
+                            -> Result<untrusted::Input<'a>, Error> {
     ring::der::positive_integer(input).map_err(|_| Error::BadDER)
 }
 
-pub fn null(input: &mut Reader) -> Result<(), Error> {
+pub fn null(input: &mut untrusted::Reader) -> Result<(), Error> {
     nested(input, Tag::Null, Error::BadDER, |_| Ok(()))
 }
 
-pub fn time_choice<'a>(input: &mut Reader<'a>) -> Result<Timespec, Error> {
+pub fn time_choice<'a>(input: &mut untrusted::Reader<'a>)
+                       -> Result<Timespec, Error> {
     let is_utc_time = input.peek(Tag::UTCTime as u8);
     let expected_tag = if is_utc_time { Tag::UTCTime }
                        else { Tag::GeneralizedTime };
 
-    fn read_digit(inner: &mut Reader) -> Result<i32, Error> {
+    fn read_digit(inner: &mut untrusted::Reader) -> Result<i32, Error> {
         let b = try!(inner.read_byte().map_err(|_| Error::BadDERTime));
         if b < b'0' || b > b'9' {
             return Err(Error::BadDERTime);
@@ -130,7 +135,7 @@ pub fn time_choice<'a>(input: &mut Reader<'a>) -> Result<Timespec, Error> {
         Ok((b - b'0') as i32)
     }
 
-    fn read_two_digits(inner: &mut Reader, min: i32, max: i32)
+    fn read_two_digits(inner: &mut untrusted::Reader, min: i32, max: i32)
                        -> Result<i32, Error> {
         let hi = try!(read_digit(inner));
         let lo = try!(read_digit(inner));

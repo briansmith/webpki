@@ -14,15 +14,15 @@
 
 //! Utilities for efficiently embedding trust anchors in programs.
 
-use ring::input::*;
 use super::{Error, TrustAnchor};
 use super::cert::{EndEntityOrCA, parse_cert};
+use untrusted;
 
 /// Interprets the given DER-encoded certificate as a `TrustAnchor`. The
 /// certificate is not validated. In particular, there is no check that the
 /// certificate is self-signed or even that the certificate has the cA basic
 /// constraint.
-pub fn cert_der_as_trust_anchor<'a>(cert_der: Input<'a>)
+pub fn cert_der_as_trust_anchor<'a>(cert_der: untrusted::Input<'a>)
                                     -> Result<TrustAnchor<'a>, Error> {
     // XXX: `EndEntityOrCA::EndEntity` is used instead of `EndEntityOrCA::CA`
     // because we don't have a refernce to a child cert, which is needed for
