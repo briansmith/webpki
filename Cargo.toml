@@ -25,6 +25,10 @@ version = "0.1.0"
 name = "webpki"
 path = "src/webpki.rs"
 
+[features]
+default = ["trust_anchor_utils"]
+trust_anchor_utils = []
+
 [dependencies]
 ring = { git = "https://github.com/briansmith/ring" }
 rustc-serialize = "0.3.15"

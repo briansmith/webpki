@@ -12,6 +12,12 @@
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
+#![no_std]
+
+#[cfg(any(test, feature = "trust_anchor_util"))]
+#[macro_use(format)]
+extern crate std;
+
 extern crate ring;
 extern crate time;
 
@@ -26,7 +32,10 @@ mod der;
 mod cert;
 mod name;
 mod signed_data;
+
+#[cfg(feature = "trust_anchor_util")]
 pub mod trust_anchor_util;
+
 mod verify_cert;
 
 pub use signed_data::{

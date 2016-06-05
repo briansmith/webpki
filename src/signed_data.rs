@@ -581,10 +581,10 @@ mod tests {
                              "rsa2048-pkcs1-sha512.pem", Ok(()));
 
     struct TestSignedData {
-        spki: Vec<u8>,
-        data: Vec<u8>,
-        algorithm: Vec<u8>,
-        signature: Vec<u8>
+        spki: std::vec::Vec<u8>,
+        data: std::vec::Vec<u8>,
+        algorithm: std::vec::Vec<u8>,
+        signature: std::vec::Vec<u8>
     }
 
     fn parse_test_signed_data(file_name: &str) -> TestSignedData {
@@ -609,7 +609,8 @@ mod tests {
 
     type FileLines<'a> = std::io::Lines<std::io::BufReader<&'a std::fs::File>>;
 
-    fn read_pem_section(lines: & mut FileLines, section_name: &str) -> Vec<u8> {
+    fn read_pem_section(lines: & mut FileLines, section_name: &str)
+                        -> std::vec::Vec<u8> {
         // Skip comments and header
         let begin_section = format!("-----BEGIN {}-----", section_name);
         loop {
@@ -619,7 +620,7 @@ mod tests {
             }
         }
 
-        let mut base64 = String::new();
+        let mut base64 = std::string::String::new();
 
         let end_section = format!("-----END {}-----", section_name);
         loop {
