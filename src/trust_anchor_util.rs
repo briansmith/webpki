@@ -16,7 +16,9 @@
 
 use std;
 use super::{Error, TrustAnchor};
-use super::cert::{EndEntityOrCA, parse_cert};
+use super::cert::{EndEntityOrCA, Cert, parse_cert};
+use super::cert::certificate_serial_number;
+use super::der;
 use untrusted;
 
 /// Interprets the given DER-encoded certificate as a `TrustAnchor`. The
@@ -26,15 +28,12 @@ use untrusted;
 pub fn cert_der_as_trust_anchor<'a>(cert_der: untrusted::Input<'a>)
                                     -> Result<TrustAnchor<'a>, Error> {
     // XXX: `EndEntityOrCA::EndEntity` is used instead of `EndEntityOrCA::CA`
-    // because we don't have a refernce to a child cert, which is needed for
+    // because we don't have a reference to a child cert, which is needed for
     // `EndEntityOrCA::CA`. For this purpose, it doesn't matter.
-    let cert = try!(parse_cert(cert_der, EndEntityOrCA::EndEntity));
-    Ok(TrustAnchor {
-        subject: cert.subject.as_slice_less_safe(),
-        spki: cert.spki.as_slice_less_safe(),
-        name_constraints: cert.name_constraints
-                              .map(|nc| nc.as_slice_less_safe())
-    })
+    parse_cert(cert_der, EndEntityOrCA::EndEntity)
+        .map(trust_anchor_from_cert)
+        .or_else(|err| parse_cert_v1(cert_der)
+                 .or(Err(err)))
 }
 
 /// Generates code for hard-coding the given trust anchors into a program. This
@@ -51,4 +50,49 @@ pub fn generate_code_for_trust_anchors(name: &str,
     let value = str::replace(&format!("{:?};\n", trust_anchors), ": [", ": &[");
 
     decl + &value
+}
+
+fn trust_anchor_from_cert<'a>(cert: Cert<'a>) -> TrustAnchor<'a> {
+    TrustAnchor {
+        subject: cert.subject.as_slice_less_safe(),
+        spki: cert.spki.as_slice_less_safe(),
+        name_constraints: cert.name_constraints
+                              .map(|nc| nc.as_slice_less_safe())
+    }
+}
+
+/// Parses a v1 certificate directly into a TrustAnchor.
+fn parse_cert_v1<'a>(cert_der: untrusted::Input<'a>)
+                     -> Result<TrustAnchor<'a>, Error> {
+    /* See https://tools.ietf.org/html/rfc5280#section-4.1 for the
+     * structures being parsed here. */
+
+    cert_der.read_all(Error::BadDER, |cert_der| {
+        der::nested(cert_der, der::Tag::Sequence, Error::BadDER,
+                    |cert_inf| {
+            let anchor = der::nested(cert_inf, der::Tag::Sequence, Error::BadDER,
+                        |inf| {
+                // The version number field does not appear in v1 certificates.
+                try!(certificate_serial_number(inf));
+                try!(der::expect_tag_and_get_input(inf, der::Tag::Sequence)); // sigalg
+                try!(der::expect_tag_and_get_input(inf, der::Tag::Sequence)); // issuer
+                try!(der::expect_tag_and_get_input(inf, der::Tag::Sequence)); // validity
+                let subject =
+                    try!(der::expect_tag_and_get_input(inf, der::Tag::Sequence));
+                let spki =
+                    try!(der::expect_tag_and_get_input(inf, der::Tag::Sequence));
+
+                Ok(TrustAnchor {
+                    subject: subject.as_slice_less_safe(),
+                    spki: spki.as_slice_less_safe(),
+                    name_constraints: None
+                })
+            });
+
+            // read and discard signatureAlgorithm + signature
+            try!(der::expect_tag_and_get_input(cert_inf, der::Tag::Sequence));
+            try!(der::expect_tag_and_get_input(cert_inf, der::Tag::BitString));
+            anchor
+        })
+    })
 }
