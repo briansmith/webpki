@@ -128,8 +128,8 @@ fn version3(input: &mut untrusted::Reader) -> Result<(), Error> {
     })
 }
 
-fn certificate_serial_number<'a>(input: &mut untrusted::Reader<'a>)
-                                 -> Result<(), Error> {
+pub fn certificate_serial_number<'a>(input: &mut untrusted::Reader<'a>)
+                                     -> Result<(), Error> {
     // https://tools.ietf.org/html/rfc5280#section-4.1.2.2:
     // * Conforming CAs MUST NOT use serialNumber values longer than 20 octets."
     // * "The serial number MUST be a positive integer [...]"
