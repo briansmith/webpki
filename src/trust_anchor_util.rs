@@ -14,6 +14,7 @@
 
 //! Utilities for efficiently embedding trust anchors in programs.
 
+use std;
 use super::{Error, TrustAnchor};
 use super::cert::{EndEntityOrCA, parse_cert};
 use untrusted;
@@ -41,7 +42,7 @@ pub fn cert_der_as_trust_anchor<'a>(cert_der: untrusted::Input<'a>)
 /// static variable that will contain the TrustAnchor array.
 pub fn generate_code_for_trust_anchors(name: &str,
                                        trust_anchors: &[TrustAnchor])
-                                       -> String {
+                                       -> std::string::String {
     let decl = format!("static {}: [TrustAnchor<'static>; {}] = ", name,
                        trust_anchors.len());
 

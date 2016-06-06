@@ -26,8 +26,8 @@ name = "webpki"
 path = "src/webpki.rs"
 
 [features]
-default = ["trust_anchor_utils"]
-trust_anchor_utils = []
+default = ["trust_anchor_util"]
+trust_anchor_util = []
 
 [dependencies]
 ring = { git = "https://github.com/briansmith/ring" }
