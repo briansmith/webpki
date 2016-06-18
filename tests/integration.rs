@@ -57,3 +57,19 @@ pub fn netflix()
     cert.verify_is_valid_tls_server_cert(ALL_SIGALGS, &anchors, &inter_vec,
                                          time::get_time()) .unwrap();
 }
+
+#[test]
+fn read_root_with_zero_serial() {
+    let ca = include_bytes!("misc/serial_zero.der");
+    trust_anchor_util::cert_der_as_trust_anchor(
+        Input::from(ca)
+    ).expect("godaddy cert should parse as anchor");
+}
+
+#[test]
+fn read_root_with_neg_serial() {
+    let ca = include_bytes!("misc/serial_neg.der");
+    trust_anchor_util::cert_der_as_trust_anchor(
+        Input::from(ca)
+    ).expect("idcat cert should parse as anchor");
+}
