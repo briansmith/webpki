@@ -120,7 +120,7 @@ pub fn parse_cert<'a>(cert_der: untrusted::Input<'a>,
 fn version3(input: &mut untrusted::Reader) -> Result<(), Error> {
     der::nested(input, der::Tag::ContextSpecificConstructed0,
                 Error::BadDER, |input| {
-        let version = try!(der::integer(input));
+        let version = try!(der::small_nonnegative_integer(input));
         if version != 2 { // v3
             return Err(Error::UnsupportedCertVersion);
         }

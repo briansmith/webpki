@@ -237,7 +237,7 @@ fn check_basic_constraints(input: Option<&mut untrusted::Reader>,
             // certificates have pathLenConstraint.
             let path_len_constraint =
                 if !input.at_end() {
-                    let value = try!(der::integer(input));
+                    let value = try!(der::small_nonnegative_integer(input));
                     Some(value as usize)
                 } else {
                     None

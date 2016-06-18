@@ -99,23 +99,16 @@ pub fn optional_boolean(input: &mut untrusted::Reader) -> Result<bool, Error> {
     })
 }
 
-// This parser will only parse values between 0..127. mozilla::pkix found
-// experimentally that the need to parse larger values is not useful.
-pub fn integer(input: &mut untrusted::Reader) -> Result<u8, Error> {
-    nested(input, Tag::Integer, Error::BadDER, |value| {
-        let first_byte = try!(value.read_byte().map_err(|_| Error::BadDER));
-        if (first_byte & 0x80) != 0 {
-            // We don't accept negative values
-            return Err(Error::BadDER);
-        }
-        Ok(first_byte)
-    })
-}
-
 pub fn positive_integer<'a>(input: &'a mut untrusted::Reader)
                             -> Result<untrusted::Input<'a>, Error> {
     ring::der::positive_integer(input).map_err(|_| Error::BadDER)
 }
+
+pub fn small_nonnegative_integer<'a>(input: &'a mut untrusted::Reader)
+                                     -> Result<u8, Error> {
+    ring::der::small_nonnegative_integer(input).map_err(|_| Error::BadDER)
+}
+
 
 pub fn null(input: &mut untrusted::Reader) -> Result<(), Error> {
     nested(input, Tag::Null, Error::BadDER, |_| Ok(()))
