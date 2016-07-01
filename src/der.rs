@@ -25,7 +25,7 @@ use time::{Timespec, Tm};
 use untrusted;
 
 // TODO: Get rid of this. This is just here to make it easier to adapt to the
-// movement of the core DER functionality from libwebpki to *ring*.
+// movement of the core DER functionality from webpki to *ring*.
 #[inline(always)]
 pub fn expect_tag_and_get_input<'a>(input: &mut untrusted::Reader<'a>,
                                     tag: Tag) ->
@@ -34,7 +34,7 @@ pub fn expect_tag_and_get_input<'a>(input: &mut untrusted::Reader<'a>,
 }
 
 // TODO: Get rid of this. This is just here to make it easier to adapt to the
-// movement of the core DER functionality from libwebpki to *ring*.
+// movement of the core DER functionality from webpki to *ring*.
 #[inline(always)]
 pub fn read_tag_and_get_input<'a>(input: &mut untrusted::Reader<'a>)
                                   -> Result<(u8, untrusted::Input<'a>), Error> {
