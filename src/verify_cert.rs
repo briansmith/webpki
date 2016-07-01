@@ -13,7 +13,7 @@
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 use untrusted;
-use super::{Error, FatalError, SignatureAlgorithm, TrustAnchor};
+use super::{Error, SignatureAlgorithm, TrustAnchor};
 use super::cert::{Cert, EndEntityOrCA, parse_cert};
 use super::der;
 use super::name::check_name_constraints;
@@ -60,10 +60,7 @@ fn build_chain<'a>(required_eku_if_present: KeyPurposeId,
 
     match loop_while_non_fatal_error(trust_anchors,
                                      |trust_anchor: &TrustAnchor<'a>| {
-        let trust_anchor_subject =
-                try!(untrusted::Input::new(trust_anchor.subject)
-                        .map_err(|_|
-                            Error::Fatal(FatalError::InvalidTrustAnchor)));
+        let trust_anchor_subject = untrusted::Input::from(trust_anchor.subject);
         if cert.issuer != trust_anchor_subject {
             return Err(Error::UnknownIssuer);
         }
@@ -72,9 +69,7 @@ fn build_chain<'a>(required_eku_if_present: KeyPurposeId,
             match trust_anchor.name_constraints {
                 Some(name_constraints) => {
                     let name_constraints =
-                        try!(untrusted::Input::new(name_constraints)
-                             .map_err(|_|
-                                Error::Fatal(FatalError::InvalidTrustAnchor)));
+                        untrusted::Input::from(name_constraints);
                     Some(name_constraints)
                 },
                 None => None
@@ -84,9 +79,7 @@ fn build_chain<'a>(required_eku_if_present: KeyPurposeId,
                 name_constraints, Error::BadDER,
                 |value| check_name_constraints(value, &cert)));
 
-        let trust_anchor_spki =
-            try!(untrusted::Input::new(trust_anchor.spki)
-                    .map_err(|_| Error::BadDER));
+        let trust_anchor_spki = untrusted::Input::from(trust_anchor.spki);
 
         // TODO: try!(check_distrust(trust_anchor_subject,
         //                           trust_anchor_spki));

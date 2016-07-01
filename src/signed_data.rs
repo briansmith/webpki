@@ -379,7 +379,7 @@ mod tests {
     fn test_verify_signed_data(file_name: &str,
                                expected_result: Result<(), Error>) {
         let tsd = parse_test_signed_data(file_name);
-        let spki_value = untrusted::Input::new(&tsd.spki).unwrap();
+        let spki_value = untrusted::Input::from(&tsd.spki);
         let spki_value = spki_value.read_all(Error::BadDER, |input| {
             der::expect_tag_and_get_input(input, der::Tag::Sequence)
         }).unwrap();
@@ -390,18 +390,18 @@ mod tests {
         // expanded with SEQUENCE-wrapped data so that we can actually
         // test `parse_signed_data`.
 
-        let algorithm = untrusted::Input::new(&tsd.algorithm).unwrap();
+        let algorithm = untrusted::Input::from(&tsd.algorithm);
         let algorithm = algorithm.read_all(Error::BadDER, |input| {
             der::expect_tag_and_get_input(input, der::Tag::Sequence)
         }).unwrap();
 
-        let signature = untrusted::Input::new(&tsd.signature).unwrap();
+        let signature = untrusted::Input::from(&tsd.signature);
         let signature = signature.read_all(Error::BadDER, |input| {
             der::bit_string_with_no_unused_bits(input)
         }).unwrap();
 
         let signed_data = signed_data::SignedData {
-            data: untrusted::Input::new(&tsd.data).unwrap(),
+            data: untrusted::Input::from(&tsd.data),
             algorithm: algorithm,
             signature: signature
         };
@@ -426,7 +426,7 @@ mod tests {
     fn test_verify_signed_data_signature_outer(file_name: &str,
                                                expected_error: Error) {
         let tsd = parse_test_signed_data(file_name);
-        let signature = untrusted::Input::new(&tsd.signature).unwrap();
+        let signature = untrusted::Input::from(&tsd.signature);
         assert_eq!(Err(expected_error),
                    signature.read_all(Error::BadDER, |input| {
             der::bit_string_with_no_unused_bits(input)
@@ -444,7 +444,7 @@ mod tests {
 
     fn test_parse_spki_bad(file_name: &str, expected_error: Error) {
         let tsd = parse_test_signed_data(file_name);
-        let spki_value = untrusted::Input::new(&tsd.spki).unwrap();
+        let spki_value = untrusted::Input::from(&tsd.spki);
         let spki_value = spki_value.read_all(Error::BadDER, |input| {
             der::expect_tag_and_get_input(input, der::Tag::Sequence)
         }).unwrap();
@@ -466,7 +466,7 @@ mod tests {
 
     fn test_parse_spki_bad_outer(file_name: &str, expected_error: Error) {
         let tsd = parse_test_signed_data(file_name);
-        let spki = untrusted::Input::new(&tsd.spki).unwrap();
+        let spki = untrusted::Input::from(&tsd.spki);
         assert_eq!(Err(expected_error),
                    spki.read_all(Error::BadDER, |input| {
             der::expect_tag_and_get_input(input, der::Tag::Sequence)
