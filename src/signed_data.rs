@@ -204,80 +204,80 @@ pub struct SignatureAlgorithm {
 pub static ECDSA_P256_SHA1: SignatureAlgorithm = SignatureAlgorithm {
     signature_alg_oids: &[ECDSA_SHA1_OID],
     public_key_alg: &ECDSA_P256,
-    verification_alg: &signature::ECDSA_P256_SHA1_VERIFY,
+    verification_alg: &signature::ECDSA_P256_SHA1,
 };
 
 pub static ECDSA_P256_SHA256: SignatureAlgorithm = SignatureAlgorithm {
     signature_alg_oids: &[ECDSA_SHA256_OID],
     public_key_alg: &ECDSA_P256,
-    verification_alg: &signature::ECDSA_P256_SHA256_VERIFY,
+    verification_alg: &signature::ECDSA_P256_SHA256,
 };
 
 pub static ECDSA_P256_SHA384: SignatureAlgorithm = SignatureAlgorithm {
     signature_alg_oids: &[ECDSA_SHA384_OID],
     public_key_alg: &ECDSA_P256,
-    verification_alg: &signature::ECDSA_P256_SHA384_VERIFY,
+    verification_alg: &signature::ECDSA_P256_SHA384,
 };
 
 pub static ECDSA_P256_SHA512: SignatureAlgorithm = SignatureAlgorithm {
     signature_alg_oids: &[ECDSA_SHA512_OID],
     public_key_alg: &ECDSA_P256,
-    verification_alg: &signature::ECDSA_P256_SHA512_VERIFY,
+    verification_alg: &signature::ECDSA_P256_SHA512,
 };
 
 pub static ECDSA_P384_SHA1: SignatureAlgorithm = SignatureAlgorithm {
     signature_alg_oids: &[ECDSA_SHA1_OID],
     public_key_alg: &ECDSA_P384,
-    verification_alg: &signature::ECDSA_P384_SHA1_VERIFY,
+    verification_alg: &signature::ECDSA_P384_SHA1,
 };
 
 pub static ECDSA_P384_SHA256: SignatureAlgorithm = SignatureAlgorithm {
     signature_alg_oids: &[ECDSA_SHA256_OID],
     public_key_alg: &ECDSA_P384,
-    verification_alg: &signature::ECDSA_P384_SHA256_VERIFY,
+    verification_alg: &signature::ECDSA_P384_SHA256,
 };
 
 pub static ECDSA_P384_SHA384: SignatureAlgorithm = SignatureAlgorithm {
     signature_alg_oids: &[ECDSA_SHA384_OID],
     public_key_alg: &ECDSA_P384,
-    verification_alg: &signature::ECDSA_P384_SHA384_VERIFY,
+    verification_alg: &signature::ECDSA_P384_SHA384,
 };
 
 pub static ECDSA_P384_SHA512: SignatureAlgorithm = SignatureAlgorithm {
     signature_alg_oids: &[ECDSA_SHA512_OID],
     public_key_alg: &ECDSA_P384,
-    verification_alg: &signature::ECDSA_P384_SHA512_VERIFY,
+    verification_alg: &signature::ECDSA_P384_SHA512,
 };
 
 
-pub static RSA_PKCS1_2048_8192_SHA1: SignatureAlgorithm = SignatureAlgorithm {
+pub static RSA_PKCS1_SHA1_2048_8192: SignatureAlgorithm = SignatureAlgorithm {
     signature_alg_oids: &[RSA_PKCS1_SHA1_OID, RSA_PKCS1_SHA1_OSE_OID],
     public_key_alg: &RSA_PKCS1,
-    verification_alg: &signature::RSA_PKCS1_2048_8192_SHA1_VERIFY,
+    verification_alg: &signature::RSA_PKCS1_SHA1_2048_8192,
 };
 
-pub static RSA_PKCS1_2048_8192_SHA256: SignatureAlgorithm = SignatureAlgorithm {
+pub static RSA_PKCS1_SHA256_2048_8192: SignatureAlgorithm = SignatureAlgorithm {
     signature_alg_oids: &[RSA_PKCS1_SHA256_OID],
     public_key_alg: &RSA_PKCS1,
-    verification_alg: &signature::RSA_PKCS1_2048_8192_SHA256_VERIFY,
+    verification_alg: &signature::RSA_PKCS1_SHA256_2048_8192,
 };
 
-pub static RSA_PKCS1_2048_8192_SHA384: SignatureAlgorithm = SignatureAlgorithm {
+pub static RSA_PKCS1_SHA384_2048_8192: SignatureAlgorithm = SignatureAlgorithm {
     signature_alg_oids: &[RSA_PKCS1_SHA384_OID],
     public_key_alg: &RSA_PKCS1,
-    verification_alg: &signature::RSA_PKCS1_2048_8192_SHA384_VERIFY,
+    verification_alg: &signature::RSA_PKCS1_SHA384_2048_8192,
 };
 
-pub static RSA_PKCS1_2048_8192_SHA512: SignatureAlgorithm = SignatureAlgorithm {
+pub static RSA_PKCS1_SHA512_2048_8192: SignatureAlgorithm = SignatureAlgorithm {
     signature_alg_oids: &[RSA_PKCS1_SHA512_OID],
     public_key_alg: &RSA_PKCS1,
-    verification_alg: &signature::RSA_PKCS1_2048_8192_SHA512_VERIFY,
+    verification_alg: &signature::RSA_PKCS1_SHA512_2048_8192,
 };
 
-pub static RSA_PKCS1_3072_8192_SHA384: SignatureAlgorithm = SignatureAlgorithm {
+pub static RSA_PKCS1_SHA384_3072_8192: SignatureAlgorithm = SignatureAlgorithm {
     signature_alg_oids: &[RSA_PKCS1_SHA384_OID],
     public_key_alg: &RSA_PKCS1,
-    verification_alg: &signature::RSA_PKCS1_3072_8192_SHA384_VERIFY,
+    verification_alg: &signature::RSA_PKCS1_SHA384_3072_8192,
 };
 
 
@@ -637,12 +637,12 @@ mod tests {
     static SUPPORTED_ALGORITHMS_IN_TESTS:
             [&'static signed_data::SignatureAlgorithm; 13] = [
         // Reasonable algorithms.
-        &signed_data::RSA_PKCS1_2048_8192_SHA256,
+        &signed_data::RSA_PKCS1_SHA256_2048_8192,
         &signed_data::ECDSA_P256_SHA256,
         &signed_data::ECDSA_P384_SHA384,
-        &signed_data::RSA_PKCS1_2048_8192_SHA384,
-        &signed_data::RSA_PKCS1_2048_8192_SHA512,
-        &signed_data::RSA_PKCS1_3072_8192_SHA384,
+        &signed_data::RSA_PKCS1_SHA384_2048_8192,
+        &signed_data::RSA_PKCS1_SHA512_2048_8192,
+        &signed_data::RSA_PKCS1_SHA384_3072_8192,
 
         // Algorithms deprecated because they are annoying (P-521) or because
         // they are nonsensical combinations.
@@ -652,7 +652,7 @@ mod tests {
         &signed_data::ECDSA_P384_SHA512, // Truncates digest.
 
         // Algorithms deprecated because they are bad.
-        &signed_data::RSA_PKCS1_2048_8192_SHA1, // SHA-1
+        &signed_data::RSA_PKCS1_SHA1_2048_8192, // SHA-1
         &signed_data::ECDSA_P256_SHA1, // SHA-1
         &signed_data::ECDSA_P384_SHA1, // SHA-1
     ];
