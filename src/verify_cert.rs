@@ -66,14 +66,7 @@ fn build_chain<'a>(required_eku_if_present: KeyPurposeId,
         }
 
         let name_constraints =
-            match trust_anchor.name_constraints {
-                Some(name_constraints) => {
-                    let name_constraints =
-                        untrusted::Input::from(name_constraints);
-                    Some(name_constraints)
-                },
-                None => None
-            };
+            trust_anchor.name_constraints.map(untrusted::Input::from);
 
         try!(untrusted::read_all_optional(
                 name_constraints, Error::BadDER,
