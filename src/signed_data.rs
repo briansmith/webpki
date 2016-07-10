@@ -204,49 +204,49 @@ pub struct SignatureAlgorithm {
 pub static ECDSA_P256_SHA1: SignatureAlgorithm = SignatureAlgorithm {
     signature_alg_oids: &[ECDSA_SHA1_OID],
     public_key_alg: &ECDSA_P256,
-    verification_alg: &signature::ECDSA_P256_SHA1,
+    verification_alg: &signature::ECDSA_P256_SHA1_ASN1,
 };
 
 pub static ECDSA_P256_SHA256: SignatureAlgorithm = SignatureAlgorithm {
     signature_alg_oids: &[ECDSA_SHA256_OID],
     public_key_alg: &ECDSA_P256,
-    verification_alg: &signature::ECDSA_P256_SHA256,
+    verification_alg: &signature::ECDSA_P256_SHA256_ASN1,
 };
 
 pub static ECDSA_P256_SHA384: SignatureAlgorithm = SignatureAlgorithm {
     signature_alg_oids: &[ECDSA_SHA384_OID],
     public_key_alg: &ECDSA_P256,
-    verification_alg: &signature::ECDSA_P256_SHA384,
+    verification_alg: &signature::ECDSA_P256_SHA384_ASN1,
 };
 
 pub static ECDSA_P256_SHA512: SignatureAlgorithm = SignatureAlgorithm {
     signature_alg_oids: &[ECDSA_SHA512_OID],
     public_key_alg: &ECDSA_P256,
-    verification_alg: &signature::ECDSA_P256_SHA512,
+    verification_alg: &signature::ECDSA_P256_SHA512_ASN1,
 };
 
 pub static ECDSA_P384_SHA1: SignatureAlgorithm = SignatureAlgorithm {
     signature_alg_oids: &[ECDSA_SHA1_OID],
     public_key_alg: &ECDSA_P384,
-    verification_alg: &signature::ECDSA_P384_SHA1,
+    verification_alg: &signature::ECDSA_P384_SHA1_ASN1,
 };
 
 pub static ECDSA_P384_SHA256: SignatureAlgorithm = SignatureAlgorithm {
     signature_alg_oids: &[ECDSA_SHA256_OID],
     public_key_alg: &ECDSA_P384,
-    verification_alg: &signature::ECDSA_P384_SHA256,
+    verification_alg: &signature::ECDSA_P384_SHA256_ASN1,
 };
 
 pub static ECDSA_P384_SHA384: SignatureAlgorithm = SignatureAlgorithm {
     signature_alg_oids: &[ECDSA_SHA384_OID],
     public_key_alg: &ECDSA_P384,
-    verification_alg: &signature::ECDSA_P384_SHA384,
+    verification_alg: &signature::ECDSA_P384_SHA384_ASN1,
 };
 
 pub static ECDSA_P384_SHA512: SignatureAlgorithm = SignatureAlgorithm {
     signature_alg_oids: &[ECDSA_SHA512_OID],
     public_key_alg: &ECDSA_P384,
-    verification_alg: &signature::ECDSA_P384_SHA512,
+    verification_alg: &signature::ECDSA_P384_SHA512_ASN1,
 };
 
 
