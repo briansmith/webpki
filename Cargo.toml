@@ -30,10 +30,10 @@ default = ["trust_anchor_util"]
 trust_anchor_util = []
 
 [dependencies]
-ring = { git = "https://github.com/briansmith/ring" }
+ring = { git = "https://github.com/briansmith/ring", branch = "error" }
 rustc-serialize = "0.3.15"
 time = "0.1"
-untrusted = "0.2"
+untrusted = { git = "https://github.com/briansmith/untrusted", branch = "EndOfInput" }
 
 [profile.bench]
 opt-level = 3
