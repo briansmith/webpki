@@ -19,7 +19,6 @@
 #![allow(
     missing_copy_implementations,
     missing_debug_implementations,
-    missing_docs,
 )]
 #![deny(
     const_err,
@@ -30,6 +29,7 @@
     fat_ptr_transmutes,
     improper_ctypes,
     match_of_unit_variant_via_paren_dotdot,
+    missing_docs,
     mutable_transmutes,
     no_mangle_const_items,
     non_camel_case_types,
