@@ -197,7 +197,13 @@ pub enum Error {
 /// `TrustAnchor` representation, either at runtime or in a build script.
 #[derive(Debug)]
 pub struct TrustAnchor<'a> {
+    /// The value of the `subject` field of the trust anchor.
     pub subject: &'a [u8],
+
+    /// The value of the `subjectPublicKeyInfo` field of the trust anchor.
     pub spki: &'a [u8],
+
+    /// The value of a DER-encoded NameConstraints, containing name
+    /// constraints to apply to the trust anchor, if any.
     pub name_constraints: Option<&'a [u8]>
 }
