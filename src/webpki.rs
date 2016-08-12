@@ -31,7 +31,7 @@ mod der;
 
 mod cert;
 mod name;
-mod signed_data;
+pub mod signed_data;
 
 #[cfg(feature = "trust_anchor_util")]
 pub mod trust_anchor_util;

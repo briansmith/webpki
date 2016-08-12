@@ -18,9 +18,9 @@ use super::der;
 use untrusted;
 
 pub struct SignedData<'a> {
-    data: untrusted::Input<'a>,
+    pub data: untrusted::Input<'a>,
     pub algorithm: untrusted::Input<'a>,
-    signature: untrusted::Input<'a>,
+    pub signature: untrusted::Input<'a>,
 }
 
 // Parses the concatenation of tbs||signatureAlgorithm||signatureValue that is
