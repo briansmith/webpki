@@ -20,6 +20,14 @@ use super::name::check_name_constraints;
 use super::signed_data::verify_signed_data;
 use time::Timespec;
 
+/// Verifies a server's TLS certificate.
+///
+/// `supported_sig_algs` is the list of signature algorithms to support.
+/// `trust_anchors` is the list of root CAs to trust. `intermediate_certs` is
+/// the sequence of intermediate certificates that the server sent in the TLS
+/// handshake. `cert` is the purported end-entity certificate of the server.
+/// `time` is the time for which the validation is effective (usually the
+/// current time).
 pub fn verify_tls_cert(supported_sig_algs: &[&SignatureAlgorithm],
                        trust_anchors: &[TrustAnchor],
                        intermediate_certs: &[untrusted::Input],
