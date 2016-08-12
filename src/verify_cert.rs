@@ -84,9 +84,6 @@ fn build_chain<'a>(required_eku_if_present: KeyPurposeId,
         Ok(()) => {
             return Ok(());
         },
-        err @ Err(Error::Fatal(..)) => {
-            return err;
-        },
         Err(..) => {
             // If the error is not fatal, then keep going.
         }
@@ -336,9 +333,6 @@ fn loop_while_non_fatal_error<V, F>(values: V, f: F) -> Result<(), Error>
         match f(v) {
             Ok(()) => {
                 return Ok(());
-            },
-            err @ Err(Error::Fatal(..)) => {
-                return err;
             },
             Err(..) => {
                 // If the error is not fatal, then keep going.

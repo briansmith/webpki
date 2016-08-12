@@ -122,7 +122,6 @@ pub enum Error {
     CertNotValidYet,
     EndEntityUsedAsCA,
     ExtensionValueInvalid,
-    Fatal(FatalError),
     InvalidCertValidity,
     InvalidReferenceName,
     NameConstraintViolation,
@@ -135,12 +134,6 @@ pub enum Error {
     UnsupportedEllipticCurve,
     UnsupportedKeyAlgorithmForSignature,
     UnsupportedSignatureAlgorithm,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum FatalError {
-    ImpossibleState,
-    InvalidTrustAnchor,
 }
 
 /// A trust anchor (a.k.a. root CA).

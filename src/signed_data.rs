@@ -13,7 +13,7 @@
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 use ring::signature;
-use super::{Error, FatalError};
+use super::Error;
 use super::der;
 use untrusted;
 
@@ -58,8 +58,7 @@ pub fn parse_signed_data<'a>(der: &mut untrusted::Reader<'a>)
     let mark1 = der.mark();
     let tbs = try!(der::expect_tag_and_get_input(der, der::Tag::Sequence));
     let mark2 = der.mark();
-    let data = try!(der.get_input_between_marks(mark1, mark2)
-                       .map_err(|_| Error::Fatal(FatalError::ImpossibleState)));
+    let data = der.get_input_between_marks(mark1, mark2).unwrap();
     let algorithm = try!(der::expect_tag_and_get_input(der,
                                                        der::Tag::Sequence));
     let signature = try!(der::bit_string_with_no_unused_bits(der));
