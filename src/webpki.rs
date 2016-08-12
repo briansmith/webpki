@@ -12,11 +12,14 @@
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
+//! Web PKI X.509 Certificate Validation.
+
 #![no_std]
 
 #![allow(
     missing_copy_implementations,
     missing_debug_implementations,
+    missing_docs,
 )]
 #![deny(
     const_err,
