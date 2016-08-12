@@ -14,6 +14,60 @@
 
 #![no_std]
 
+#![allow(
+    missing_copy_implementations,
+    missing_debug_implementations,
+    missing_docs,
+    unused_qualifications,
+    unused_results,
+)]
+#![deny(
+    const_err,
+    dead_code,
+    deprecated,
+    drop_with_repr_extern,
+    exceeding_bitshifts,
+    fat_ptr_transmutes,
+    improper_ctypes,
+    match_of_unit_variant_via_paren_dotdot,
+    mutable_transmutes,
+    no_mangle_const_items,
+    non_camel_case_types,
+    non_shorthand_field_patterns,
+    non_snake_case,
+    non_upper_case_globals,
+    overflowing_literals,
+    path_statements,
+    plugin_as_library,
+    private_no_mangle_fns,
+    private_no_mangle_statics,
+    stable_features,
+    trivial_casts,
+    trivial_numeric_casts,
+    unconditional_recursion,
+    unknown_crate_types,
+    unknown_lints,
+    unreachable_code,
+    unsafe_code,
+    unstable_features,
+    unused_allocation,
+    unused_assignments,
+    unused_attributes,
+    unused_comparisons,
+    unused_extern_crates,
+    unused_features,
+    unused_imports,
+    unused_import_braces,
+    unused_must_use,
+    unused_mut,
+    unused_parens,
+    unused_unsafe,
+    unused_variables,
+    variant_size_differences,
+    warnings,
+    while_true,
+)]
+
 #[cfg(any(test, feature = "trust_anchor_util"))]
 #[macro_use(format)]
 extern crate std;
