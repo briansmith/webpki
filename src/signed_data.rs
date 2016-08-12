@@ -140,22 +140,22 @@ pub fn verify_signed_data(supported_algorithms: &[&SignatureAlgorithm],
 
         found_signature_alg_match = true;
 
-        let (spki_algorithm_oid, spki_curve_oid, spki_key) =
-            try!(parse_spki_value(spki_value));
-        if spki_algorithm_oid !=
+        let spki = try!(parse_spki_value(spki_value));
+        if spki.algorithm_oid !=
                 supported_alg.public_key_alg.shared.spki_algorithm_oid {
             continue;
         }
 
-        match (spki_curve_oid, supported_alg.public_key_alg.curve_oid) {
+        match (spki.curve_oid, supported_alg.public_key_alg.curve_oid) {
             (None, None) => (),
             (Some(spki_oid), Some(supported_oid))
                     if spki_oid == supported_oid => (),
             _ => { continue },
         };
 
-        return signature::verify(supported_alg.verification_alg, spki_key,
-                                 signed_data.data, signed_data.signature)
+        return signature::verify(supported_alg.verification_alg,
+                                 spki.key_value, signed_data.data,
+                                 signed_data.signature)
                     .map_err(|_| Error::InvalidSignatureForPublicKey);
     }
 
@@ -166,15 +166,18 @@ pub fn verify_signed_data(supported_algorithms: &[&SignatureAlgorithm],
     }
 }
 
+struct SubjectPublicKeyInfo<'a> {
+    algorithm_oid: untrusted::Input<'a>,
+    curve_oid: Option<untrusted::Input<'a>>,
+    key_value: untrusted::Input<'a>,
+}
+
 // Parse the public key into an algorithm OID, an optional curve OID, and the
 // key value. The caller needs to check whether these match the
 // `PublicKeyAlgorithm` for the `SignatureAlgorithm` that is matched when
 // parsing the signature.
-fn parse_spki_value<'a>(input: untrusted::Input<'a>) ->
-                        Result<(untrusted::Input<'a>,
-                                Option<untrusted::Input<'a>>,
-                                untrusted::Input<'a>),
-                               Error> {
+fn parse_spki_value(input: untrusted::Input)
+                    -> Result<SubjectPublicKeyInfo, Error> {
     input.read_all(Error::BadDER, |input| {
         let (algorithm_oid, curve_oid) =
                 try!(der::nested(input, der::Tag::Sequence, Error::BadDER,
@@ -196,8 +199,12 @@ fn parse_spki_value<'a>(input: untrusted::Input<'a>) ->
             };
             Ok((algorithm_oid, curve_oid))
         }));
-        let public_key = try!(der::bit_string_with_no_unused_bits(input));
-        Ok((algorithm_oid, curve_oid, public_key))
+        let key_value = try!(der::bit_string_with_no_unused_bits(input));
+        Ok(SubjectPublicKeyInfo {
+            algorithm_oid: algorithm_oid,
+            curve_oid: curve_oid,
+            key_value: key_value,
+        })
     })
 }
 
