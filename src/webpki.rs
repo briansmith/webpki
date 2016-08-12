@@ -111,6 +111,7 @@ pub use signed_data::{
     RSA_PKCS1_3072_8192_SHA384,
 };
 pub use name::verify_cert_dns_name;
+pub use signed_data::{SignedData, verify_signed_data};
 pub use verify_cert::verify_tls_cert;
 
 /// An error that occurs during certificate validation or name validation.

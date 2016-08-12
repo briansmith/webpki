@@ -17,41 +17,57 @@ use super::Error;
 use super::der;
 use untrusted;
 
+/// X.509 certificates and related items that are signed are almost always
+/// encoded in the format "tbs||signatureAlgorithm||signature". This structure
+/// captures this pattern.
 pub struct SignedData<'a> {
+    /// The signed data. This would be `tbsCertificate` in the case of an X.509
+    /// certificate, `tbsResponseData` in the case of an OCSP response, and the
+    /// data nested in the `digitally-signed` construct for TLS 1.2 signed
+    /// data.
     data: untrusted::Input<'a>,
+
+    /// The value of the `AlgorithmIdentifier`. This would be
+    /// `signatureAlgorithm` in the case of an X.509 certificate or OCSP
+    /// response. This would have to be synthesized in the case of TLS 1.2
+    /// signed data, since TLS does not identify algorithms by ASN.1 OIDs.
     pub algorithm: untrusted::Input<'a>,
+
+    /// The value of the signature. This would be `signature` in an X.509
+    /// certificate or OCSP response. This would be the value of
+    /// `DigitallySigned.signature` for TLS 1.2 signed data.
     signature: untrusted::Input<'a>,
 }
 
-// Parses the concatenation of tbs||signatureAlgorithm||signatureValue that is
-// common in the X.509 certificate and OCSP response syntaxes.
-//
-// X.509 Certificates (RFC 5280) look like this:
-//
-// ```ASN.1
-// Certificate (SEQUENCE) {
-//     tbsCertificate TBSCertificate,
-//     signatureAlgorithm AlgorithmIdentifier,
-//     signatureValue BIT STRING
-// }
-//
-// OCSP responses (RFC 6960) look like this:
-//
-// ```ASN.1
-// BasicOCSPResponse {
-//     tbsResponseData ResponseData,
-//     signatureAlgorithm AlgorithmIdentifier,
-//     signature BIT STRING,
-//     certs [0] EXPLICIT SEQUENCE OF Certificate OPTIONAL
-// }
-// ```
-//
-// Note that this function does NOT parse the outermost `SEQUENCE` or the
-// `certs` value.
-//
-// The return value's first component is the contents of
-// `tbsCertificate`/`tbsResponseData`; the second component is a `SignedData`
-// structure that can be passed to `verify_signed_data`.
+/// Parses the concatenation of "tbs||signatureAlgorithm||signature" that
+/// is common in the X.509 certificate and OCSP response syntaxes.
+///
+/// X.509 Certificates (RFC 5280) look like this:
+///
+/// ```ASN.1
+/// Certificate (SEQUENCE) {
+///     tbsCertificate TBSCertificate,
+///     signatureAlgorithm AlgorithmIdentifier,
+///     signatureValue BIT STRING
+/// }
+///
+/// OCSP responses (RFC 6960) look like this:
+///
+/// ```ASN.1
+/// BasicOCSPResponse {
+///     tbsResponseData ResponseData,
+///     signatureAlgorithm AlgorithmIdentifier,
+///     signature BIT STRING,
+///     certs [0] EXPLICIT SEQUENCE OF Certificate OPTIONAL
+/// }
+/// ```
+///
+/// Note that this function does NOT parse the outermost `SEQUENCE` or the
+/// `certs` value.
+///
+/// The return value's first component is the contents of
+/// `tbsCertificate`/`tbsResponseData`; the second component is a `SignedData`
+/// structure that can be passed to `verify_signed_data`.
 pub fn parse_signed_data<'a>(der: &mut untrusted::Reader<'a>)
                              -> Result<(untrusted::Input<'a>, SignedData<'a>),
                                        Error> {
