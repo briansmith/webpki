@@ -64,23 +64,29 @@ fn trust_anchor_from_cert<'a>(cert: Cert<'a>) -> TrustAnchor<'a> {
 /// Parses a v1 certificate directly into a TrustAnchor.
 fn parse_cert_v1<'a>(cert_der: untrusted::Input<'a>)
                      -> Result<TrustAnchor<'a>, Error> {
-    /* See https://tools.ietf.org/html/rfc5280#section-4.1 for the
-     * structures being parsed here. */
+    fn skip(input: &mut untrusted::Reader, tag: der::Tag)
+            -> Result<(), Error> {
+        let _ = try!(der::expect_tag_and_get_input(input, tag));
+        Ok(())
+    }
 
+    // X.509 Certificate: https://tools.ietf.org/html/rfc5280#section-4.1.
     cert_der.read_all(Error::BadDER, |cert_der| {
-        der::nested(cert_der, der::Tag::Sequence, Error::BadDER,
-                    |cert_inf| {
-            let anchor = der::nested(cert_inf, der::Tag::Sequence, Error::BadDER,
-                        |inf| {
+        der::nested(cert_der, der::Tag::Sequence, Error::BadDER, |cert_der| {
+            let anchor = der::nested(cert_der, der::Tag::Sequence,
+                                     Error::BadDER, |tbs| {
                 // The version number field does not appear in v1 certificates.
-                try!(certificate_serial_number(inf));
-                try!(der::expect_tag_and_get_input(inf, der::Tag::Sequence)); // sigalg
-                try!(der::expect_tag_and_get_input(inf, der::Tag::Sequence)); // issuer
-                try!(der::expect_tag_and_get_input(inf, der::Tag::Sequence)); // validity
+                try!(certificate_serial_number(tbs));
+
+                try!(skip(tbs, der::Tag::Sequence)); // signature.
+                try!(skip(tbs, der::Tag::Sequence)); // issuer.
+                try!(skip(tbs, der::Tag::Sequence)); // validity.
                 let subject =
-                    try!(der::expect_tag_and_get_input(inf, der::Tag::Sequence));
+                    try!(der::expect_tag_and_get_input(tbs,
+                                                       der::Tag::Sequence));
                 let spki =
-                    try!(der::expect_tag_and_get_input(inf, der::Tag::Sequence));
+                    try!(der::expect_tag_and_get_input(tbs,
+                                                       der::Tag::Sequence));
 
                 Ok(TrustAnchor {
                     subject: subject.as_slice_less_safe(),
@@ -90,8 +96,9 @@ fn parse_cert_v1<'a>(cert_der: untrusted::Input<'a>)
             });
 
             // read and discard signatureAlgorithm + signature
-            try!(der::expect_tag_and_get_input(cert_inf, der::Tag::Sequence));
-            try!(der::expect_tag_and_get_input(cert_inf, der::Tag::BitString));
+            try!(skip(cert_der, der::Tag::Sequence));
+            try!(skip(cert_der, der::Tag::BitString));
+
             anchor
         })
     })
