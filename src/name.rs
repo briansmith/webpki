@@ -17,9 +17,10 @@ use super::der;
 use super::Error;
 use untrusted;
 
-// Verify that the given end-entity cert, which is assumed to have been already
-// validated with `verify_cert`, is valid for the given hostname. `hostname` is
-// assumed to a normalized ASCII (punycode if non-ASCII) DNS name.
+/// Verifies that the given end-entity cert, which is assumed to have been
+/// already validated with `verify_tls_cert`, is valid for the given hostname.
+/// `dns_name` is assumed to a normalized ASCII (punycode if non-ASCII) DNS
+/// name. `cert_der` is the entire ASN.1 DER-encoded end-entity certificate.
 pub fn verify_cert_dns_name(cert_der: untrusted::Input,
                             dns_name: untrusted::Input) -> Result<(), Error> {
     let cert = try!(parse_cert(cert_der, EndEntityOrCA::EndEntity));
