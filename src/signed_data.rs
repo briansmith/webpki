@@ -359,9 +359,7 @@ const RSA_PKCS1_SHA1_OSE_OID: &'static [u8] = &oid!(1, 3, 14, 3, 2, 29);
 mod tests {
     use rustc_serialize::base64::FromBase64;
     use std;
-    use std::fs;
-    use std::io::{BufRead, BufReader};
-    use std::path::PathBuf;
+    use std::io::BufRead;
     use super::super::{der, Error, signed_data};
     use untrusted;
 
@@ -589,10 +587,10 @@ mod tests {
 
     fn parse_test_signed_data(file_name: &str) -> TestSignedData {
         let path =
-            PathBuf::from("third-party/chromium/data/verify_signed_data")
-                .join(file_name);
-        let file = fs::File::open(path).unwrap();
-        let mut lines = BufReader::new(&file).lines();
+            std::path::PathBuf::from(
+                "third-party/chromium/data/verify_signed_data").join(file_name);
+        let file = std::fs::File::open(path).unwrap();
+        let mut lines = std::io::BufReader::new(&file).lines();
 
         let spki = read_pem_section(&mut lines, "PUBLIC KEY");
         let algorithm = read_pem_section(&mut lines, "ALGORITHM");
