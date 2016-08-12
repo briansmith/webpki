@@ -14,6 +14,8 @@
 
 //! Web PKI X.509 Certificate Validation.
 
+#![doc(html_root_url="https://briansmith.org/rustdoc/")]
+
 #![no_std]
 
 #![allow(

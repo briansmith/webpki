@@ -15,6 +15,7 @@
 [package]
 authors = ["Brian Smith <brian@briansmith.org>"]
 description = "Web PKI X.509 Certificate Verification."
+documentation = "https://briansmith.org/rustdoc/webpki/"
 license-file = "LICENSE"
 name = "webpki"
 readme = "README.md"
