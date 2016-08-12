@@ -159,6 +159,34 @@ impl <'a> EndEntityCert<'a> {
                                         -> Result<(), Error> {
         name::verify_cert_dns_name(&self, dns_name)
     }
+
+    /// Verifies the signature `signature` of message `msg` using the
+    /// certificate's public key.
+    ///
+    /// `signature_alg` is the algorithm to use to
+    /// verify the signature; the certificate's public key is verified to be
+    /// compatible with this algorithm.
+    ///
+    /// For TLS 1.2, `signature` corresponds to TLS's
+    /// `DigitallySigned.signature` and `signature_alg` corresponds to TLS's
+    /// `DigitallySigned.algorithm` of TLS type `SignatureAndHashAlgorithm`. In
+    /// TLS 1.2 a single `SignatureAndHashAlgorithm` may map to multiple
+    /// `SignatureAlgorithm`s. For example, a TLS 1.2
+    /// `ignatureAndHashAlgorithm` of (ECDSA, SHA-256) may map to any or all
+    /// of {`ECDSA_P256_SHA1`, `ECDSA_P256_SHA256`, `ECDSA_P256_SHA384`,
+    /// `ECDSA_P256_SHA512`}, depending on how the TLS implementation is
+    /// configured.
+    ///
+    /// For current TLS 1.3 drafts, `signature_alg` corresponds to TLS's
+    /// `algorithm` fields of type `SignatureScheme`. There is (currently) a
+    /// one-to-one correspondence between TLS 1.3's `SignatureScheme` and
+    /// `SignatureAlgorithm`.
+    pub fn verify_signature(&self, signature_alg: &SignatureAlgorithm,
+                            msg: untrusted::Input,
+                            signature: untrusted::Input) -> Result<(), Error> {
+        signed_data::verify_signature(signature_alg, self.inner.spki, msg,
+                                      signature)
+    }
 }
 
 

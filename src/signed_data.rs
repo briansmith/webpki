@@ -155,9 +155,9 @@ pub fn verify_signed_data(supported_algorithms: &[&SignatureAlgorithm],
     }
 }
 
-fn verify_signature(signature_alg: &SignatureAlgorithm,
-                    spki_value: untrusted::Input, msg: untrusted::Input,
-                    signature: untrusted::Input) -> Result<(), Error> {
+pub fn verify_signature(signature_alg: &SignatureAlgorithm,
+                        spki_value: untrusted::Input, msg: untrusted::Input,
+                        signature: untrusted::Input) -> Result<(), Error> {
     let spki = try!(parse_spki_value(spki_value));
     if spki.algorithm_oid !=
             signature_alg.public_key_alg.shared.spki_algorithm_oid {
