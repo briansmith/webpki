@@ -301,7 +301,7 @@ fn check_eku(input: Option<&mut untrusted::Reader>, used_as_ca: UsedAsCA,
                 if value == required_eku_if_present.oid_value ||
                    (match_step_up &&
                     value == EKU_NETSCAPE_SERVER_STEP_UP.oid_value) {
-                    input.skip_to_end();
+                    let _ = input.skip_to_end();
                     break;
                 }
                 if input.at_end() {

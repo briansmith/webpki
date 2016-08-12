@@ -19,7 +19,6 @@
     missing_debug_implementations,
     missing_docs,
     unused_qualifications,
-    unused_results,
 )]
 #![deny(
     const_err,
@@ -61,6 +60,7 @@
     unused_must_use,
     unused_mut,
     unused_parens,
+    unused_results,
     unused_unsafe,
     unused_variables,
     variant_size_differences,
