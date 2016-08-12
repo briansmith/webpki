@@ -16,7 +16,7 @@
 
 use std;
 use super::{Error, TrustAnchor};
-use super::cert::{EndEntityOrCA, Cert, parse_cert};
+use super::cert::{EndEntityOrCA, Cert, parse_cert_internal};
 use super::cert::certificate_serial_number;
 use super::der;
 use untrusted;
@@ -36,12 +36,25 @@ pub fn cert_der_as_trust_anchor<'a>(cert_der: untrusted::Input<'a>)
     // certificate using a special parser for v1 certificates. Notably, that
     // parser doesn't allow extensions, so there's no need to worry about
     // embedded name constraints in a v1 certificate.
-    match parse_cert(cert_der, EndEntityOrCA::EndEntity) {
+    match parse_cert_internal(cert_der, EndEntityOrCA::EndEntity,
+                              possibly_invalid_certificate_serial_number) {
         Ok(cert) => Ok(trust_anchor_from_cert(cert)),
         Err(Error::BadDER) => parse_cert_v1(cert_der).or(Err(Error::BadDER)),
         Err(err) => Err(err),
     }
 }
+
+fn possibly_invalid_certificate_serial_number<'a>(
+        input: &mut untrusted::Reader<'a>) -> Result<(), Error> {
+    // https://tools.ietf.org/html/rfc5280#section-4.1.2.2:
+    // * Conforming CAs MUST NOT use serialNumber values longer than 20 octets."
+    // * "The serial number MUST be a positive integer [...]"
+    //
+    // However, we don't enforce these constraints on trust anchors, as there
+    // are widely-deployed trust anchors that violate these constraints.
+    skip(input, der::Tag::Integer)
+}
+
 
 /// Generates code for hard-coding the given trust anchors into a program. This
 /// is designed to be used in a build script. `name` is the name of the public
@@ -71,12 +84,6 @@ fn trust_anchor_from_cert<'a>(cert: Cert<'a>) -> TrustAnchor<'a> {
 /// Parses a v1 certificate directly into a TrustAnchor.
 fn parse_cert_v1<'a>(cert_der: untrusted::Input<'a>)
                      -> Result<TrustAnchor<'a>, Error> {
-    fn skip(input: &mut untrusted::Reader, tag: der::Tag)
-            -> Result<(), Error> {
-        let _ = try!(der::expect_tag_and_get_input(input, tag));
-        Ok(())
-    }
-
     // X.509 Certificate: https://tools.ietf.org/html/rfc5280#section-4.1.
     cert_der.read_all(Error::BadDER, |cert_der| {
         der::nested(cert_der, der::Tag::Sequence, Error::BadDER, |cert_der| {
@@ -109,4 +116,9 @@ fn parse_cert_v1<'a>(cert_der: untrusted::Input<'a>)
             anchor
         })
     })
+}
+
+fn skip(input: &mut untrusted::Reader, tag: der::Tag) -> Result<(), Error> {
+    let _ = try!(der::expect_tag_and_get_input(input, tag));
+    Ok(())
 }
