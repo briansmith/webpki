@@ -30,10 +30,17 @@ pub fn cert_der_as_trust_anchor<'a>(cert_der: untrusted::Input<'a>)
     // XXX: `EndEntityOrCA::EndEntity` is used instead of `EndEntityOrCA::CA`
     // because we don't have a reference to a child cert, which is needed for
     // `EndEntityOrCA::CA`. For this purpose, it doesn't matter.
-    parse_cert(cert_der, EndEntityOrCA::EndEntity)
-        .map(trust_anchor_from_cert)
-        .or_else(|err| parse_cert_v1(cert_der)
-                 .or(Err(err)))
+    //
+    // v1 certificates will result in `Error::BadDER` because `parse_cert` will
+    // expect a version field that isn't there. In that case, try to parse the
+    // certificate using a special parser for v1 certificates. Notably, that
+    // parser doesn't allow extensions, so there's no need to worry about
+    // embedded name constraints in a v1 certificate.
+    match parse_cert(cert_der, EndEntityOrCA::EndEntity) {
+        Ok(cert) => Ok(trust_anchor_from_cert(cert)),
+        Err(Error::BadDER) => parse_cert_v1(cert_der).or(Err(Error::BadDER)),
+        Err(err) => Err(err),
+    }
 }
 
 /// Generates code for hard-coding the given trust anchors into a program. This
