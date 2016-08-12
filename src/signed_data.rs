@@ -126,7 +126,6 @@ pub fn verify_signed_data(supported_algorithms: &[&SignatureAlgorithm],
     }));
 
     let mut found_signature_alg_match = false;
-    //let mut found_key_alg_match = false;
     for supported_alg in supported_algorithms {
         if !supported_alg.signature_alg_oids.into_iter()
                                             .any(|oid| algorithm_id == *oid) {
