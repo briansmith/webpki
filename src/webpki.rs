@@ -228,7 +228,7 @@ pub enum Error {
 
     /// The signature's algorithm does not match the algorithm of the public
     /// key it is being validated for.
-    UnsupportedKeyAlgorithmForSignature,
+    UnsupportedSignatureAlgorithmForPublicKey,
 
     /// The signature algorithm for a signature is not in the set of supported
     /// signature algorithms given.

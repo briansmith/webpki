@@ -138,33 +138,44 @@ pub fn verify_signed_data(supported_algorithms: &[&SignatureAlgorithm],
             continue;
         }
 
-        found_signature_alg_match = true;
-
-        let spki = try!(parse_spki_value(spki_value));
-        if spki.algorithm_oid !=
-                supported_alg.public_key_alg.shared.spki_algorithm_oid {
-            continue;
+        match verify_signature(supported_alg, spki_value, signed_data.data,
+                               signed_data.signature) {
+            Err(Error::UnsupportedSignatureAlgorithmForPublicKey) => {
+                found_signature_alg_match = true;
+                continue;
+            },
+            result => { return result; },
         }
-
-        match (spki.curve_oid, supported_alg.public_key_alg.curve_oid) {
-            (None, None) => (),
-            (Some(spki_oid), Some(supported_oid))
-                    if spki_oid == supported_oid => (),
-            _ => { continue },
-        };
-
-        return signature::verify(supported_alg.verification_alg,
-                                 spki.key_value, signed_data.data,
-                                 signed_data.signature)
-                    .map_err(|_| Error::InvalidSignatureForPublicKey);
     }
 
     if found_signature_alg_match {
-        Err(Error::UnsupportedKeyAlgorithmForSignature)
+        Err(Error::UnsupportedSignatureAlgorithmForPublicKey)
     } else {
         Err(Error::UnsupportedSignatureAlgorithm)
     }
 }
+
+fn verify_signature(signature_alg: &SignatureAlgorithm,
+                    spki_value: untrusted::Input, msg: untrusted::Input,
+                    signature: untrusted::Input) -> Result<(), Error> {
+    let spki = try!(parse_spki_value(spki_value));
+    if spki.algorithm_oid !=
+            signature_alg.public_key_alg.shared.spki_algorithm_oid {
+        return Err(Error::UnsupportedSignatureAlgorithmForPublicKey);
+    }
+
+    match (spki.curve_oid, signature_alg.public_key_alg.curve_oid) {
+        (None, None) => (),
+        (Some(spki_oid), Some(supported_oid))
+                if spki_oid == supported_oid => (),
+        _ => { return Err(Error::UnsupportedSignatureAlgorithmForPublicKey); },
+    };
+
+    signature::verify(signature_alg.verification_alg, spki.key_value, msg,
+                      signature)
+        .map_err(|_| Error::InvalidSignatureForPublicKey)
+}
+
 
 struct SubjectPublicKeyInfo<'a> {
     algorithm_oid: untrusted::Input<'a>,
@@ -508,22 +519,26 @@ mod tests {
 
     // XXX: Some of the BadDER tests should have better error codes, maybe?
 
-    test_verify_signed_data!(test_ecdsa_prime256v1_sha512_spki_params_null,
-                             "ecdsa-prime256v1-sha512-spki-params-null.pem",
-                             Err(Error::UnsupportedKeyAlgorithmForSignature));
+    test_verify_signed_data!(
+        test_ecdsa_prime256v1_sha512_spki_params_null,
+        "ecdsa-prime256v1-sha512-spki-params-null.pem",
+        Err(Error::UnsupportedSignatureAlgorithmForPublicKey));
     test_verify_signed_data_signature_outer!(
         test_ecdsa_prime256v1_sha512_unused_bits_signature,
         "ecdsa-prime256v1-sha512-unused-bits-signature.pem",
         Error::BadDER);
-    test_verify_signed_data!(test_ecdsa_prime256v1_sha512_using_ecdh_key,
-                             "ecdsa-prime256v1-sha512-using-ecdh-key.pem",
-                             Err(Error::UnsupportedKeyAlgorithmForSignature));
-    test_verify_signed_data!(test_ecdsa_prime256v1_sha512_using_ecmqv_key,
-                             "ecdsa-prime256v1-sha512-using-ecmqv-key.pem",
-                             Err(Error::UnsupportedKeyAlgorithmForSignature));
-    test_verify_signed_data!(test_ecdsa_prime256v1_sha512_using_rsa_algorithm,
-                             "ecdsa-prime256v1-sha512-using-rsa-algorithm.pem",
-                             Err(Error::UnsupportedKeyAlgorithmForSignature));
+    test_verify_signed_data!(
+        test_ecdsa_prime256v1_sha512_using_ecdh_key,
+        "ecdsa-prime256v1-sha512-using-ecdh-key.pem",
+        Err(Error::UnsupportedSignatureAlgorithmForPublicKey));
+    test_verify_signed_data!(
+        test_ecdsa_prime256v1_sha512_using_ecmqv_key,
+        "ecdsa-prime256v1-sha512-using-ecmqv-key.pem",
+        Err(Error::UnsupportedSignatureAlgorithmForPublicKey));
+    test_verify_signed_data!(
+        test_ecdsa_prime256v1_sha512_using_rsa_algorithm,
+        "ecdsa-prime256v1-sha512-using-rsa-algorithm.pem",
+        Err(Error::UnsupportedSignatureAlgorithmForPublicKey));
     test_verify_signed_data!(
         test_ecdsa_prime256v1_sha512_wrong_signature_format,
         "ecdsa-prime256v1-sha512-wrong-signature-format.pem",
@@ -535,9 +550,9 @@ mod tests {
                              Err(Error::InvalidSignatureForPublicKey));
     test_verify_signed_data!(test_ecdsa_secp384r1_sha256,
                              "ecdsa-secp384r1-sha256.pem", Ok(()));
-    test_verify_signed_data!(test_ecdsa_using_rsa_key,
-                             "ecdsa-using-rsa-key.pem",
-                             Err(Error::UnsupportedKeyAlgorithmForSignature));
+    test_verify_signed_data!(
+        test_ecdsa_using_rsa_key, "ecdsa-using-rsa-key.pem",
+        Err(Error::UnsupportedSignatureAlgorithmForPublicKey));
 
     test_parse_spki_bad_outer!(test_rsa_pkcs1_sha1_bad_key_der_length,
                                "rsa-pkcs1-sha1-bad-key-der-length.pem",
@@ -572,12 +587,14 @@ mod tests {
     test_parse_spki_bad!(test_rsa_pkcs1_sha256_spki_non_null_params,
                          "rsa-pkcs1-sha256-spki-non-null-params.pem",
                          Error::BadDER);
-    test_verify_signed_data!(test_rsa_pkcs1_sha256_using_ecdsa_algorithm,
-                             "rsa-pkcs1-sha256-using-ecdsa-algorithm.pem",
-                             Err(Error::UnsupportedKeyAlgorithmForSignature));
-    test_verify_signed_data!(test_rsa_pkcs1_sha256_using_id_ea_rsa,
-                             "rsa-pkcs1-sha256-using-id-ea-rsa.pem",
-                             Err(Error::UnsupportedKeyAlgorithmForSignature));
+    test_verify_signed_data!(
+        test_rsa_pkcs1_sha256_using_ecdsa_algorithm,
+        "rsa-pkcs1-sha256-using-ecdsa-algorithm.pem",
+        Err(Error::UnsupportedSignatureAlgorithmForPublicKey));
+    test_verify_signed_data!(
+        test_rsa_pkcs1_sha256_using_id_ea_rsa,
+        "rsa-pkcs1-sha256-using-id-ea-rsa.pem",
+        Err(Error::UnsupportedSignatureAlgorithmForPublicKey));
 
     // XXX: PSS is not supported, so our test results are not the same as
     // Chromium's test results for these cases.
@@ -608,8 +625,9 @@ mod tests {
                              "rsa-pss-sha256-salt10.pem",
                              Err(Error::UnsupportedSignatureAlgorithm));
 
-    test_verify_signed_data!(test_rsa_using_ec_key, "rsa-using-ec-key.pem",
-                             Err(Error::UnsupportedKeyAlgorithmForSignature));
+    test_verify_signed_data!(
+        test_rsa_using_ec_key, "rsa-using-ec-key.pem",
+        Err(Error::UnsupportedSignatureAlgorithmForPublicKey));
     test_verify_signed_data!(test_rsa2048_pkcs1_sha512,
                              "rsa2048-pkcs1-sha512.pem", Ok(()));
 
