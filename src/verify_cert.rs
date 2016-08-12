@@ -20,7 +20,9 @@ use super::name::check_name_constraints;
 use super::signed_data::verify_signed_data;
 use time::Timespec;
 
-/// Verifies a server's TLS certificate.
+/// Verifies a server's TLS certificate. **Important**: `verify_cert_dns_name` must
+/// also be used to verify that the certificate is valid for the host being
+/// connected to.
 ///
 /// `supported_sig_algs` is the list of signature algorithms to support.
 /// `trust_anchors` is the list of root CAs to trust. `intermediate_certs` is
