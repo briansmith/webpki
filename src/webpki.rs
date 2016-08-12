@@ -112,9 +112,55 @@ pub use signed_data::{
     RSA_PKCS1_2048_8192_SHA512,
     RSA_PKCS1_3072_8192_SHA384,
 };
-pub use name::verify_cert_dns_name;
-pub use signed_data::{SignedData, verify_signed_data};
-pub use verify_cert::verify_tls_cert;
+
+/// An end-entity certificate.
+pub struct EndEntityCert<'a> {
+    inner: cert::Cert<'a>,
+}
+
+impl <'a> EndEntityCert<'a> {
+    /// Parse the ASN.1 DER-encoded X.509 encoding of the certificate
+    /// `cert_der`.
+    pub fn from(cert_der: untrusted::Input<'a>)
+                -> Result<EndEntityCert<'a>, Error> {
+        Ok(EndEntityCert {
+            inner:
+                try!(cert::parse_cert(cert_der,
+                                      cert::EndEntityOrCA::EndEntity))
+        })
+    }
+
+    /// Verifies that the end-entity certificate is valid for use by a TLS
+    /// server.
+    ///
+    /// `supported_sig_algs` is the list of signature algorithms that are
+    /// trusted for use in certificate signatures; the end-entity certificate's
+    /// public key is not validated against this list. `trust_anchors` is the
+    /// list of root CAs to trust. `intermediate_certs` is the sequence of
+    /// intermediate certificates that the server sent in the TLS handshake.
+    /// `cert` is the purported end-entity certificate of the server. `time` is
+    /// the time for which the validation is effective (usually the current
+    /// time).
+    pub fn verify_is_valid_tls_server_cert(
+            &self, supported_sig_algs: &[&SignatureAlgorithm],
+            trust_anchors: &[TrustAnchor],
+            intermediate_certs: &[untrusted::Input], time: time::Timespec)
+            -> Result<(), Error> {
+        verify_cert::build_chain(verify_cert::EKU_SERVER_AUTH,
+                                 supported_sig_algs, trust_anchors,
+                                 intermediate_certs, &self.inner, time, 0)
+    }
+
+    /// Verifies that the certificate is valid for the given DNS host name.
+    ///
+    /// `dns_name` is assumed to a normalized ASCII (punycode if non-ASCII) DNS
+    /// name.
+    pub fn verify_is_valid_for_dns_name(&self, dns_name: untrusted::Input)
+                                        -> Result<(), Error> {
+        name::verify_cert_dns_name(&self, dns_name)
+    }
+}
+
 
 /// An error that occurs during certificate validation or name validation.
 #[derive(Clone, Copy, Debug, PartialEq)]

@@ -12,20 +12,14 @@
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-use super::cert::{Cert, EndEntityOrCA, parse_cert};
+use super::cert::{Cert, EndEntityOrCA};
 use super::der;
 use super::Error;
 use untrusted;
 
-/// Verifies that the given end-entity cert is valid for the given hostname.
-/// **Important**: `verify_tls_cert` must also be used to verify that the
-/// certificate is valid.
-///
-/// `dns_name` is assumed to a normalized ASCII (punycode if non-ASCII) DNS
-/// name. `cert_der` is the entire ASN.1 DER-encoded end-entity certificate.
-pub fn verify_cert_dns_name(cert_der: untrusted::Input,
+pub fn verify_cert_dns_name(cert: &super::EndEntityCert,
                             dns_name: untrusted::Input) -> Result<(), Error> {
-    let cert = try!(parse_cert(cert_der, EndEntityOrCA::EndEntity));
+    let cert = &cert.inner;
 
     if !is_valid_reference_dns_id(dns_name) {
         return Err(Error::InvalidReferenceName);

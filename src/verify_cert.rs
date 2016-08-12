@@ -18,33 +18,15 @@ use super::cert::{Cert, EndEntityOrCA, parse_cert};
 use super::der;
 use super::name::check_name_constraints;
 use super::signed_data::verify_signed_data;
-use time::Timespec;
+use time;
 
-/// Verifies a server's TLS certificate. **Important**: `verify_cert_dns_name` must
-/// also be used to verify that the certificate is valid for the host being
-/// connected to.
-///
-/// `supported_sig_algs` is the list of signature algorithms to support.
-/// `trust_anchors` is the list of root CAs to trust. `intermediate_certs` is
-/// the sequence of intermediate certificates that the server sent in the TLS
-/// handshake. `cert` is the purported end-entity certificate of the server.
-/// `time` is the time for which the validation is effective (usually the
-/// current time).
-pub fn verify_tls_cert(supported_sig_algs: &[&SignatureAlgorithm],
-                       trust_anchors: &[TrustAnchor],
-                       intermediate_certs: &[untrusted::Input],
-                       cert: untrusted::Input,
-                       time: Timespec) -> Result<(), Error> {
-    let cert = try!(parse_cert(cert, EndEntityOrCA::EndEntity));
-    build_chain(EKU_SERVER_AUTH, supported_sig_algs, trust_anchors,
-                intermediate_certs, &cert, time, 0)
-}
-
-fn build_chain<'a>(required_eku_if_present: KeyPurposeId,
-                   supported_sig_algs: &[&SignatureAlgorithm],
-                   trust_anchors: &'a [TrustAnchor],
-                   intermediate_certs: &[untrusted::Input<'a>], cert: &Cert<'a>,
-                   time: Timespec, sub_ca_count: usize) -> Result<(), Error> {
+pub fn build_chain<'a>(required_eku_if_present: KeyPurposeId,
+                       supported_sig_algs: &[&SignatureAlgorithm],
+                       trust_anchors: &'a [TrustAnchor],
+                       intermediate_certs: &[untrusted::Input<'a>],
+                       cert: &Cert<'a>, time: time::Timespec,
+                       sub_ca_count: usize)
+                       -> Result<(), Error> {
     let used_as_ca = used_as_ca(&cert.ee_or_ca);
 
     try!(check_issuer_independent_properties(cert, time, used_as_ca,
@@ -159,7 +141,7 @@ fn check_signatures(supported_sig_algs: &[&SignatureAlgorithm],
 }
 
 fn check_issuer_independent_properties<'a>(
-        cert: &Cert<'a>, time: Timespec, used_as_ca: UsedAsCA,
+        cert: &Cert<'a>, time: time::Timespec, used_as_ca: UsedAsCA,
         sub_ca_count: usize, required_eku_if_present: KeyPurposeId)
         -> Result<(), Error> {
     // TODO: try!(check_distrust(trust_anchor_subject,
@@ -184,7 +166,7 @@ fn check_issuer_independent_properties<'a>(
 }
 
 // https://tools.ietf.org/html/rfc5280#section-4.1.2.5
-fn check_validity(input: &mut untrusted::Reader, time: Timespec)
+fn check_validity(input: &mut untrusted::Reader, time: time::Timespec)
                   -> Result<(), Error> {
     let not_before = try!(der::time_choice(input));
     let not_after = try!(der::time_choice(input));
@@ -259,7 +241,7 @@ pub struct KeyPurposeId {
 // id-kp              OBJECT IDENTIFIER ::= { id-pkix 3 }
 
 // id-kp-serverAuth   OBJECT IDENTIFIER ::= { id-kp 1 }
-static EKU_SERVER_AUTH: KeyPurposeId = KeyPurposeId {
+pub static EKU_SERVER_AUTH: KeyPurposeId = KeyPurposeId {
     oid_value: &[(40 * 1) + 3, 6, 1, 5, 5, 7, 3, 1]
 };
 
