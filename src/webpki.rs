@@ -111,28 +111,76 @@ pub use signed_data::{
 pub use name::verify_cert_dns_name;
 pub use verify_cert::verify_tls_cert;
 
+/// An error that occurs during certificate validation or name validation.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Error {
+    /// The encoding of some ASN.1 DER-encoded item is invalid.
     BadDER,
+
+    /// The encoding of an ASN.1 DER-encoded time is invalid.
     BadDERTime,
+
+    /// The signature is invalid for the given public key.
     BadSignature,
+
+    /// A CA certificate is veing used as an end-entity certificate.
     CAUsedAsEndEntity,
+
+    /// The certificate is expired; i.e. the time it is being validated for is
+    /// later than the certificate's notAfter time.
     CertExpired,
+
+    /// The certificate is not valid for the name it is being validated for.
     CertNotValidForName,
+
+    /// The certificate is not valid yet; i.e. the time it is being validated
+    /// for is earlier than the certificate's notBefore time.
     CertNotValidYet,
+
+    /// An end-entity certificate is being used as a CA certificate.
     EndEntityUsedAsCA,
+
+    /// An X.509 extension is invalid.
     ExtensionValueInvalid,
+
+    /// The certificate validity period (notBefore, notAfter) is invalid; e.g.
+    /// the notAfter time is earlier than the notBefore time.
     InvalidCertValidity,
+
+    /// The name that a certificate is being validated for is malformed. This
+    /// is not a problem with the certificate, but with the name it is being
+    /// validated for.
     InvalidReferenceName,
+
+    /// The certificate violates one or more name constraints.
     NameConstraintViolation,
+
+    /// The certificate violates one or more path length constraints.
     PathLenConstraintViolated,
+
+    /// The algorithm in the TBSCertificate "signature" field of a certificate
+    /// does not match the algorithm in the signature of the certificate.
     SignatureAlgorithmMismatch,
+
+    /// The certificate is not valid for the Extended Key Usage for which it is
+    /// being validated.
     RequiredEKUNotFound,
+
+    /// A valid issuer for the certificate could not be found.
     UnknownIssuer,
+
+    /// The certificate is not a v3 X.509 certificate.
     UnsupportedCertVersion,
+
+    /// The certificate contains an unsupported critical extension.
     UnsupportedCriticalExtension,
-    UnsupportedEllipticCurve,
+
+    /// The signature's algorithm does not match the algorithm of the public
+    /// key it is being validated for.
     UnsupportedKeyAlgorithmForSignature,
+
+    /// The signature algorithm for a signature is in the set of signature
+    /// algorithms that were given.
     UnsupportedSignatureAlgorithm,
 }
 
