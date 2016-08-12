@@ -200,48 +200,56 @@ pub struct SignatureAlgorithm {
 // we relax that requirement by allowing the NULL to be omitted, to match all
 // the other signature algorithms we support and for compatibility.
 
+/// ECDSA signatures using the P-256 curve and SHA-1. Deprecated.
 pub static ECDSA_P256_SHA1: SignatureAlgorithm = SignatureAlgorithm {
     signature_alg_oids: &[ECDSA_SHA1_OID],
     public_key_alg: &ECDSA_P256,
     verification_alg: &signature::ECDSA_P256_SHA1_ASN1,
 };
 
+/// ECDSA signatures using the P-256 curve and SHA-256.
 pub static ECDSA_P256_SHA256: SignatureAlgorithm = SignatureAlgorithm {
     signature_alg_oids: &[ECDSA_SHA256_OID],
     public_key_alg: &ECDSA_P256,
     verification_alg: &signature::ECDSA_P256_SHA256_ASN1,
 };
 
+/// ECDSA signatures using the P-256 curve and SHA-384. Deprecated.
 pub static ECDSA_P256_SHA384: SignatureAlgorithm = SignatureAlgorithm {
     signature_alg_oids: &[ECDSA_SHA384_OID],
     public_key_alg: &ECDSA_P256,
     verification_alg: &signature::ECDSA_P256_SHA384_ASN1,
 };
 
+/// ECDSA signatures using the P-256 curve and SHA-512. Deprecated.
 pub static ECDSA_P256_SHA512: SignatureAlgorithm = SignatureAlgorithm {
     signature_alg_oids: &[ECDSA_SHA512_OID],
     public_key_alg: &ECDSA_P256,
     verification_alg: &signature::ECDSA_P256_SHA512_ASN1,
 };
 
+/// ECDSA signatures using the P-384 curve and SHA-1. Deprecated.
 pub static ECDSA_P384_SHA1: SignatureAlgorithm = SignatureAlgorithm {
     signature_alg_oids: &[ECDSA_SHA1_OID],
     public_key_alg: &ECDSA_P384,
     verification_alg: &signature::ECDSA_P384_SHA1_ASN1,
 };
 
+/// ECDSA signatures using the P-384 curve and SHA-256. Deprecated.
 pub static ECDSA_P384_SHA256: SignatureAlgorithm = SignatureAlgorithm {
     signature_alg_oids: &[ECDSA_SHA256_OID],
     public_key_alg: &ECDSA_P384,
     verification_alg: &signature::ECDSA_P384_SHA256_ASN1,
 };
 
+/// ECDSA signatures using the P-384 curve and SHA-384.
 pub static ECDSA_P384_SHA384: SignatureAlgorithm = SignatureAlgorithm {
     signature_alg_oids: &[ECDSA_SHA384_OID],
     public_key_alg: &ECDSA_P384,
     verification_alg: &signature::ECDSA_P384_SHA384_ASN1,
 };
 
+/// ECDSA signatures using the P-384 curve and SHA-512. Deprecated.
 pub static ECDSA_P384_SHA512: SignatureAlgorithm = SignatureAlgorithm {
     signature_alg_oids: &[ECDSA_SHA512_OID],
     public_key_alg: &ECDSA_P384,
@@ -249,30 +257,36 @@ pub static ECDSA_P384_SHA512: SignatureAlgorithm = SignatureAlgorithm {
 };
 
 
+/// RSA PKCS#1 1.5 signatures using SHA-1 for keys of 2048-8192 bits.
+/// Deprecated.
 pub static RSA_PKCS1_2048_8192_SHA1: SignatureAlgorithm = SignatureAlgorithm {
     signature_alg_oids: &[RSA_PKCS1_SHA1_OID, RSA_PKCS1_SHA1_OSE_OID],
     public_key_alg: &RSA_PKCS1,
     verification_alg: &signature::RSA_PKCS1_2048_8192_SHA1,
 };
 
+/// RSA PKCS#1 1.5 signatures using SHA-256 for keys of 2048-8192 bits.
 pub static RSA_PKCS1_2048_8192_SHA256: SignatureAlgorithm = SignatureAlgorithm {
     signature_alg_oids: &[RSA_PKCS1_SHA256_OID],
     public_key_alg: &RSA_PKCS1,
     verification_alg: &signature::RSA_PKCS1_2048_8192_SHA256,
 };
 
+/// RSA PKCS#1 1.5 signatures using SHA-384 for keys of 2048-8192 bits.
 pub static RSA_PKCS1_2048_8192_SHA384: SignatureAlgorithm = SignatureAlgorithm {
     signature_alg_oids: &[RSA_PKCS1_SHA384_OID],
     public_key_alg: &RSA_PKCS1,
     verification_alg: &signature::RSA_PKCS1_2048_8192_SHA384,
 };
 
+/// RSA PKCS#1 1.5 signatures using SHA-512 for keys of 2048-8192 bits.
 pub static RSA_PKCS1_2048_8192_SHA512: SignatureAlgorithm = SignatureAlgorithm {
     signature_alg_oids: &[RSA_PKCS1_SHA512_OID],
     public_key_alg: &RSA_PKCS1,
     verification_alg: &signature::RSA_PKCS1_2048_8192_SHA512,
 };
 
+/// RSA PKCS#1 1.5 signatures using SHA-384 for keys of 3072-8192 bits.
 pub static RSA_PKCS1_3072_8192_SHA384: SignatureAlgorithm = SignatureAlgorithm {
     signature_alg_oids: &[RSA_PKCS1_SHA384_OID],
     public_key_alg: &RSA_PKCS1,
