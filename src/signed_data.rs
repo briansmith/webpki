@@ -157,7 +157,7 @@ pub fn verify_signed_data(supported_algorithms: &[&SignatureAlgorithm],
 
         return signature::verify(supported_alg.verification_alg, spki_key,
                                  signed_data.data, signed_data.signature)
-                    .map_err(|_| Error::BadSignature);
+                    .map_err(|_| Error::InvalidSignatureForPublicKey);
     }
 
     if found_signature_alg_match {
@@ -521,12 +521,12 @@ mod tests {
     test_verify_signed_data!(
         test_ecdsa_prime256v1_sha512_wrong_signature_format,
         "ecdsa-prime256v1-sha512-wrong-signature-format.pem",
-        Err(Error::BadSignature));
+        Err(Error::InvalidSignatureForPublicKey));
     test_verify_signed_data!(test_ecdsa_prime256v1_sha512,
                              "ecdsa-prime256v1-sha512.pem", Ok(()));
     test_verify_signed_data!(test_ecdsa_secp384r1_sha256_corrupted_data,
                              "ecdsa-secp384r1-sha256-corrupted-data.pem",
-                             Err(Error::BadSignature));
+                             Err(Error::InvalidSignatureForPublicKey));
     test_verify_signed_data!(test_ecdsa_secp384r1_sha256,
                              "ecdsa-secp384r1-sha256.pem", Ok(()));
     test_verify_signed_data!(test_ecdsa_using_rsa_key,
@@ -547,19 +547,19 @@ mod tests {
                          Error::BadDER);
     test_verify_signed_data!(test_rsa_pkcs1_sha1_wrong_algorithm,
                              "rsa-pkcs1-sha1-wrong-algorithm.pem",
-                             Err(Error::BadSignature));
+                             Err(Error::InvalidSignatureForPublicKey));
     // XXX: RSA PKCS#1 with SHA-1 is a supported algorithm, but we only accept
     // 2048-8192 bit keys, and this test file is using a 1024 bit key. Thus,
     // our results differ from Chromium's. TODO: this means we need a 2048+ bit
     // version of this test.
     test_verify_signed_data!(test_rsa_pkcs1_sha1, "rsa-pkcs1-sha1.pem",
-                             Err(Error::BadSignature));
+                             Err(Error::InvalidSignatureForPublicKey));
     // XXX: RSA PKCS#1 with SHA-1 is a supported algorithm, but we only accept
     // 2048-8192 bit keys, and this test file is using a 1024 bit key. Thus,
     // our results differ from Chromium's. TODO: this means we need a 2048+ bit
     // version of this test.
     test_verify_signed_data!(test_rsa_pkcs1_sha256, "rsa-pkcs1-sha256.pem",
-                             Err(Error::BadSignature));
+                             Err(Error::InvalidSignatureForPublicKey));
     test_parse_spki_bad_outer!(test_rsa_pkcs1_sha256_key_encoded_ber,
                                "rsa-pkcs1-sha256-key-encoded-ber.pem",
                                Error::BadDER);

@@ -123,9 +123,6 @@ pub enum Error {
     /// The encoding of an ASN.1 DER-encoded time is invalid.
     BadDERTime,
 
-    /// The signature is invalid for the given public key.
-    BadSignature,
-
     /// A CA certificate is veing used as an end-entity certificate.
     CAUsedAsEndEntity,
 
@@ -154,6 +151,9 @@ pub enum Error {
     /// is not a problem with the certificate, but with the name it is being
     /// validated for.
     InvalidReferenceName,
+
+    /// The signature is invalid for the given public key.
+    InvalidSignatureForPublicKey,
 
     /// The certificate violates one or more name constraints.
     NameConstraintViolation,
