@@ -37,6 +37,17 @@ pub struct Cert<'a> {
 
 pub fn parse_cert<'a>(cert_der: untrusted::Input<'a>,
                       ee_or_ca: EndEntityOrCA<'a>) -> Result<Cert<'a>, Error> {
+    parse_cert_internal(cert_der, ee_or_ca, certificate_serial_number)
+}
+
+/// Used by `parse_cert` for regular certificates (end-entity and intermediate)
+/// and by `cert_der_as_trust_anchor` for trust anchors encoded as
+/// certificates.
+pub fn parse_cert_internal<'a>(
+        cert_der: untrusted::Input<'a>, ee_or_ca: EndEntityOrCA<'a>,
+        serial_number: fn(input: &mut untrusted::Reader<'a>)
+                          -> Result<(), Error>)
+        -> Result<Cert<'a>, Error> {
     let (tbs, signed_data) = try!(cert_der.read_all(Error::BadDER, |cert_der| {
         der::nested(cert_der, der::Tag::Sequence, Error::BadDER,
                     signed_data::parse_signed_data)
@@ -44,7 +55,7 @@ pub fn parse_cert<'a>(cert_der: untrusted::Input<'a>,
 
     tbs.read_all(Error::BadDER, |tbs| {
         try!(version3(tbs));
-        try!(certificate_serial_number(tbs));
+        try!(serial_number(tbs));
 
         let signature =
             try!(der::expect_tag_and_get_value(tbs, der::Tag::Sequence));
