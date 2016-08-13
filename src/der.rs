@@ -24,19 +24,15 @@ use super::Error;
 use time::{Timespec, Tm};
 use untrusted;
 
-// TODO: Get rid of this. This is just here to make it easier to adapt to the
-// movement of the core DER functionality from webpki to *ring*.
 #[inline(always)]
-pub fn expect_tag_and_get_input<'a>(input: &mut untrusted::Reader<'a>,
+pub fn expect_tag_and_get_value<'a>(input: &mut untrusted::Reader<'a>,
                                     tag: Tag) ->
                                     Result<untrusted::Input<'a>, Error> {
     ring::der::expect_tag_and_get_value(input, tag).map_err(|_| Error::BadDER)
 }
 
-// TODO: Get rid of this. This is just here to make it easier to adapt to the
-// movement of the core DER functionality from webpki to *ring*.
 #[inline(always)]
-pub fn read_tag_and_get_input<'a>(input: &mut untrusted::Reader<'a>)
+pub fn read_tag_and_get_value<'a>(input: &mut untrusted::Reader<'a>)
                                   -> Result<(u8, untrusted::Input<'a>), Error> {
     ring::der::read_tag_and_get_value(input).map_err(|_| Error::BadDER)
 }
@@ -49,7 +45,7 @@ pub fn nested_mut<'a, F, R, E: Copy>(input: &mut untrusted::Reader<'a>,
                                      -> Result<R, E>
                                      where F : FnMut(&mut untrusted::Reader<'a>)
                                                      -> Result<R, E> {
-    let inner = try!(expect_tag_and_get_input(input, tag).map_err(|_| error));
+    let inner = try!(expect_tag_and_get_value(input, tag).map_err(|_| error));
     inner.read_all_mut(error, decoder).map_err(|_| error)
 }
 

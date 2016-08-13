@@ -49,7 +49,7 @@ pub fn parse_cert<'a>(cert_der: untrusted::Input<'a>,
         try!(certificate_serial_number(tbs));
 
         let signature =
-            try!(der::expect_tag_and_get_input(tbs, der::Tag::Sequence));
+            try!(der::expect_tag_and_get_value(tbs, der::Tag::Sequence));
         // TODO: In mozilla::pkix, the comparison is done based on the
         // normalized value (ignoring whether or not there is an optional NULL
         // parameter for RSA-based algorithms), so this may be too strict.
@@ -58,13 +58,13 @@ pub fn parse_cert<'a>(cert_der: untrusted::Input<'a>,
         }
 
         let issuer =
-            try!(der::expect_tag_and_get_input(tbs, der::Tag::Sequence));
+            try!(der::expect_tag_and_get_value(tbs, der::Tag::Sequence));
         let validity =
-            try!(der::expect_tag_and_get_input(tbs, der::Tag::Sequence));
+            try!(der::expect_tag_and_get_value(tbs, der::Tag::Sequence));
         let subject =
-            try!(der::expect_tag_and_get_input(tbs, der::Tag::Sequence));
+            try!(der::expect_tag_and_get_value(tbs, der::Tag::Sequence));
         let spki =
-            try!(der::expect_tag_and_get_input(tbs, der::Tag::Sequence));
+            try!(der::expect_tag_and_get_value(tbs, der::Tag::Sequence));
 
         // In theory there could be fields [1] issuerUniqueID and [2]
         // subjectUniqueID, but in practice there never are, and to keep the
@@ -96,11 +96,11 @@ pub fn parse_cert<'a>(cert_der: untrusted::Input<'a>,
                              Error::BadDER, |tagged| {
             der::nested_of_mut(tagged, der::Tag::Sequence, der::Tag::Sequence,
                                Error::BadDER, |extension| {
-                let extn_id = try!(der::expect_tag_and_get_input(extension,
+                let extn_id = try!(der::expect_tag_and_get_value(extension,
                                                                  der::Tag::OID));
                 let critical = try!(der::optional_boolean(extension));
                 let extn_value: untrusted::Input<'a> =
-                    try!(der::expect_tag_and_get_input(extension,
+                    try!(der::expect_tag_and_get_value(extension,
                                                        der::Tag::OctetString));
                 match try!(remember_extension(&mut cert, extn_id, extn_value)) {
                     Understood::No if critical => {
@@ -190,7 +190,7 @@ fn remember_extension<'a>(cert: &mut Cert<'a>, extn_id: untrusted::Input,
         None => {
             // All the extensions that we care about are wrapped in a SEQUENCE.
             let sequence_value = try!(value.read_all(Error::BadDER, |value| {
-                der::expect_tag_and_get_input(value, der::Tag::Sequence)
+                der::expect_tag_and_get_value(value, der::Tag::Sequence)
             }));
             *out = Some(sequence_value);
         }

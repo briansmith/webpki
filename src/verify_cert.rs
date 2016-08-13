@@ -286,7 +286,7 @@ fn check_eku(input: Option<&mut untrusted::Reader>, used_as_ca: UsedAsCA,
 
             loop {
                 let value =
-                    try!(der::expect_tag_and_get_input(input, der::Tag::OID));
+                    try!(der::expect_tag_and_get_value(input, der::Tag::OID));
                 if value == required_eku_if_present.oid_value ||
                    (match_step_up &&
                     value == EKU_NETSCAPE_SERVER_STEP_UP.oid_value) {

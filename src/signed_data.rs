@@ -72,10 +72,10 @@ pub fn parse_signed_data<'a>(der: &mut untrusted::Reader<'a>)
                              -> Result<(untrusted::Input<'a>, SignedData<'a>),
                                        Error> {
     let mark1 = der.mark();
-    let tbs = try!(der::expect_tag_and_get_input(der, der::Tag::Sequence));
+    let tbs = try!(der::expect_tag_and_get_value(der, der::Tag::Sequence));
     let mark2 = der.mark();
     let data = der.get_input_between_marks(mark1, mark2).unwrap();
-    let algorithm = try!(der::expect_tag_and_get_input(der,
+    let algorithm = try!(der::expect_tag_and_get_value(der,
                                                        der::Tag::Sequence));
     let signature = try!(der::bit_string_with_no_unused_bits(der));
 
@@ -120,7 +120,7 @@ pub fn verify_signed_data(supported_algorithms: &[&SignatureAlgorithm],
     //
     let (algorithm_id, parameters) =
             try!(signed_data.algorithm.read_all(Error::BadDER, |input| {
-        let algorithm_id = try!(der::expect_tag_and_get_input(input,
+        let algorithm_id = try!(der::expect_tag_and_get_value(input,
                                                               der::Tag::OID));
         Ok((algorithm_id, input.skip_to_end()))
     }));
@@ -194,7 +194,7 @@ fn parse_spki_value(input: untrusted::Input)
                 try!(der::nested(input, der::Tag::Sequence, Error::BadDER,
                                  |input| {
             let algorithm_oid =
-                try!(der::expect_tag_and_get_input(input, der::Tag::OID));
+                try!(der::expect_tag_and_get_value(input, der::Tag::OID));
 
             // We only support algorithm identifiers that have either an
             // OID parameter (id-ecPublicKey using the named curve form as
@@ -202,7 +202,7 @@ fn parse_spki_value(input: untrusted::Input)
             // in RFC 3279 Section 2.3.1).
             let curve_oid = if input.peek(der::Tag::OID as u8) {
                 let curve_oid =
-                    try!(der::expect_tag_and_get_input(input, der::Tag::OID));
+                    try!(der::expect_tag_and_get_value(input, der::Tag::OID));
                 Some(curve_oid)
             } else {
                 try!(der::null(input));
@@ -425,7 +425,7 @@ mod tests {
         let tsd = parse_test_signed_data(file_name);
         let spki_value = untrusted::Input::from(&tsd.spki);
         let spki_value = spki_value.read_all(Error::BadDER, |input| {
-            der::expect_tag_and_get_input(input, der::Tag::Sequence)
+            der::expect_tag_and_get_value(input, der::Tag::Sequence)
         }).unwrap();
 
         // we can't use `parse_signed_data` because it requires `data`
@@ -436,7 +436,7 @@ mod tests {
 
         let algorithm = untrusted::Input::from(&tsd.algorithm);
         let algorithm = algorithm.read_all(Error::BadDER, |input| {
-            der::expect_tag_and_get_input(input, der::Tag::Sequence)
+            der::expect_tag_and_get_value(input, der::Tag::Sequence)
         }).unwrap();
 
         let signature = untrusted::Input::from(&tsd.signature);
@@ -490,7 +490,7 @@ mod tests {
         let tsd = parse_test_signed_data(file_name);
         let spki_value = untrusted::Input::from(&tsd.spki);
         let spki_value = spki_value.read_all(Error::BadDER, |input| {
-            der::expect_tag_and_get_input(input, der::Tag::Sequence)
+            der::expect_tag_and_get_value(input, der::Tag::Sequence)
         }).unwrap();
         match signed_data::parse_spki_value(spki_value) {
             Ok(_) => unreachable!(),
@@ -513,7 +513,7 @@ mod tests {
         let spki = untrusted::Input::from(&tsd.spki);
         assert_eq!(Err(expected_error),
                    spki.read_all(Error::BadDER, |input| {
-            der::expect_tag_and_get_input(input, der::Tag::Sequence)
+            der::expect_tag_and_get_value(input, der::Tag::Sequence)
         }));
     }
 

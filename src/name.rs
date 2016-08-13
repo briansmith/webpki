@@ -59,7 +59,7 @@ pub fn check_name_constraints<'a>(input: Option<&mut untrusted::Reader<'a>>,
         }
         let subtrees = try!(der::nested(inner, subtrees_tag,
                                         Error::BadDER, |tagged| {
-            der::expect_tag_and_get_input(tagged, der::Tag::Sequence)
+            der::expect_tag_and_get_value(tagged, der::Tag::Sequence)
         }));
         Ok(Some(subtrees))
     }
@@ -126,8 +126,7 @@ fn check_presented_id_conforms_to_constraints_in_subtree(
         fn general_subtree<'b>(input: &mut untrusted::Reader<'b>)
                                -> Result<GeneralName<'b>, Error> {
             let general_subtree =
-                try!(der::expect_tag_and_get_input(input,
-                                                   der::Tag::Sequence));
+                try!(der::expect_tag_and_get_value(input, der::Tag::Sequence));
             general_subtree.read_all(Error::BadDER,
                                      |subtree| general_name(subtree))
         }
@@ -328,7 +327,7 @@ fn general_name<'a>(input: &mut untrusted::Reader<'a>)
     const IP_ADDRESS_TAG: u8 = CONTEXT_SPECIFIC | 7;
     const REGISTERED_ID_TAG: u8 = CONTEXT_SPECIFIC | 8;
 
-    let (tag, value) = try!(der::read_tag_and_get_input(input));
+    let (tag, value) = try!(der::read_tag_and_get_value(input));
     let name = match tag {
         DNS_NAME_TAG => GeneralName::DNSName(value),
         DIRECTORY_NAME_TAG => GeneralName::DirectoryName(value),
