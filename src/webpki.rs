@@ -182,8 +182,8 @@ pub enum Error {
     /// key it is being validated for.
     UnsupportedKeyAlgorithmForSignature,
 
-    /// The signature algorithm for a signature is in the set of signature
-    /// algorithms that were given.
+    /// The signature algorithm for a signature is not in the set of supported
+    /// signature algorithms given.
     UnsupportedSignatureAlgorithm,
 }
 
