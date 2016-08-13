@@ -20,8 +20,8 @@ pub use ring::der::{
 
     nested,
 };
-use super::Error;
-use time::{Timespec, Tm};
+use Error;
+use time;
 use untrusted;
 
 #[inline(always)]
@@ -111,7 +111,7 @@ pub fn null(input: &mut untrusted::Reader) -> Result<(), Error> {
 }
 
 pub fn time_choice<'a>(input: &mut untrusted::Reader<'a>)
-                       -> Result<Timespec, Error> {
+                       -> Result<time::Timespec, Error> {
     let is_utc_time = input.peek(Tag::UTCTime as u8);
     let expected_tag = if is_utc_time { Tag::UTCTime }
                        else { Tag::GeneralizedTime };
@@ -180,7 +180,7 @@ pub fn time_choice<'a>(input: &mut untrusted::Reader<'a>)
         }
 
         // XXX: We need to audit the `time` crate for correctness.
-        let tm = Tm {
+        let tm = time::Tm {
             tm_year: year - 1900,
             tm_mon: month - 1,
             tm_mday: day_of_month,

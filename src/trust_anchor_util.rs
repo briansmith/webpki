@@ -14,9 +14,9 @@
 
 //! Utilities for efficiently embedding trust anchors in programs.
 
+use {Error, TrustAnchor};
+use cert::{EndEntityOrCA, parse_cert};
 use std;
-use super::{Error, TrustAnchor};
-use super::cert::{EndEntityOrCA, parse_cert};
 use untrusted;
 
 /// Interprets the given DER-encoded certificate as a `TrustAnchor`. The

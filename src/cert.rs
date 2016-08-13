@@ -12,9 +12,7 @@
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-use super::Error;
-use super::der;
-use super::signed_data::{parse_signed_data, SignedData};
+use {Error, der, signed_data};
 use untrusted;
 
 pub enum EndEntityOrCA<'a> {
@@ -25,7 +23,7 @@ pub enum EndEntityOrCA<'a> {
 pub struct Cert<'a> {
     pub ee_or_ca: EndEntityOrCA<'a>,
 
-    pub signed_data: SignedData<'a>,
+    pub signed_data: signed_data::SignedData<'a>,
     pub issuer: untrusted::Input<'a>,
     pub validity: untrusted::Input<'a>,
     pub subject: untrusted::Input<'a>,
@@ -41,7 +39,7 @@ pub fn parse_cert<'a>(cert_der: untrusted::Input<'a>,
                       ee_or_ca: EndEntityOrCA<'a>) -> Result<Cert<'a>, Error> {
     let (tbs, signed_data) = try!(cert_der.read_all(Error::BadDER, |cert_der| {
         der::nested(cert_der, der::Tag::Sequence, Error::BadDER,
-                    parse_signed_data)
+                    signed_data::parse_signed_data)
     }));
 
     tbs.read_all(Error::BadDER, |tbs| {

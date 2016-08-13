@@ -12,9 +12,8 @@
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
+use {der, Error};
 use ring::signature;
-use super::Error;
-use super::der;
 use untrusted;
 
 /// X.509 certificates and related items that are signed are almost always
@@ -406,7 +405,7 @@ mod tests {
     use rustc_serialize::base64::FromBase64;
     use std;
     use std::io::BufRead;
-    use super::super::{der, Error, signed_data};
+    use {der, Error, signed_data};
     use untrusted;
 
     // TODO: The expected results need to be modified for SHA-1 deprecation.

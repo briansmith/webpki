@@ -12,9 +12,8 @@
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-use super::cert::{Cert, EndEntityOrCA};
-use super::der;
-use super::Error;
+use cert::{Cert, EndEntityOrCA};
+use {der, Error};
 use untrusted;
 
 pub fn verify_cert_dns_name(cert: &super::EndEntityCert,

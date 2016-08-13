@@ -13,11 +13,8 @@
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 use untrusted;
-use super::{Error, SignatureAlgorithm, TrustAnchor};
-use super::cert::{Cert, EndEntityOrCA, parse_cert};
-use super::der;
-use super::name::check_name_constraints;
-use super::signed_data::verify_signed_data;
+use {cert, der, Error, name, signed_data, SignatureAlgorithm, TrustAnchor};
+use cert::{Cert, EndEntityOrCA};
 use time;
 
 pub fn build_chain<'a>(required_eku_if_present: KeyPurposeId,
@@ -62,7 +59,7 @@ pub fn build_chain<'a>(required_eku_if_present: KeyPurposeId,
 
         try!(untrusted::read_all_optional(
                 name_constraints, Error::BadDER,
-                |value| check_name_constraints(value, &cert)));
+                |value| name::check_name_constraints(value, &cert)));
 
         let trust_anchor_spki = untrusted::Input::from(trust_anchor.spki);
 
@@ -83,7 +80,7 @@ pub fn build_chain<'a>(required_eku_if_present: KeyPurposeId,
 
     loop_while_non_fatal_error(intermediate_certs, |cert_der| {
         let potential_issuer =
-            try!(parse_cert(*cert_der, EndEntityOrCA::CA(&cert)));
+            try!(cert::parse_cert(*cert_der, EndEntityOrCA::CA(&cert)));
 
         if potential_issuer.subject != cert.issuer {
             return Err(Error::UnknownIssuer)
@@ -104,7 +101,7 @@ pub fn build_chain<'a>(required_eku_if_present: KeyPurposeId,
 
         try!(untrusted::read_all_optional(
                 potential_issuer.name_constraints, Error::BadDER,
-                |value| check_name_constraints(value, &cert)));
+                |value| name::check_name_constraints(value, &cert)));
 
         let next_sub_ca_count = match used_as_ca {
             UsedAsCA::No => sub_ca_count,
@@ -123,8 +120,8 @@ fn check_signatures(supported_sig_algs: &[&SignatureAlgorithm],
     let mut spki_value = trust_anchor_key;
     let mut cert = cert_chain;
     loop {
-        try!(verify_signed_data(supported_sig_algs, spki_value,
-                                &cert.signed_data));
+        try!(signed_data::verify_signed_data(supported_sig_algs, spki_value,
+                                             &cert.signed_data));
 
         // TODO: check revocation
 
