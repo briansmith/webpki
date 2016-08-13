@@ -12,7 +12,10 @@
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-//! Web PKI X.509 Certificate Validation.
+//! webpki: Web PKI X.509 Certificate Validation.
+//!
+//! See `EndEntityCert`'s documentation for a description of the certificate
+//! processing steps necessary for a TLS connection.
 
 #![doc(html_root_url="https://briansmith.org/rustdoc/")]
 
@@ -114,6 +117,26 @@ pub use signed_data::{
 };
 
 /// An end-entity certificate.
+///
+/// Server certificate processing in a TLS connection consists of several
+/// steps. All of these steps are necessary:
+///
+/// * `EndEntityCert.verify_is_valid_tls_server_cert`: Verify that the server's
+///   certificate is currently valid.
+/// * `EndEntityCert.verify_is_valid_for_dns_name`: Verify that the server's
+///   certificate is valid for the host that is being connected to.
+/// * `EndEntityCert.verify_signature`: Verify that the signature of server's
+///   `ServerKeyExchange` message is valid for the server's certificate.
+///
+/// Although it would be less error-prone to combine all these steps into a
+/// single function call, some significant optimizations are possible if the
+/// three steps are processed separately (in parallel). It does not matter much
+/// which order the steps are done in, but **all of these steps must completed
+/// before application data is sent and before received application data is
+/// processed**. `EndEntityCert::from` is an inexpensive operation and is
+/// deterministic, so if these tasks are done in multiple threads, it is
+/// probably best to just call `EndEntityCert::from` multiple times (before each
+/// operation) for the same DER-encoded ASN.1 certificate bytes.
 pub struct EndEntityCert<'a> {
     inner: cert::Cert<'a>,
 }
