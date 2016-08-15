@@ -198,9 +198,8 @@ impl <'a> EndEntityCert<'a> {
     /// TLS 1.2 a single `SignatureAndHashAlgorithm` may map to multiple
     /// `SignatureAlgorithm`s. For example, a TLS 1.2
     /// `ignatureAndHashAlgorithm` of (ECDSA, SHA-256) may map to any or all
-    /// of {`ECDSA_P256_SHA1`, `ECDSA_P256_SHA256`, `ECDSA_P256_SHA384`,
-    /// `ECDSA_P256_SHA512`}, depending on how the TLS implementation is
-    /// configured.
+    /// of {`ECDSA_P256_SHA256`, `ECDSA_P384_SHA256`}, depending on how the TLS
+    /// implementation is configured.
     ///
     /// For current TLS 1.3 drafts, `signature_alg` corresponds to TLS's
     /// `algorithm` fields of type `SignatureScheme`. There is (currently) a
