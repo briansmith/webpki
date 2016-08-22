@@ -82,7 +82,6 @@
 extern crate std;
 
 extern crate ring;
-extern crate time;
 
 #[cfg(test)]
 extern crate rustc_serialize;
@@ -95,6 +94,7 @@ mod der;
 mod cert;
 mod name;
 mod signed_data;
+mod time;
 
 #[cfg(feature = "trust_anchor_util")]
 pub mod trust_anchor_util;
@@ -168,7 +168,7 @@ impl <'a> EndEntityCert<'a> {
     pub fn verify_is_valid_tls_server_cert(
             &self, supported_sig_algs: &[&SignatureAlgorithm],
             trust_anchors: &[TrustAnchor],
-            intermediate_certs: &[untrusted::Input], time: time::Timespec)
+            intermediate_certs: &[untrusted::Input], time: time::Time)
             -> Result<(), Error> {
         verify_cert::build_chain(verify_cert::EKU_SERVER_AUTH,
                                  supported_sig_algs, trust_anchors,
