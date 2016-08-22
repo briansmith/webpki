@@ -13,16 +13,15 @@
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 use untrusted;
-use {cert, der, Error, name, signed_data, SignatureAlgorithm, TrustAnchor};
+use {cert, der, Error, name, signed_data, SignatureAlgorithm, time,
+     TrustAnchor};
 use cert::{Cert, EndEntityOrCA};
-use time;
 
 pub fn build_chain<'a>(required_eku_if_present: KeyPurposeId,
                        supported_sig_algs: &[&SignatureAlgorithm],
                        trust_anchors: &'a [TrustAnchor],
                        intermediate_certs: &[untrusted::Input<'a>],
-                       cert: &Cert<'a>, time: time::Timespec,
-                       sub_ca_count: usize)
+                       cert: &Cert<'a>, time: time::Time, sub_ca_count: usize)
                        -> Result<(), Error> {
     let used_as_ca = used_as_ca(&cert.ee_or_ca);
 
@@ -138,7 +137,7 @@ fn check_signatures(supported_sig_algs: &[&SignatureAlgorithm],
 }
 
 fn check_issuer_independent_properties<'a>(
-        cert: &Cert<'a>, time: time::Timespec, used_as_ca: UsedAsCA,
+        cert: &Cert<'a>, time: time::Time, used_as_ca: UsedAsCA,
         sub_ca_count: usize, required_eku_if_present: KeyPurposeId)
         -> Result<(), Error> {
     // TODO: try!(check_distrust(trust_anchor_subject,
@@ -163,7 +162,7 @@ fn check_issuer_independent_properties<'a>(
 }
 
 // https://tools.ietf.org/html/rfc5280#section-4.1.2.5
-fn check_validity(input: &mut untrusted::Reader, time: time::Timespec)
+fn check_validity(input: &mut untrusted::Reader, time: time::Time)
                   -> Result<(), Error> {
     let not_before = try!(der::time_choice(input));
     let not_after = try!(der::time_choice(input));

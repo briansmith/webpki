@@ -60,7 +60,6 @@ trust_anchor_util = []
 
 [dependencies]
 ring = "0.11"
-time = "0.1"
 untrusted = "0.5"
 
 [dev-dependencies]
