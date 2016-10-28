@@ -21,11 +21,9 @@ use untrusted::Input;
 use webpki::*;
 
 static ALL_SIGALGS: &'static [&'static SignatureAlgorithm] = &[
-    &ECDSA_P256_SHA1,
     &ECDSA_P256_SHA256,
     &ECDSA_P256_SHA384,
     &ECDSA_P256_SHA512,
-    &ECDSA_P384_SHA1,
     &ECDSA_P384_SHA256,
     &ECDSA_P384_SHA384,
     &ECDSA_P384_SHA512,

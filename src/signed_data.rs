@@ -232,13 +232,6 @@ pub struct SignatureAlgorithm {
 // we relax that requirement by allowing the NULL to be omitted, to match all
 // the other signature algorithms we support and for compatibility.
 
-/// ECDSA signatures using the P-256 curve and SHA-1. Deprecated.
-pub static ECDSA_P256_SHA1: SignatureAlgorithm = SignatureAlgorithm {
-    signature_alg_oids: &[ECDSA_SHA1_OID],
-    public_key_alg: &ECDSA_P256,
-    verification_alg: &signature::ECDSA_P256_SHA1_ASN1,
-};
-
 /// ECDSA signatures using the P-256 curve and SHA-256.
 pub static ECDSA_P256_SHA256: SignatureAlgorithm = SignatureAlgorithm {
     signature_alg_oids: &[ECDSA_SHA256_OID],
@@ -258,13 +251,6 @@ pub static ECDSA_P256_SHA512: SignatureAlgorithm = SignatureAlgorithm {
     signature_alg_oids: &[ECDSA_SHA512_OID],
     public_key_alg: &ECDSA_P256,
     verification_alg: &signature::ECDSA_P256_SHA512_ASN1,
-};
-
-/// ECDSA signatures using the P-384 curve and SHA-1. Deprecated.
-pub static ECDSA_P384_SHA1: SignatureAlgorithm = SignatureAlgorithm {
-    signature_alg_oids: &[ECDSA_SHA1_OID],
-    public_key_alg: &ECDSA_P384,
-    verification_alg: &signature::ECDSA_P384_SHA1_ASN1,
 };
 
 /// ECDSA signatures using the P-384 curve and SHA-256. Deprecated.
@@ -383,7 +369,6 @@ const RSA_PKCS1_SHARED: PublicKeyAlgorithmSharedInfo =
 
 // TODO: add documentation for all this stuff.
 
-const ECDSA_SHA1_OID: &'static [u8] = &oid_1_2_840_10045![4, 1, 1];
 const ECDSA_SHA256_OID: &'static [u8] = &oid_1_2_840_10045![4, 3, 2];
 const ECDSA_SHA384_OID: &'static [u8] = &oid_1_2_840_10045![4, 3, 3];
 const ECDSA_SHA512_OID: &'static [u8] = &oid_1_2_840_10045![4, 3, 4];
@@ -451,7 +436,7 @@ mod tests {
 
         assert_eq!(expected_result,
                    signed_data::verify_signed_data(
-                        &SUPPORTED_ALGORITHMS_IN_TESTS, spki_value,
+                        SUPPORTED_ALGORITHMS_IN_TESTS, spki_value,
                         &signed_data));
     }
 
@@ -685,7 +670,7 @@ mod tests {
     }
 
     static SUPPORTED_ALGORITHMS_IN_TESTS:
-            [&'static signed_data::SignatureAlgorithm; 13] = [
+            &'static [&'static signed_data::SignatureAlgorithm] = &[
         // Reasonable algorithms.
         &signed_data::RSA_PKCS1_2048_8192_SHA256,
         &signed_data::ECDSA_P256_SHA256,
@@ -703,7 +688,5 @@ mod tests {
 
         // Algorithms deprecated because they are bad.
         &signed_data::RSA_PKCS1_2048_8192_SHA1, // SHA-1
-        &signed_data::ECDSA_P256_SHA1, // SHA-1
-        &signed_data::ECDSA_P384_SHA1, // SHA-1
     ];
 }

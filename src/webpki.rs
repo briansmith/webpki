@@ -103,11 +103,9 @@ mod verify_cert;
 
 pub use signed_data::{
     SignatureAlgorithm,
-    ECDSA_P256_SHA1,
     ECDSA_P256_SHA256,
     ECDSA_P256_SHA384,
     ECDSA_P256_SHA512,
-    ECDSA_P384_SHA1,
     ECDSA_P384_SHA256,
     ECDSA_P384_SHA384,
     ECDSA_P384_SHA512,
