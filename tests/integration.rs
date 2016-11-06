@@ -23,10 +23,8 @@ use webpki::*;
 static ALL_SIGALGS: &'static [&'static SignatureAlgorithm] = &[
     &ECDSA_P256_SHA256,
     &ECDSA_P256_SHA384,
-    &ECDSA_P256_SHA512,
     &ECDSA_P384_SHA256,
     &ECDSA_P384_SHA384,
-    &ECDSA_P384_SHA512,
     &RSA_PKCS1_2048_8192_SHA1,
     &RSA_PKCS1_2048_8192_SHA256,
     &RSA_PKCS1_2048_8192_SHA384,

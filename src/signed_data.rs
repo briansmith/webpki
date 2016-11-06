@@ -246,13 +246,6 @@ pub static ECDSA_P256_SHA384: SignatureAlgorithm = SignatureAlgorithm {
     verification_alg: &signature::ECDSA_P256_SHA384_ASN1,
 };
 
-/// ECDSA signatures using the P-256 curve and SHA-512. Deprecated.
-pub static ECDSA_P256_SHA512: SignatureAlgorithm = SignatureAlgorithm {
-    signature_alg_oids: &[ECDSA_SHA512_OID],
-    public_key_alg: &ECDSA_P256,
-    verification_alg: &signature::ECDSA_P256_SHA512_ASN1,
-};
-
 /// ECDSA signatures using the P-384 curve and SHA-256. Deprecated.
 pub static ECDSA_P384_SHA256: SignatureAlgorithm = SignatureAlgorithm {
     signature_alg_oids: &[ECDSA_SHA256_OID],
@@ -265,13 +258,6 @@ pub static ECDSA_P384_SHA384: SignatureAlgorithm = SignatureAlgorithm {
     signature_alg_oids: &[ECDSA_SHA384_OID],
     public_key_alg: &ECDSA_P384,
     verification_alg: &signature::ECDSA_P384_SHA384_ASN1,
-};
-
-/// ECDSA signatures using the P-384 curve and SHA-512. Deprecated.
-pub static ECDSA_P384_SHA512: SignatureAlgorithm = SignatureAlgorithm {
-    signature_alg_oids: &[ECDSA_SHA512_OID],
-    public_key_alg: &ECDSA_P384,
-    verification_alg: &signature::ECDSA_P384_SHA512_ASN1,
 };
 
 
@@ -371,7 +357,6 @@ const RSA_PKCS1_SHARED: PublicKeyAlgorithmSharedInfo =
 
 const ECDSA_SHA256_OID: &'static [u8] = &oid_1_2_840_10045![4, 3, 2];
 const ECDSA_SHA384_OID: &'static [u8] = &oid_1_2_840_10045![4, 3, 3];
-const ECDSA_SHA512_OID: &'static [u8] = &oid_1_2_840_10045![4, 3, 4];
 
 const RSA_PKCS1_SHA1_OID: &'static [u8] = &oid_1_2_840_113549![1, 1, 5];
 const RSA_PKCS1_SHA256_OID: &'static [u8] = &oid_1_2_840_113549![1, 1, 11];
@@ -503,32 +488,43 @@ mod tests {
 
     // XXX: Some of the BadDER tests should have better error codes, maybe?
 
+    // XXX: We should have a variant of this test with a SHA-256 digest that gives
+    // `Error::UnsupportedSignatureAlgorithmForPublicKey`.
     test_verify_signed_data!(
         test_ecdsa_prime256v1_sha512_spki_params_null,
         "ecdsa-prime256v1-sha512-spki-params-null.pem",
-        Err(Error::UnsupportedSignatureAlgorithmForPublicKey));
+        Err(Error::UnsupportedSignatureAlgorithm));
     test_verify_signed_data_signature_outer!(
         test_ecdsa_prime256v1_sha512_unused_bits_signature,
         "ecdsa-prime256v1-sha512-unused-bits-signature.pem",
         Error::BadDER);
+    // XXX: We should have a variant of this test with a SHA-256 digest that gives
+    // `Error::UnsupportedSignatureAlgorithmForPublicKey`.
     test_verify_signed_data!(
         test_ecdsa_prime256v1_sha512_using_ecdh_key,
         "ecdsa-prime256v1-sha512-using-ecdh-key.pem",
-        Err(Error::UnsupportedSignatureAlgorithmForPublicKey));
+        Err(Error::UnsupportedSignatureAlgorithm));
+    // XXX: We should have a variant of this test with a SHA-256 digest that gives
+    // `Error::UnsupportedSignatureAlgorithmForPublicKey`.
     test_verify_signed_data!(
         test_ecdsa_prime256v1_sha512_using_ecmqv_key,
         "ecdsa-prime256v1-sha512-using-ecmqv-key.pem",
-        Err(Error::UnsupportedSignatureAlgorithmForPublicKey));
+        Err(Error::UnsupportedSignatureAlgorithm));
     test_verify_signed_data!(
         test_ecdsa_prime256v1_sha512_using_rsa_algorithm,
         "ecdsa-prime256v1-sha512-using-rsa-algorithm.pem",
         Err(Error::UnsupportedSignatureAlgorithmForPublicKey));
+    // XXX: We should have a variant of this test with a SHA-256 digest that gives
+    // `Error::InvalidSignatureForPublicKey`.
     test_verify_signed_data!(
         test_ecdsa_prime256v1_sha512_wrong_signature_format,
         "ecdsa-prime256v1-sha512-wrong-signature-format.pem",
-        Err(Error::InvalidSignatureForPublicKey));
-    test_verify_signed_data!(test_ecdsa_prime256v1_sha512,
-                             "ecdsa-prime256v1-sha512.pem", Ok(()));
+        Err(Error::UnsupportedSignatureAlgorithm));
+    // Differs from Chromium because we don't support P-256 with SHA-512.
+    test_verify_signed_data!(
+        test_ecdsa_prime256v1_sha512,
+        "ecdsa-prime256v1-sha512.pem",
+        Err(Error::UnsupportedSignatureAlgorithm));
     test_verify_signed_data!(test_ecdsa_secp384r1_sha256_corrupted_data,
                              "ecdsa-secp384r1-sha256-corrupted-data.pem",
                              Err(Error::InvalidSignatureForPublicKey));
@@ -682,9 +678,7 @@ mod tests {
         // Algorithms deprecated because they are annoying (P-521) or because
         // they are nonsensical combinations.
         &signed_data::ECDSA_P256_SHA384, // Truncates digest.
-        &signed_data::ECDSA_P256_SHA512, // Truncates digest.
         &signed_data::ECDSA_P384_SHA256, // Digest is unnecessarily short.
-        &signed_data::ECDSA_P384_SHA512, // Truncates digest.
 
         // Algorithms deprecated because they are bad.
         &signed_data::RSA_PKCS1_2048_8192_SHA1, // SHA-1
