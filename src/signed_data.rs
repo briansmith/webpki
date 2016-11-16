@@ -296,6 +296,29 @@ pub static RSA_PKCS1_3072_8192_SHA384: SignatureAlgorithm = SignatureAlgorithm {
     verification_alg: &signature::RSA_PKCS1_3072_8192_SHA384,
 };
 
+/// RSA PSS signatures using SHA-256 for keys of 2048-8192 bits and of
+/// type rsaEncryption; see https://tools.ietf.org/html/rfc4055#section-1.2
+pub static RSA_PSS_2048_8192_SHA256_LEGACY_KEY: SignatureAlgorithm = SignatureAlgorithm {
+    signature_alg_oid: RSA_PSS_OID,
+    public_key_alg: &RSA_PSS_SHA256_LEGACY_KEY,
+    verification_alg: &signature::RSA_PSS_2048_8192_SHA256,
+};
+
+/// RSA PSS signatures using SHA-384 for keys of 2048-8192 bits and of
+/// type rsaEncryption; see https://tools.ietf.org/html/rfc4055#section-1.2
+pub static RSA_PSS_2048_8192_SHA384_LEGACY_KEY: SignatureAlgorithm = SignatureAlgorithm {
+    signature_alg_oid: RSA_PSS_OID,
+    public_key_alg: &RSA_PSS_SHA384_LEGACY_KEY,
+    verification_alg: &signature::RSA_PSS_2048_8192_SHA384,
+};
+
+/// RSA PSS signatures using SHA-512 for keys of 2048-8192 bits and of
+/// type rsaEncryption; see https://tools.ietf.org/html/rfc4055#section-1.2
+pub static RSA_PSS_2048_8192_SHA512_LEGACY_KEY: SignatureAlgorithm = SignatureAlgorithm {
+    signature_alg_oid: RSA_PSS_OID,
+    public_key_alg: &RSA_PSS_SHA512_LEGACY_KEY,
+    verification_alg: &signature::RSA_PSS_2048_8192_SHA512,
+};
 
 struct PublicKeyAlgorithm {
     shared: &'static PublicKeyAlgorithmSharedInfo,
@@ -343,7 +366,7 @@ const ECDSA_SHARED: PublicKeyAlgorithmSharedInfo = PublicKeyAlgorithmSharedInfo 
 
 const RSA_PKCS1_SHARED: PublicKeyAlgorithmSharedInfo =
         PublicKeyAlgorithmSharedInfo {
-    spki_algorithm_oid: &oid_1_2_840_113549![1, 1, 1],
+    spki_algorithm_oid: &RSA_ENCRYPTION_OID,
 
     // RFC 4055 Section 5 and RFC 3279 Section 2.2.1 both say that parameters
     // for RSA PKCS#1 must be encoded as NULL; we relax that requirement by
@@ -352,15 +375,47 @@ const RSA_PKCS1_SHARED: PublicKeyAlgorithmSharedInfo =
     allowed_signature_alg_parameters: &[&[], &[0x05, 0x00]], // Optional NULL.
 };
 
+const RSA_PSS_SHA256_LEGACY_KEY: PublicKeyAlgorithm = PublicKeyAlgorithm {
+    shared: &PublicKeyAlgorithmSharedInfo {
+      spki_algorithm_oid: &RSA_ENCRYPTION_OID,
+      allowed_signature_alg_parameters: &[
+        include_bytes!("data/params-pss-sha256.der")
+      ]
+    },
+    curve_oid: None
+};
+
+const RSA_PSS_SHA384_LEGACY_KEY: PublicKeyAlgorithm = PublicKeyAlgorithm {
+    shared: &PublicKeyAlgorithmSharedInfo {
+      spki_algorithm_oid: &RSA_ENCRYPTION_OID,
+      allowed_signature_alg_parameters: &[
+        include_bytes!("data/params-pss-sha384.der")
+      ]
+    },
+    curve_oid: None
+};
+
+const RSA_PSS_SHA512_LEGACY_KEY: PublicKeyAlgorithm = PublicKeyAlgorithm {
+    shared: &PublicKeyAlgorithmSharedInfo {
+      spki_algorithm_oid: &RSA_ENCRYPTION_OID,
+      allowed_signature_alg_parameters: &[
+        include_bytes!("data/params-pss-sha512.der")
+      ]
+    },
+    curve_oid: None
+};
+
 // TODO: add documentation for all this stuff.
 
 const ECDSA_SHA256_OID: &'static [u8] = &oid_1_2_840_10045![4, 3, 2];
 const ECDSA_SHA384_OID: &'static [u8] = &oid_1_2_840_10045![4, 3, 3];
 
+const RSA_ENCRYPTION_OID: &'static [u8] = &oid_1_2_840_113549![1, 1, 1];
 const RSA_PKCS1_SHA1_OID: &'static [u8] = &oid_1_2_840_113549![1, 1, 5];
 const RSA_PKCS1_SHA256_OID: &'static [u8] = &oid_1_2_840_113549![1, 1, 11];
 const RSA_PKCS1_SHA384_OID: &'static [u8] = &oid_1_2_840_113549![1, 1, 12];
 const RSA_PKCS1_SHA512_OID: &'static [u8] = &oid_1_2_840_113549![1, 1, 13];
+const RSA_PSS_OID: &'static [u8] = &oid_1_2_840_113549![1, 1, 10];
 
 
 #[cfg(test)]
@@ -569,8 +624,7 @@ mod tests {
         "rsa-pkcs1-sha256-using-id-ea-rsa.pem",
         Err(Error::UnsupportedSignatureAlgorithmForPublicKey));
 
-    // XXX: PSS is not supported, so our test results are not the same as
-    // Chromium's test results for these cases.
+    // Chromium's PSS test are for parameter combinations we don't support.
     test_parse_spki_bad!(test_rsa_pss_sha1_salt20_using_pss_key_no_params,
                          "rsa-pss-sha1-salt20-using-pss-key-no-params.pem",
                          Error::BadDER);
@@ -597,6 +651,32 @@ mod tests {
     test_verify_signed_data!(test_rsa_pss_sha256_salt10,
                              "rsa-pss-sha256-salt10.pem",
                              Err(Error::UnsupportedSignatureAlgorithm));
+
+    /// Our PSS tests that should work.
+    test_verify_signed_data!(
+        test_rsa_pss_sha256_salt32,
+        "ours/rsa-pss-sha256-salt32.pem",
+        Ok(()));
+    test_verify_signed_data!(
+        test_rsa_pss_sha384_salt48,
+        "ours/rsa-pss-sha384-salt48.pem",
+        Ok(()));
+    test_verify_signed_data!(
+        test_rsa_pss_sha512_salt64,
+        "ours/rsa-pss-sha512-salt64.pem",
+        Ok(()));
+    test_verify_signed_data!(
+        test_rsa_pss_sha256_salt32_corrupted_data,
+        "ours/rsa-pss-sha256-salt32-corrupted-data.pem",
+        Err(Error::InvalidSignatureForPublicKey));
+    test_verify_signed_data!(
+        test_rsa_pss_sha384_salt48_corrupted_data,
+        "ours/rsa-pss-sha384-salt48-corrupted-data.pem",
+        Err(Error::InvalidSignatureForPublicKey));
+    test_verify_signed_data!(
+        test_rsa_pss_sha512_salt64_corrupted_data,
+        "ours/rsa-pss-sha512-salt64-corrupted-data.pem",
+        Err(Error::InvalidSignatureForPublicKey));
 
     test_verify_signed_data!(
         test_rsa_using_ec_key, "rsa-using-ec-key.pem",
@@ -667,6 +747,9 @@ mod tests {
         &signed_data::RSA_PKCS1_2048_8192_SHA384,
         &signed_data::RSA_PKCS1_2048_8192_SHA512,
         &signed_data::RSA_PKCS1_3072_8192_SHA384,
+        &signed_data::RSA_PSS_2048_8192_SHA256_LEGACY_KEY,
+        &signed_data::RSA_PSS_2048_8192_SHA384_LEGACY_KEY,
+        &signed_data::RSA_PSS_2048_8192_SHA512_LEGACY_KEY,
 
         // Algorithms deprecated because they are annoying (P-521) or because
         // they are nonsensical combinations.
