@@ -126,8 +126,7 @@ pub fn verify_signed_data(supported_algorithms: &[&SignatureAlgorithm],
 
     let mut found_signature_alg_match = false;
     for supported_alg in supported_algorithms {
-        if !supported_alg.signature_alg_oids.into_iter()
-                                            .any(|oid| algorithm_id == *oid) {
+        if algorithm_id != supported_alg.signature_alg_oid {
             continue;
         }
 
@@ -221,7 +220,7 @@ fn parse_spki_value(input: untrusted::Input)
 
 /// A signature algorithm.
 pub struct SignatureAlgorithm {
-    signature_alg_oids: &'static [&'static [u8]],
+    signature_alg_oid: &'static [u8],
     public_key_alg: &'static PublicKeyAlgorithm,
     verification_alg: &'static signature::VerificationAlgorithm,
 }
@@ -234,28 +233,28 @@ pub struct SignatureAlgorithm {
 
 /// ECDSA signatures using the P-256 curve and SHA-256.
 pub static ECDSA_P256_SHA256: SignatureAlgorithm = SignatureAlgorithm {
-    signature_alg_oids: &[ECDSA_SHA256_OID],
+    signature_alg_oid: ECDSA_SHA256_OID,
     public_key_alg: &ECDSA_P256,
     verification_alg: &signature::ECDSA_P256_SHA256_ASN1,
 };
 
 /// ECDSA signatures using the P-256 curve and SHA-384. Deprecated.
 pub static ECDSA_P256_SHA384: SignatureAlgorithm = SignatureAlgorithm {
-    signature_alg_oids: &[ECDSA_SHA384_OID],
+    signature_alg_oid: ECDSA_SHA384_OID,
     public_key_alg: &ECDSA_P256,
     verification_alg: &signature::ECDSA_P256_SHA384_ASN1,
 };
 
 /// ECDSA signatures using the P-384 curve and SHA-256. Deprecated.
 pub static ECDSA_P384_SHA256: SignatureAlgorithm = SignatureAlgorithm {
-    signature_alg_oids: &[ECDSA_SHA256_OID],
+    signature_alg_oid: ECDSA_SHA256_OID,
     public_key_alg: &ECDSA_P384,
     verification_alg: &signature::ECDSA_P384_SHA256_ASN1,
 };
 
 /// ECDSA signatures using the P-384 curve and SHA-384.
 pub static ECDSA_P384_SHA384: SignatureAlgorithm = SignatureAlgorithm {
-    signature_alg_oids: &[ECDSA_SHA384_OID],
+    signature_alg_oid: ECDSA_SHA384_OID,
     public_key_alg: &ECDSA_P384,
     verification_alg: &signature::ECDSA_P384_SHA384_ASN1,
 };
@@ -264,35 +263,35 @@ pub static ECDSA_P384_SHA384: SignatureAlgorithm = SignatureAlgorithm {
 /// RSA PKCS#1 1.5 signatures using SHA-1 for keys of 2048-8192 bits.
 /// Deprecated.
 pub static RSA_PKCS1_2048_8192_SHA1: SignatureAlgorithm = SignatureAlgorithm {
-    signature_alg_oids: &[RSA_PKCS1_SHA1_OID, RSA_PKCS1_SHA1_OSE_OID],
+    signature_alg_oid: RSA_PKCS1_SHA1_OID,
     public_key_alg: &RSA_PKCS1,
     verification_alg: &signature::RSA_PKCS1_2048_8192_SHA1,
 };
 
 /// RSA PKCS#1 1.5 signatures using SHA-256 for keys of 2048-8192 bits.
 pub static RSA_PKCS1_2048_8192_SHA256: SignatureAlgorithm = SignatureAlgorithm {
-    signature_alg_oids: &[RSA_PKCS1_SHA256_OID],
+    signature_alg_oid: RSA_PKCS1_SHA256_OID,
     public_key_alg: &RSA_PKCS1,
     verification_alg: &signature::RSA_PKCS1_2048_8192_SHA256,
 };
 
 /// RSA PKCS#1 1.5 signatures using SHA-384 for keys of 2048-8192 bits.
 pub static RSA_PKCS1_2048_8192_SHA384: SignatureAlgorithm = SignatureAlgorithm {
-    signature_alg_oids: &[RSA_PKCS1_SHA384_OID],
+    signature_alg_oid: RSA_PKCS1_SHA384_OID,
     public_key_alg: &RSA_PKCS1,
     verification_alg: &signature::RSA_PKCS1_2048_8192_SHA384,
 };
 
 /// RSA PKCS#1 1.5 signatures using SHA-512 for keys of 2048-8192 bits.
 pub static RSA_PKCS1_2048_8192_SHA512: SignatureAlgorithm = SignatureAlgorithm {
-    signature_alg_oids: &[RSA_PKCS1_SHA512_OID],
+    signature_alg_oid: RSA_PKCS1_SHA512_OID,
     public_key_alg: &RSA_PKCS1,
     verification_alg: &signature::RSA_PKCS1_2048_8192_SHA512,
 };
 
 /// RSA PKCS#1 1.5 signatures using SHA-384 for keys of 3072-8192 bits.
 pub static RSA_PKCS1_3072_8192_SHA384: SignatureAlgorithm = SignatureAlgorithm {
-    signature_alg_oids: &[RSA_PKCS1_SHA384_OID],
+    signature_alg_oid: RSA_PKCS1_SHA384_OID,
     public_key_alg: &RSA_PKCS1,
     verification_alg: &signature::RSA_PKCS1_3072_8192_SHA384,
 };
@@ -362,12 +361,6 @@ const RSA_PKCS1_SHA1_OID: &'static [u8] = &oid_1_2_840_113549![1, 1, 5];
 const RSA_PKCS1_SHA256_OID: &'static [u8] = &oid_1_2_840_113549![1, 1, 11];
 const RSA_PKCS1_SHA384_OID: &'static [u8] = &oid_1_2_840_113549![1, 1, 12];
 const RSA_PKCS1_SHA512_OID: &'static [u8] = &oid_1_2_840_113549![1, 1, 13];
-
-// NIST Open Systems Environment (OSE) Implementor's Workshop (OIW)
-// http://www.oiw.org/agreements/stable/12s-9412.txt (no longer works).
-// http://www.imc.org/ietf-pkix/old-archive-97/msg01166.html
-// We need to support this non-PKIX OID for compatibility.
-const RSA_PKCS1_SHA1_OSE_OID: &'static [u8] = &oid!(1, 3, 14, 3, 2, 29);
 
 
 #[cfg(test)]
