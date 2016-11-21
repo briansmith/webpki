@@ -278,7 +278,12 @@ pub enum Error {
     UnsupportedCriticalExtension,
 
     /// The signature's algorithm does not match the algorithm of the public
-    /// key it is being validated for.
+    /// key it is being validated for. This may be because the public key
+    /// algorithm's OID isn't recognized (e.g. DSA), or the public key
+    /// algorithm's parameters don't match the supported parameters for that
+    /// algorithm (e.g. ECC keys for unsupported curves), or the public key
+    /// algorithm and the signature algorithm simply don't match (e.g.
+    /// verifying an RSA signature with an ECC public key).
     UnsupportedSignatureAlgorithmForPublicKey,
 
     /// The signature algorithm for a signature is not in the set of supported

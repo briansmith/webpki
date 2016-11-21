@@ -106,10 +106,6 @@ pub fn small_nonnegative_integer<'a>(input: &'a mut untrusted::Reader)
 }
 
 
-pub fn null(input: &mut untrusted::Reader) -> Result<(), Error> {
-    nested(input, Tag::Null, Error::BadDER, |_| Ok(()))
-}
-
 pub fn time_choice<'a>(input: &mut untrusted::Reader<'a>)
                        -> Result<time::Timespec, Error> {
     let is_utc_time = input.peek(Tag::UTCTime as u8);
@@ -204,34 +200,5 @@ macro_rules! oid {
     ( $first:expr, $second:expr, $( $tail:expr ),* ) =>
     (
         [(40 * $first) + $second, $( $tail ),*]
-    )
-}
-
-macro_rules! oid_1_2_840_10045 {
-   ( $( $tail:expr ),* ) =>
-   (
-        oid![1, 2,
-             0x86, 0x48, // 840
-             0xce, 0x3d, // 10045
-             $( $tail ),*]
-   )
-}
-
-macro_rules! oid_1_2_840_113549 {
-    ( $( $tail:expr ),* ) =>
-    (
-        oid![1, 2,
-             0x86, 0x48, // 840
-             0x86, 0xf7, 0x0d, // 113549
-             $( $tail ),* ]
-    )
-}
-
-macro_rules! oid_1_3_132 {
-    ( $( $tail:expr ),* ) =>
-    (
-        oid![1, 3,
-             0x81, 0x04, // 132
-             $( $tail ),* ]
     )
 }
