@@ -130,9 +130,8 @@ pub fn verify_signed_data(supported_algorithms: &[&SignatureAlgorithm],
             continue;
         }
 
-        if !supported_alg.public_key_alg.shared
-                         .allowed_signature_alg_parameters
-                         .into_iter().any(|allowed| parameters == *allowed) {
+        if parameters !=
+            supported_alg.public_key_alg.shared.signature_alg_parameters {
             continue;
         }
 
@@ -354,7 +353,7 @@ struct PublicKeyAlgorithmSharedInfo {
     /// `PublicKeyAlgorithm`. However, keep in mind that this applies to the
     /// `AlgorithmIdentifier` for the *signature*, not the `AlgorithmIdentifier`
     /// for the `SubjectPublicKeyAlgorithm`.
-    allowed_signature_alg_parameters: &'static [&'static [u8]],
+    signature_alg_parameters: &'static [u8],
 }
 
 // id-ecPublicKey from RFC 3279 Section 2.3.5 & RFC 5480 Section 2.1.1
@@ -363,7 +362,7 @@ const ECDSA_SHARED: PublicKeyAlgorithmSharedInfo = PublicKeyAlgorithmSharedInfo 
 
     // RFC 5758 Section 3.2 (ECDSA with SHA-2), and RFC 3279 Section 2.2.3
     // (ECDSA with SHA-1) say that parameters must be omitted in signatures.
-    allowed_signature_alg_parameters: &[&[]],
+    signature_alg_parameters: &[],
 };
 
 const RSA_PKCS1_SHARED: PublicKeyAlgorithmSharedInfo =
@@ -371,18 +370,14 @@ const RSA_PKCS1_SHARED: PublicKeyAlgorithmSharedInfo =
     spki_algorithm_oid: &RSA_ENCRYPTION_OID,
 
     // RFC 4055 Section 5 and RFC 3279 Section 2.2.1 both say that parameters
-    // for RSA PKCS#1 must be encoded as NULL; we relax that requirement by
-    // allowing the NULL to be omitted, to match all the other signature
-    // algorithms we support and for compatibility.
-    allowed_signature_alg_parameters: &[&[], &[0x05, 0x00]], // Optional NULL.
+    // for RSA PKCS#1 must be encoded as NULL.
+    signature_alg_parameters: &[0x05, 0x00], // Optional NULL.
 };
 
 const RSA_PSS_SHA256_LEGACY_KEY: PublicKeyAlgorithm = PublicKeyAlgorithm {
     shared: &PublicKeyAlgorithmSharedInfo {
       spki_algorithm_oid: &RSA_ENCRYPTION_OID,
-      allowed_signature_alg_parameters: &[
-        include_bytes!("data/params-pss-sha256.der")
-      ]
+      signature_alg_parameters: include_bytes!("data/params-pss-sha256.der")
     },
     curve_oid: None
 };
@@ -390,9 +385,7 @@ const RSA_PSS_SHA256_LEGACY_KEY: PublicKeyAlgorithm = PublicKeyAlgorithm {
 const RSA_PSS_SHA384_LEGACY_KEY: PublicKeyAlgorithm = PublicKeyAlgorithm {
     shared: &PublicKeyAlgorithmSharedInfo {
       spki_algorithm_oid: &RSA_ENCRYPTION_OID,
-      allowed_signature_alg_parameters: &[
-        include_bytes!("data/params-pss-sha384.der")
-      ]
+      signature_alg_parameters: include_bytes!("data/params-pss-sha384.der")
     },
     curve_oid: None
 };
@@ -400,9 +393,7 @@ const RSA_PSS_SHA384_LEGACY_KEY: PublicKeyAlgorithm = PublicKeyAlgorithm {
 const RSA_PSS_SHA512_LEGACY_KEY: PublicKeyAlgorithm = PublicKeyAlgorithm {
     shared: &PublicKeyAlgorithmSharedInfo {
       spki_algorithm_oid: &RSA_ENCRYPTION_OID,
-      allowed_signature_alg_parameters: &[
-        include_bytes!("data/params-pss-sha512.der")
-      ]
+      signature_alg_parameters: include_bytes!("data/params-pss-sha512.der")
     },
     curve_oid: None
 };
