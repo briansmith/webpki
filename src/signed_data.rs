@@ -182,12 +182,6 @@ pub struct SignatureAlgorithm {
     verification_alg: &'static signature::VerificationAlgorithm,
 }
 
-// RFC 5758 Section 3.2 (ECDSA with SHA-2), and RFC 3279 Section 2.2.3 (ECDSA
-// with SHA-1) say that parameters must be omitted. RFC 4055 Section 5 and RFC
-// 3279 Section 2.2.1 both say that parameters for RSA must be encoded as NULL;
-// we relax that requirement by allowing the NULL to be omitted, to match all
-// the other signature algorithms we support and for compatibility.
-
 /// ECDSA signatures using the P-256 curve and SHA-256.
 pub static ECDSA_P256_SHA256: SignatureAlgorithm = SignatureAlgorithm {
     public_key_alg_id: ECDSA_P256,
