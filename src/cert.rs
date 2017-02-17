@@ -40,6 +40,18 @@ pub fn parse_cert<'a>(cert_der: untrusted::Input<'a>,
     parse_cert_internal(cert_der, ee_or_ca, certificate_serial_number)
 }
 
+/// Cert length
+pub fn parse_cert_len_internal<'a>(cert_der: untrusted::Input<'a>)
+        -> Result<usize, Error> {
+    
+    let mut reader = untrusted::Reader::new(cert_der);
+
+    let (_tbs, _signed_data) = try!(der::nested(&mut reader, der::Tag::Sequence, Error::BadDER,
+                signed_data::parse_signed_data));
+
+    Ok(reader.pos())
+}
+
 /// Used by `parse_cert` for regular certificates (end-entity and intermediate)
 /// and by `cert_der_as_trust_anchor` for trust anchors encoded as
 /// certificates.
