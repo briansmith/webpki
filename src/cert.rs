@@ -46,10 +46,14 @@ pub fn parse_cert_len_internal<'a>(cert_der: untrusted::Input<'a>)
     
     let mut reader = untrusted::Reader::new(cert_der);
 
+    let mark1 = reader.mark();
     let (_tbs, _signed_data) = try!(der::nested(&mut reader, der::Tag::Sequence, Error::BadDER,
                 signed_data::parse_signed_data));
+    let mark2 = reader.mark();
 
-    Ok(reader.pos())
+    let cert_input = try!(reader.get_input_between_marks(mark1, mark2).map_err(|_e| Error::BadDER));
+
+    Ok(cert_input.len())
 }
 
 /// Used by `parse_cert` for regular certificates (end-entity and intermediate)
