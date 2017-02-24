@@ -40,20 +40,9 @@ pub fn parse_cert<'a>(cert_der: untrusted::Input<'a>,
     parse_cert_internal(cert_der, ee_or_ca, certificate_serial_number)
 }
 
-/// Cert length
-pub fn parse_cert_len_internal<'a>(cert_der: untrusted::Input<'a>)
-        -> Result<usize, Error> {
-    
-    let mut reader = untrusted::Reader::new(cert_der);
-
-    let mark1 = reader.mark();
-    let (_tbs, _signed_data) = try!(der::nested(&mut reader, der::Tag::Sequence, Error::BadDER,
-                signed_data::parse_signed_data));
-    let mark2 = reader.mark();
-
-    let cert_input = try!(reader.get_input_between_marks(mark1, mark2).map_err(|_e| Error::BadDER));
-
-    Ok(cert_input.len())
+pub fn parse_cert_from_reader<'a>(cert_der: &mut untrusted::Reader<'a>,
+                      ee_or_ca: EndEntityOrCA<'a>) -> Result<Cert<'a>, Error> {
+    parse_cert_from_reader_internal(cert_der, ee_or_ca, certificate_serial_number)
 }
 
 /// Used by `parse_cert` for regular certificates (end-entity and intermediate)
@@ -64,10 +53,24 @@ pub fn parse_cert_internal<'a>(
         serial_number: fn(input: &mut untrusted::Reader<'a>)
                           -> Result<(), Error>)
         -> Result<Cert<'a>, Error> {
-    let (tbs, signed_data) = try!(cert_der.read_all(Error::BadDER, |cert_der| {
-        der::nested(cert_der, der::Tag::Sequence, Error::BadDER,
-                    signed_data::parse_signed_data)
-    }));
+    
+    cert_der.read_all(Error::BadDER, |cert_der| {
+        parse_cert_from_reader_internal(cert_der, ee_or_ca, serial_number)
+    })
+}
+
+/// Used by `parse_cert` for regular certificates (end-entity and intermediate)
+/// and by `cert_der_as_trust_anchor` for trust anchors encoded as
+/// certificates.
+pub fn parse_cert_from_reader_internal<'a>(
+        cert_der: &mut untrusted::Reader<'a>, ee_or_ca: EndEntityOrCA<'a>,
+        serial_number: fn(input: &mut untrusted::Reader<'a>)
+                          -> Result<(), Error>)
+        -> Result<Cert<'a>, Error> {
+    
+    let (tbs, signed_data) = try!(der::nested(cert_der, 
+                    der::Tag::Sequence, Error::BadDER,
+                    signed_data::parse_signed_data));
 
     tbs.read_all(Error::BadDER, |tbs| {
         try!(version3(tbs));

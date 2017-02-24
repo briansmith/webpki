@@ -155,9 +155,14 @@ impl <'a> EndEntityCert<'a> {
     }
 
     /// Parse the ASN.1 DER-encoded X.509 encoding of the certificate
-    /// `cert_der` and return the length in bytes consumed.
-    pub fn cert_len(cert_der: untrusted::Input<'a>) -> Result<usize, Error> {
-        cert::parse_cert_len_internal(cert_der)
+    /// `cert_der`.
+    pub fn from_reader(cert_der: &mut untrusted::Reader<'a>)
+                -> Result<EndEntityCert<'a>, Error> {
+        Ok(EndEntityCert {
+            inner:
+                try!(cert::parse_cert_from_reader(cert_der,
+                                      cert::EndEntityOrCA::EndEntity))
+        })
     }
 
     /// Verifies that the end-entity certificate is valid for use by a TLS
