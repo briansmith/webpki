@@ -58,7 +58,7 @@ default = ["trust_anchor_util"]
 trust_anchor_util = []
 
 [dependencies]
-ring = "0.7.2-alpha1"
+ring = "0.7"
 rustc-serialize = "0.3.15"
 time = "0.1"
 untrusted = "0.3"
