@@ -175,6 +175,27 @@ impl <'a> EndEntityCert<'a> {
                                  intermediate_certs, &self.inner, time, 0)
     }
 
+    /// Verifies that the end-entity certificate is valid for use by a TLS
+    /// client.
+    ///
+    /// `supported_sig_algs` is the list of signature algorithms that are
+    /// trusted for use in certificate signatures; the end-entity certificate's
+    /// public key is not validated against this list. `trust_anchors` is the
+    /// list of root CAs to trust. `intermediate_certs` is the sequence of
+    /// intermediate certificates that the client sent in the TLS handshake.
+    /// `cert` is the purported end-entity certificate of the client. `time` is
+    /// the time for which the validation is effective (usually the current
+    /// time).
+    pub fn verify_is_valid_tls_client_cert(
+            &self, supported_sig_algs: &[&SignatureAlgorithm],
+            trust_anchors: &[TrustAnchor],
+            intermediate_certs: &[untrusted::Input], time: time::Timespec)
+            -> Result<(), Error> {
+        verify_cert::build_chain(verify_cert::EKU_CLIENT_AUTH,
+                                 supported_sig_algs, trust_anchors,
+                                 intermediate_certs, &self.inner, time, 0)
+    }
+
     /// Verifies that the certificate is valid for the given DNS host name.
     ///
     /// `dns_name` is assumed to a normalized ASCII (punycode if non-ASCII) DNS
