@@ -21,6 +21,7 @@ pub use ring::der::{
     nested,
 };
 use Error;
+use calendar;
 use time;
 use untrusted;
 
@@ -145,7 +146,7 @@ pub fn time_choice<'a>(input: &mut untrusted::Reader<'a>)
 
         let year = (year_hi * 100) + year_lo;
         let month = try!(read_two_digits(value, 1, 12));
-        let days_in_month = time::days_in_month(year, month);
+        let days_in_month = calendar::days_in_month(year, month);
         let day_of_month = try!(read_two_digits(value, 1, days_in_month));
         let hours = try!(read_two_digits(value, 0, 23));
         let minutes = try!(read_two_digits(value, 0, 59));
@@ -156,8 +157,8 @@ pub fn time_choice<'a>(input: &mut untrusted::Reader<'a>)
             return Err(Error::BadDERTime);
         }
 
-        time::time_from_ymdhms_utc(year, month, day_of_month, hours, minutes,
-                                   seconds)
+        calendar::time_from_ymdhms_utc(year, month, day_of_month, hours, minutes,
+                                       seconds)
     })
 }
 
