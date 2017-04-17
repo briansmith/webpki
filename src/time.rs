@@ -12,103 +12,34 @@
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-// XXX: This depends on the `std` modulue. TODO: Create a `#![no_std]`
-// interface.
+//! Conversions into the library's time type.
 
-use std;
-use super::Error;
+/// The time type.
+///
+/// Internally this is merely a UNIX timestamp: a count of non-leap
+/// seconds since the start of 1970.  This type exists to assist
+/// unit-of-measure correctness.
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+pub struct Time(u64);
 
-pub type Time = std::time::SystemTime;
+#[cfg(feature = "use_std")]
+pub mod stdsupport {
+    use std::time;
+    use std::convert;
+    use super::Time;
 
-pub fn time_from_ymdhms_utc(year: u64, month: u64, day_of_month: u64,
-                            hours: u64, minutes: u64, seconds: u64)
-                            -> Result<Time, Error> {
-    let days_before_year_since_unix_epoch =
-        try!(days_before_year_since_unix_epoch(year));
-
-    const JAN: u64 = 31;
-    let feb = days_in_feb(year);
-    const MAR: u64 = 31;
-    const APR: u64 = 30;
-    const MAY: u64 = 31;
-    const JUN: u64 = 30;
-    const JUL: u64 = 31;
-    const AUG: u64 = 31;
-    const SEP: u64 = 30;
-    const OCT: u64 = 31;
-    const NOV: u64 = 30;
-    let days_before_month_in_year = match month {
-         1 => 0,
-         2 => JAN,
-         3 => JAN + feb,
-         4 => JAN + feb + MAR,
-         5 => JAN + feb + MAR + APR,
-         6 => JAN + feb + MAR + APR + MAY,
-         7 => JAN + feb + MAR + APR + MAY + JUN,
-         8 => JAN + feb + MAR + APR + MAY + JUN + JUL,
-         9 => JAN + feb + MAR + APR + MAY + JUN + JUL + AUG,
-        10 => JAN + feb + MAR + APR + MAY + JUN + JUL + AUG + SEP,
-        11 => JAN + feb + MAR + APR + MAY + JUN + JUL + AUG + SEP + OCT,
-        12 => JAN + feb + MAR + APR + MAY + JUN + JUL + AUG + SEP + OCT + NOV,
-        _ => unreachable!() // `read_two_digits` already bounds-checked it.
-    };
-
-    let days_before = days_before_year_since_unix_epoch +
-                      days_before_month_in_year + day_of_month - 1;
-
-    let seconds_since_unix_epoch = (days_before * 24 * 60 * 60) +
-                                   (hours            * 60 * 60) +
-                                   (minutes               * 60) +
-                                   seconds;
-
-    Ok(std::time::UNIX_EPOCH +
-        std::time::Duration::from_secs(seconds_since_unix_epoch))
-}
-
-fn days_before_year_since_unix_epoch(year: u64) -> Result<u64, Error> {
-    // We don't support dates before January 1, 1970 because that is the
-    // Unix epoch. It is likely that other software won't deal well with
-    // certificates that have dates before the epoch.
-    if year < 1970 {
-        return Err(Error::BadDERTime);
-    }
-    let days_before_year_ad = days_before_year_ad(year);
-    debug_assert!(days_before_year_ad >= DAYS_BEFORE_UNIX_EPOCH_AD);
-    Ok(days_before_year_ad - DAYS_BEFORE_UNIX_EPOCH_AD)
-}
-
-fn days_before_year_ad(year: u64) -> u64 {
-    ((year - 1) * 365)
-        + ((year - 1) / 4)    // leap years are every 4 years,
-        - ((year - 1) / 100)  // except years divisible by 100,
-        + ((year - 1) / 400)  // except years divisible by 400.
-}
-
-pub fn days_in_month(year: u64, month: u64) -> u64 {
-    match month {
-        1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
-        4 | 6 | 9 | 11 => 30,
-        2 => days_in_feb(year),
-        _ => unreachable!() // `read_two_digits` already bounds-checked it.
+    impl convert::From<time::SystemTime> for Time {
+        fn from(st: time::SystemTime) -> Time {
+            Time(st.duration_since(time::UNIX_EPOCH)
+                 .unwrap() // it's definitely after 1970 now
+                 .as_secs())
+        }
     }
 }
 
-fn days_in_feb(year: u64) -> u64 {
-    if (year % 4 == 0) && ((year % 100 != 0) || (year % 400 == 0)) {
-        29
-    } else {
-        28
-    }
-}
-
-const DAYS_BEFORE_UNIX_EPOCH_AD: u64 = 719162;
-
-#[cfg(test)]
-mod tests {
-    use super::{DAYS_BEFORE_UNIX_EPOCH_AD, days_before_year_ad};
-
-    #[test]
-    fn test_days_before_unix_epoch() {
-        assert_eq!(DAYS_BEFORE_UNIX_EPOCH_AD, days_before_year_ad(1970));
+impl Time {
+    /// Create a `webpki::Time` from a unix timestamp.
+    pub fn from_seconds_from_unix_epoch(secs: u64) -> Time {
+        Time(secs)
     }
 }

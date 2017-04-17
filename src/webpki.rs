@@ -94,7 +94,12 @@ mod der;
 mod cert;
 mod name;
 mod signed_data;
+mod calendar;
 mod time;
+
+pub use time::Time;
+#[cfg(feature = "use_std")]
+pub use time::stdsupport::*;
 
 #[cfg(feature = "trust_anchor_util")]
 pub mod trust_anchor_util;

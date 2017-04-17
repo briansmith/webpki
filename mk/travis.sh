@@ -33,6 +33,8 @@ CC=$CC_X CXX=$CXX_X cargo build -j2 ${mode-} -vv
 
 CC=$CC_X CXX=$CXX_X cargo test -j2 ${mode-} -vv
 
+CC=$CC_X CXX=$CXX_X cargo test -j2 ${mode-} --features use_std -vv
+
 CC=$CC_X CXX=$CXX_X cargo doc --verbose
 
 CC=$CC_X CXX=$CXX_X cargo clean --verbose

@@ -57,6 +57,7 @@ path = "src/webpki.rs"
 [features]
 default = ["trust_anchor_util"]
 trust_anchor_util = []
+use_std = []
 
 [dependencies]
 ring = "0.11"
