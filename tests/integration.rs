@@ -15,7 +15,6 @@
 extern crate untrusted;
 extern crate webpki;
 extern crate ring;
-extern crate time;
 
 use untrusted::Input;
 use webpki::*;
@@ -49,9 +48,12 @@ pub fn netflix()
         ).unwrap()
     ];
 
+    let time = Time::from_seconds_from_unix_epoch(1492441716);
+
     let cert = webpki::EndEntityCert::from(ee_input).unwrap();
-    cert.verify_is_valid_tls_server_cert(ALL_SIGALGS, &anchors, &inter_vec,
-                                         time::get_time()) .unwrap();
+    cert.verify_is_valid_tls_server_cert(ALL_SIGALGS, &anchors,
+                                         &inter_vec, time)
+        .unwrap();
 }
 
 #[test]
@@ -68,4 +70,12 @@ fn read_root_with_neg_serial() {
     trust_anchor_util::cert_der_as_trust_anchor(
         Input::from(ca)
     ).expect("idcat cert should parse as anchor");
+}
+
+#[cfg(feature = "use_std")]
+#[test]
+fn time_constructor() {
+    use std::time;
+
+    Time::from(time::SystemTime::now());
 }
