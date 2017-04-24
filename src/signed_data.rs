@@ -336,7 +336,7 @@ const RSA_PSS_SHA512: AlgorithmIdentifier = AlgorithmIdentifier {
 
 #[cfg(test)]
 mod tests {
-    use rustc_serialize::base64::FromBase64;
+    use base64;
     use std;
     use std::io::BufRead;
     use {der, Error, signed_data};
@@ -631,7 +631,7 @@ mod tests {
             base64.push_str(&line);
         }
 
-        base64.from_base64().unwrap()
+        base64::decode(&base64).unwrap()
     }
 
     static SUPPORTED_ALGORITHMS_IN_TESTS:
