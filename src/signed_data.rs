@@ -78,12 +78,7 @@ pub fn parse_signed_data<'a>(der: &mut untrusted::Reader<'a>)
                                                        der::Tag::Sequence));
     let signature = try!(der::bit_string_with_no_unused_bits(der));
 
-    Ok((tbs,
-        SignedData {
-            data: data,
-            algorithm: algorithm,
-            signature: signature
-        }))
+    Ok((tbs, SignedData { data, algorithm, signature }))
 }
 
 /// Verify `signed_data` using the public key in the DER-encoded
@@ -599,12 +594,7 @@ mod tests {
         let data = read_pem_section(&mut lines, "DATA");
         let signature = read_pem_section(&mut lines, "SIGNATURE");
 
-        TestSignedData {
-            spki: spki,
-            data: data,
-            algorithm: algorithm,
-            signature: signature
-        }
+        TestSignedData { spki, data, algorithm, signature }
     }
 
     type FileLines<'a> = std::io::Lines<std::io::BufReader<&'a std::fs::File>>;
