@@ -335,6 +335,6 @@ pub struct TrustAnchor<'a> {
 }
 
 /// Trust anchors which may be used for authenticating servers.
-pub struct TLSServerTrustAnchors<'a>(&'a [TrustAnchor<'a>]);
+pub struct TLSServerTrustAnchors<'a>(pub &'a [TrustAnchor<'a>]);
 /// Trust anchors which may be used for authenticating clients.
-pub struct TLSClientTrustAnchors<'a>(&'a [TrustAnchor<'a>]);
+pub struct TLSClientTrustAnchors<'a>(pub &'a [TrustAnchor<'a>]);

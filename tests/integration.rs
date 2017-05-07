@@ -50,7 +50,7 @@ pub fn netflix()
     ];
 
     let cert = webpki::EndEntityCert::from(ee_input).unwrap();
-    cert.verify_is_valid_tls_server_cert(ALL_SIGALGS, &anchors, &inter_vec,
+    cert.verify_is_valid_tls_server_cert(ALL_SIGALGS, TLSServerTrustAnchors(&anchors), &inter_vec,
                                          time::get_time()) .unwrap();
 }
 
