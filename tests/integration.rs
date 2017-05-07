@@ -47,11 +47,12 @@ pub fn netflix()
             Input::from(ca)
         ).unwrap()
     ];
+    let anchors = TLSServerTrustAnchors(&anchors);
 
     let time = Time::from_seconds_since_unix_epoch(1492441716);
 
     let cert = webpki::EndEntityCert::from(ee_input).unwrap();
-    cert.verify_is_valid_tls_server_cert(ALL_SIGALGS, &anchors,
+    cert.verify_is_valid_tls_server_cert(ALL_SIGALGS, anchors,
                                          &inter_vec, time)
         .unwrap();
 }
