@@ -167,11 +167,11 @@ impl <'a> EndEntityCert<'a> {
     /// time).
     pub fn verify_is_valid_tls_server_cert(
             &self, supported_sig_algs: &[&SignatureAlgorithm],
-            trust_anchors: &[TrustAnchor],
+            trust_anchors: TLSServerTrustAnchors,
             intermediate_certs: &[untrusted::Input], time: time::Timespec)
             -> Result<(), Error> {
         verify_cert::build_chain(verify_cert::EKU_SERVER_AUTH,
-                                 supported_sig_algs, trust_anchors,
+                                 supported_sig_algs, trust_anchors.0,
                                  intermediate_certs, &self.inner, time, 0)
     }
 
@@ -188,11 +188,11 @@ impl <'a> EndEntityCert<'a> {
     /// time).
     pub fn verify_is_valid_tls_client_cert(
             &self, supported_sig_algs: &[&SignatureAlgorithm],
-            trust_anchors: &[TrustAnchor],
+            trust_anchors: TLSClientTrustAnchors,
             intermediate_certs: &[untrusted::Input], time: time::Timespec)
             -> Result<(), Error> {
         verify_cert::build_chain(verify_cert::EKU_CLIENT_AUTH,
-                                 supported_sig_algs, trust_anchors,
+                                 supported_sig_algs, trust_anchors.0,
                                  intermediate_certs, &self.inner, time, 0)
     }
 
@@ -333,3 +333,8 @@ pub struct TrustAnchor<'a> {
     /// constraints to apply to the trust anchor, if any.
     pub name_constraints: Option<&'a [u8]>
 }
+
+/// Trust anchors which may be used for authenticating servers.
+pub struct TLSServerTrustAnchors<'a>(&'a [TrustAnchor<'a>]);
+/// Trust anchors which may be used for authenticating clients.
+pub struct TLSClientTrustAnchors<'a>(&'a [TrustAnchor<'a>]);
