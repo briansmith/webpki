@@ -166,11 +166,11 @@ impl <'a> EndEntityCert<'a> {
     /// time).
     pub fn verify_is_valid_tls_client_cert(
             &self, supported_sig_algs: &[&SignatureAlgorithm],
-            trust_anchors: &[TrustAnchor],
-            intermediate_certs: &[untrusted::Input], time: time::Timespec)
+            trust_anchors: TLSClientTrustAnchors,
+            intermediate_certs: &[untrusted::Input], time: Time)
             -> Result<(), Error> {
         verify_cert::build_chain(verify_cert::EKU_CLIENT_AUTH,
-                                 supported_sig_algs, trust_anchors,
+                                 supported_sig_algs, trust_anchors.0,
                                  intermediate_certs, &self.inner, time, 0)
     }
 
@@ -307,3 +307,7 @@ pub struct TrustAnchor<'a> {
 /// Trust anchors which may be used for authenticating servers.
 #[derive(Debug)]
 pub struct TLSServerTrustAnchors<'a>(pub &'a [TrustAnchor<'a>]);
+
+/// Trust anchors which may be used for authenticating clients.
+#[derive(Debug)]
+pub struct TLSClientTrustAnchors<'a>(pub &'a [TrustAnchor<'a>]);
