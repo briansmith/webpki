@@ -69,3 +69,10 @@ fn read_root_with_neg_serial() {
         Input::from(ca)
     ).expect("idcat cert should parse as anchor");
 }
+
+#[test]
+fn yubico_u2f() {
+    let c = include_bytes!("misc/yubico_u2f.der");
+    let c_input = Input::from(c);
+    webpki::EndEntityCert::from(c_input).unwrap();
+}
