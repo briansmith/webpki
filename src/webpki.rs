@@ -162,9 +162,8 @@ impl <'a> EndEntityCert<'a> {
     /// public key is not validated against this list. `trust_anchors` is the
     /// list of root CAs to trust. `intermediate_certs` is the sequence of
     /// intermediate certificates that the server sent in the TLS handshake.
-    /// `cert` is the purported end-entity certificate of the server. `time` is
-    /// the time for which the validation is effective (usually the current
-    /// time).
+    /// `time` is the time for which the validation is effective (usually the
+    /// current time).
     pub fn verify_is_valid_tls_server_cert(
             &self, supported_sig_algs: &[&SignatureAlgorithm],
             trust_anchors: &[TrustAnchor],
