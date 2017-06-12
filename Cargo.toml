@@ -21,7 +21,7 @@ license-file = "LICENSE"
 name = "webpki"
 readme = "README.md"
 repository = "https://github.com/briansmith/webpki"
-version = "0.13.0"
+version = "0.14.0"
 
 include = [
     "Cargo.toml",
@@ -59,7 +59,7 @@ default = ["trust_anchor_util"]
 trust_anchor_util = []
 
 [dependencies]
-ring = "0.10"
+ring = "0.11"
 time = "0.1"
 untrusted = "0.5"
 
