@@ -147,7 +147,7 @@ fn check_issuer_independent_properties<'a>(
     // TODO: Check SPKI like mozilla::pkix.
     // TODO: check for active distrust like mozilla::pkix.
 
-    // See the comment in `remember_extensions` for why we don't check the
+    // See the comment in `remember_extension` for why we don't check the
     // KeyUsage extension.
 
     try!(cert.validity.read_all(Error::BadDER,
