@@ -22,7 +22,7 @@
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub struct Time(u64);
 
-#[cfg(feature = "use_std")]
+#[cfg(feature = "std")]
 pub mod stdsupport {
     use std::time;
     use std::convert;

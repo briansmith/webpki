@@ -72,7 +72,7 @@ fn read_root_with_neg_serial() {
     ).expect("idcat cert should parse as anchor");
 }
 
-#[cfg(feature = "use_std")]
+#[cfg(feature = "std")]
 #[test]
 fn time_constructor() {
     use std::time;

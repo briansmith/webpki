@@ -98,7 +98,7 @@ mod calendar;
 mod time;
 
 pub use time::Time;
-#[cfg(feature = "use_std")]
+#[cfg(feature = "std")]
 pub use time::stdsupport::*;
 
 #[cfg(feature = "trust_anchor_util")]
