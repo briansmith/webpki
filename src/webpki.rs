@@ -166,11 +166,32 @@ impl <'a> EndEntityCert<'a> {
     /// current time).
     pub fn verify_is_valid_tls_server_cert(
             &self, supported_sig_algs: &[&SignatureAlgorithm],
-            trust_anchors: &[TrustAnchor],
+            trust_anchors: TLSServerTrustAnchors,
             intermediate_certs: &[untrusted::Input], time: time::Timespec)
             -> Result<(), Error> {
         verify_cert::build_chain(verify_cert::EKU_SERVER_AUTH,
-                                 supported_sig_algs, trust_anchors,
+                                 supported_sig_algs, trust_anchors.0,
+                                 intermediate_certs, &self.inner, time, 0)
+    }
+
+    /// Verifies that the end-entity certificate is valid for use by a TLS
+    /// client.
+    ///
+    /// `supported_sig_algs` is the list of signature algorithms that are
+    /// trusted for use in certificate signatures; the end-entity certificate's
+    /// public key is not validated against this list. `trust_anchors` is the
+    /// list of root CAs to trust. `intermediate_certs` is the sequence of
+    /// intermediate certificates that the client sent in the TLS handshake.
+    /// `cert` is the purported end-entity certificate of the client. `time` is
+    /// the time for which the validation is effective (usually the current
+    /// time).
+    pub fn verify_is_valid_tls_client_cert(
+            &self, supported_sig_algs: &[&SignatureAlgorithm],
+            trust_anchors: TLSClientTrustAnchors,
+            intermediate_certs: &[untrusted::Input], time: time::Timespec)
+            -> Result<(), Error> {
+        verify_cert::build_chain(verify_cert::EKU_CLIENT_AUTH,
+                                 supported_sig_algs, trust_anchors.0,
                                  intermediate_certs, &self.inner, time, 0)
     }
 
@@ -311,3 +332,8 @@ pub struct TrustAnchor<'a> {
     /// constraints to apply to the trust anchor, if any.
     pub name_constraints: Option<&'a [u8]>
 }
+
+/// Trust anchors which may be used for authenticating servers.
+pub struct TLSServerTrustAnchors<'a>(pub &'a [TrustAnchor<'a>]);
+/// Trust anchors which may be used for authenticating clients.
+pub struct TLSClientTrustAnchors<'a>(pub &'a [TrustAnchor<'a>]);
