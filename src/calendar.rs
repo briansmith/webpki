@@ -56,7 +56,7 @@ pub fn time_from_ymdhms_utc(year: u64, month: u64, day_of_month: u64,
                                    (minutes               * 60) +
                                    seconds;
 
-    Ok(Time::from_seconds_from_unix_epoch(seconds_since_unix_epoch))
+    Ok(Time::from_seconds_since_unix_epoch(seconds_since_unix_epoch))
 }
 
 fn days_before_year_since_unix_epoch(year: u64) -> Result<u64, Error> {
@@ -133,17 +133,17 @@ mod tests {
         use super::{time_from_ymdhms_utc, Time};
 
         // year boundary
-        assert_eq!(Time::from_seconds_from_unix_epoch(1483228799),
+        assert_eq!(Time::from_seconds_since_unix_epoch(1483228799),
                    time_from_ymdhms_utc(2016, 12, 31, 23, 59, 59).unwrap());
-        assert_eq!(Time::from_seconds_from_unix_epoch(1483228800),
+        assert_eq!(Time::from_seconds_since_unix_epoch(1483228800),
                    time_from_ymdhms_utc(2017, 1, 1, 0, 0, 0).unwrap());
 
         // not a leap year
-        assert_eq!(Time::from_seconds_from_unix_epoch(1492449162),
+        assert_eq!(Time::from_seconds_since_unix_epoch(1492449162),
                    time_from_ymdhms_utc(2017, 4, 17, 17, 12, 42).unwrap());
 
         // leap year, post-feb
-        assert_eq!(Time::from_seconds_from_unix_epoch(1460913162),
+        assert_eq!(Time::from_seconds_since_unix_epoch(1460913162),
                    time_from_ymdhms_utc(2016, 4, 17, 17, 12, 42).unwrap());
     }
 }

@@ -39,7 +39,7 @@ pub mod stdsupport {
 
 impl Time {
     /// Create a `webpki::Time` from a unix timestamp.
-    pub fn from_seconds_from_unix_epoch(secs: u64) -> Time {
+    pub fn from_seconds_since_unix_epoch(secs: u64) -> Time {
         Time(secs)
     }
 }
