@@ -14,6 +14,9 @@
 
 //! Conversions into the library's time type.
 
+#[cfg(feature = "std")]
+use {ring, std};
+
 /// The time type.
 ///
 /// Internally this is merely a UNIX timestamp: a count of non-leap
@@ -22,22 +25,34 @@
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub struct Time(u64);
 
-#[cfg(feature = "std")]
-pub mod stdsupport {
-    use std::time;
-    use std::convert;
-    use super::Time;
-
-    impl convert::From<time::SystemTime> for Time {
-        fn from(st: time::SystemTime) -> Time {
-            Time(st.duration_since(time::UNIX_EPOCH)
-                 .unwrap() // it's definitely after 1970 now
-                 .as_secs())
-        }
-    }
-}
-
 impl Time {
+    /// Create a `webpki::Time` from a `std::time::SystemTime`.
+    ///
+    /// This will be replaced with a real `TryFrom<std::time::SystemTime>`
+    /// implementation when `TryFrom` is added to Rust Stable.
+    ///
+    /// # Example:
+    ///
+    /// Construct a `webpki::Time` from the current system time:
+    ///
+    /// ```
+    /// # extern crate ring;
+    /// # extern crate webpki;
+    /// #
+    /// #[cfg(feature = "std")]
+    /// # fn foo() -> Result<(), ring::error::Unspecified> {
+    /// let time = webpki::Time::try_from(std::time::SystemTime::now())?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    #[cfg(feature = "std")]
+    pub fn try_from(time: std::time::SystemTime)
+                    -> Result<Time, ring::error::Unspecified> {
+        time.duration_since(std::time::UNIX_EPOCH)
+          .map(|d| Time::from_seconds_since_unix_epoch(d.as_secs()))
+          .map_err(|_| ring::error::Unspecified)
+    }
+
     /// Create a `webpki::Time` from a unix timestamp.
     pub fn from_seconds_since_unix_epoch(secs: u64) -> Time {
         Time(secs)
