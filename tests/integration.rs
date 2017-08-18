@@ -75,7 +75,7 @@ fn read_root_with_neg_serial() {
 #[cfg(feature = "std")]
 #[test]
 fn time_constructor() {
-    use std::time;
+    use std;
 
-    Time::from(time::SystemTime::now());
+    Time::try_from(std::time::SystemTime::now()).unwrap();
 }

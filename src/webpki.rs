@@ -98,8 +98,6 @@ mod calendar;
 mod time;
 
 pub use time::Time;
-#[cfg(feature = "std")]
-pub use time::stdsupport::*;
 
 #[cfg(feature = "trust_anchor_util")]
 pub mod trust_anchor_util;
