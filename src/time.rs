@@ -54,6 +54,11 @@ impl Time {
     }
 
     /// Create a `webpki::Time` from a unix timestamp.
+    ///
+    /// It is usually better to use the less error-prone
+    /// `webpki::Time::try_from(time: &std::time::SystemTime)` instead when
+    /// `std::time::SystemTime` is available (when `#![no_std]` isn't being
+    /// used).
     pub fn from_seconds_since_unix_epoch(secs: u64) -> Time {
         Time(secs)
     }
