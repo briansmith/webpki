@@ -97,8 +97,6 @@ mod signed_data;
 mod calendar;
 mod time;
 
-pub use time::Time;
-
 #[cfg(feature = "trust_anchor_util")]
 pub mod trust_anchor_util;
 
@@ -119,6 +117,8 @@ pub use signed_data::{
     RSA_PSS_2048_8192_SHA384_LEGACY_KEY,
     RSA_PSS_2048_8192_SHA512_LEGACY_KEY,
 };
+
+pub use time::Time;
 
 /// An end-entity certificate.
 ///
