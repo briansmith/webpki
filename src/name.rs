@@ -443,12 +443,12 @@ fn general_name<'a>(input: &mut untrusted::Reader<'a>)
 //     A: Absolute names are not supported as presented IDs or name
 //        constraints. Only reference IDs may be absolute.
 //
-//     Q: Is "" a valid DNSName constraints? If so, what does it mean?
+//     Q: Is "" a valid DNSName constraint? If so, what does it mean?
 //     A: Yes. Any valid presented DNSName can be formed "by simply adding zero
 //        or more labels to the left-hand side" of "". In particular, an
 //        excludedSubtrees DNSName constraint of "" forbids all DNSNames.
 //
-//     Q: Is "." a valid DNSName constraints? If so, what does it mean?
+//     Q: Is "." a valid DNSName constraint? If so, what does it mean?
 //     A: No, because absolute names are not allowed (see above).
 //
 // [0] RFC 6265 (Cookies) Domain Matching rules:
