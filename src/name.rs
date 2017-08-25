@@ -435,7 +435,7 @@ fn general_name<'a>(input: &mut untrusted::Reader<'a>)
 //
 //        However, it can be done with a combination of permittedSubtrees and
 //        excludedSubtrees, e.g. "example.com" in permittedSubtrees and
-//        ".example.com" in excudedSubtrees.
+//        ".example.com" in excludedSubtrees.
 //
 //     Q: Are name constraints allowed to be specified as absolute names?
 //        For example, does a presented ID of "example.com" match a name
