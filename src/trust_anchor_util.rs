@@ -89,17 +89,15 @@ fn parse_cert_v1<'a>(cert_der: untrusted::Input<'a>)
             let anchor = der::nested(cert_der, der::Tag::Sequence,
                                      Error::BadDER, |tbs| {
                 // The version number field does not appear in v1 certificates.
-                try!(certificate_serial_number(tbs));
+                certificate_serial_number(tbs)?;
 
-                try!(skip(tbs, der::Tag::Sequence)); // signature.
-                try!(skip(tbs, der::Tag::Sequence)); // issuer.
-                try!(skip(tbs, der::Tag::Sequence)); // validity.
+                skip(tbs, der::Tag::Sequence)?; // signature.
+                skip(tbs, der::Tag::Sequence)?; // issuer.
+                skip(tbs, der::Tag::Sequence)?; // validity.
                 let subject =
-                    try!(der::expect_tag_and_get_value(tbs,
-                                                       der::Tag::Sequence));
+                    der::expect_tag_and_get_value(tbs, der::Tag::Sequence)?;
                 let spki =
-                    try!(der::expect_tag_and_get_value(tbs,
-                                                       der::Tag::Sequence));
+                    der::expect_tag_and_get_value(tbs, der::Tag::Sequence)?;
 
                 Ok(TrustAnchor {
                     subject: subject.as_slice_less_safe(),
@@ -109,8 +107,8 @@ fn parse_cert_v1<'a>(cert_der: untrusted::Input<'a>)
             });
 
             // read and discard signatureAlgorithm + signature
-            try!(skip(cert_der, der::Tag::Sequence));
-            try!(skip(cert_der, der::Tag::BitString));
+            skip(cert_der, der::Tag::Sequence)?;
+            skip(cert_der, der::Tag::BitString)?;
 
             anchor
         })

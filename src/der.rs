@@ -46,7 +46,7 @@ pub fn nested_mut<'a, F, R, E: Copy>(input: &mut untrusted::Reader<'a>,
                                      -> Result<R, E>
                                      where F : FnMut(&mut untrusted::Reader<'a>)
                                                      -> Result<R, E> {
-    let inner = try!(expect_tag_and_get_value(input, tag).map_err(|_| error));
+    let inner = expect_tag_and_get_value(input, tag).map_err(|_| error)?;
     inner.read_all_mut(error, decoder).map_err(|_| error)
 }
 
@@ -59,7 +59,7 @@ pub fn nested_of_mut<'a, F, E: Copy>(input: &mut untrusted::Reader<'a>,
                                                      -> Result<(), E> {
     nested_mut(input, outer_tag, error, |outer| {
         loop {
-            try!(nested_mut(outer, inner_tag, error, |inner| decoder(inner)));
+            nested_mut(outer, inner_tag, error, |inner| decoder(inner))?;
             if outer.at_end() {
                 break;
             }
@@ -72,8 +72,7 @@ pub fn bit_string_with_no_unused_bits<'a>(input: &mut untrusted::Reader<'a>)
                                           -> Result<untrusted::Input<'a>,
                                                     Error> {
     nested(input, Tag::BitString, Error::BadDER, |value| {
-        let unused_bits_at_end =
-            try!(value.read_byte().map_err(|_| Error::BadDER));
+        let unused_bits_at_end = value.read_byte().map_err(|_| Error::BadDER)?;
         if unused_bits_at_end != 0 {
             return Err(Error::BadDER);
         }
@@ -114,7 +113,7 @@ pub fn time_choice<'a>(input: &mut untrusted::Reader<'a>)
                        else { Tag::GeneralizedTime };
 
     fn read_digit(inner: &mut untrusted::Reader) -> Result<u64, Error> {
-        let b = try!(inner.read_byte().map_err(|_| Error::BadDERTime));
+        let b = inner.read_byte().map_err(|_| Error::BadDERTime)?;
         if b < b'0' || b > b'9' {
             return Err(Error::BadDERTime);
         }
@@ -123,8 +122,8 @@ pub fn time_choice<'a>(input: &mut untrusted::Reader<'a>)
 
     fn read_two_digits(inner: &mut untrusted::Reader, min: u64, max: u64)
                        -> Result<u64, Error> {
-        let hi = try!(read_digit(inner));
-        let lo = try!(read_digit(inner));
+        let hi = read_digit(inner)?;
+        let lo = read_digit(inner)?;
         let value = (hi * 10) + lo;
         if value < min || value > max {
             return Err(Error::BadDERTime);
@@ -135,24 +134,24 @@ pub fn time_choice<'a>(input: &mut untrusted::Reader<'a>)
     nested(input, expected_tag, Error::BadDER, |value| {
         let (year_hi, year_lo) =
             if is_utc_time {
-                let lo = try!(read_two_digits(value, 0, 99));
+                let lo = read_two_digits(value, 0, 99)?;
                 let hi = if lo >= 50 { 19 } else { 20 };
                 (hi, lo)
             } else {
-                let hi = try!(read_two_digits(value, 0, 99));
-                let lo = try!(read_two_digits(value, 0, 99));
+                let hi = read_two_digits(value, 0, 99)?;
+                let lo = read_two_digits(value, 0, 99)?;
                 (hi, lo)
             };
 
         let year = (year_hi * 100) + year_lo;
-        let month = try!(read_two_digits(value, 1, 12));
+        let month = read_two_digits(value, 1, 12)?;
         let days_in_month = calendar::days_in_month(year, month);
-        let day_of_month = try!(read_two_digits(value, 1, days_in_month));
-        let hours = try!(read_two_digits(value, 0, 23));
-        let minutes = try!(read_two_digits(value, 0, 59));
-        let seconds = try!(read_two_digits(value, 0, 59));
+        let day_of_month = read_two_digits(value, 1, days_in_month)?;
+        let hours = read_two_digits(value, 0, 23)?;
+        let minutes = read_two_digits(value, 0, 59)?;
+        let seconds = read_two_digits(value, 0, 59)?;
 
-        let time_zone = try!(value.read_byte().map_err(|_| Error::BadDERTime));
+        let time_zone = value.read_byte().map_err(|_| Error::BadDERTime)?;
         if time_zone != b'Z' {
             return Err(Error::BadDERTime);
         }

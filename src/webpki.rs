@@ -151,9 +151,7 @@ impl <'a> EndEntityCert<'a> {
     pub fn from(cert_der: untrusted::Input<'a>)
                 -> Result<EndEntityCert<'a>, Error> {
         Ok(EndEntityCert {
-            inner:
-                try!(cert::parse_cert(cert_der,
-                                      cert::EndEntityOrCA::EndEntity))
+            inner: cert::parse_cert(cert_der, cert::EndEntityOrCA::EndEntity)?
         })
     }
 

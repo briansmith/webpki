@@ -25,9 +25,8 @@ pub fn build_chain<'a>(required_eku_if_present: KeyPurposeId,
                        -> Result<(), Error> {
     let used_as_ca = used_as_ca(&cert.ee_or_ca);
 
-    try!(check_issuer_independent_properties(cert, time, used_as_ca,
-                                             sub_ca_count,
-                                             required_eku_if_present));
+    check_issuer_independent_properties(cert, time, used_as_ca, sub_ca_count,
+                                        required_eku_if_present)?;
 
     // TODO: HPKP checks.
 
@@ -56,16 +55,15 @@ pub fn build_chain<'a>(required_eku_if_present: KeyPurposeId,
         let name_constraints =
             trust_anchor.name_constraints.map(untrusted::Input::from);
 
-        try!(untrusted::read_all_optional(
-                name_constraints, Error::BadDER,
-                |value| name::check_name_constraints(value, &cert)));
+        untrusted::read_all_optional(
+            name_constraints, Error::BadDER,
+            |value| name::check_name_constraints(value, &cert))?;
 
         let trust_anchor_spki = untrusted::Input::from(trust_anchor.spki);
 
-        // TODO: try!(check_distrust(trust_anchor_subject,
-        //                           trust_anchor_spki));
+        // TODO: check_distrust(trust_anchor_subject, trust_anchor_spki)?;
 
-        try!(check_signatures(supported_sig_algs, cert, trust_anchor_spki));
+        check_signatures(supported_sig_algs, cert, trust_anchor_spki)?;
 
         Ok(())
     }) {
@@ -79,7 +77,7 @@ pub fn build_chain<'a>(required_eku_if_present: KeyPurposeId,
 
     loop_while_non_fatal_error(intermediate_certs, |cert_der| {
         let potential_issuer =
-            try!(cert::parse_cert(*cert_der, EndEntityOrCA::CA(&cert)));
+            cert::parse_cert(*cert_der, EndEntityOrCA::CA(&cert))?;
 
         if potential_issuer.subject != cert.issuer {
             return Err(Error::UnknownIssuer)
@@ -98,9 +96,9 @@ pub fn build_chain<'a>(required_eku_if_present: KeyPurposeId,
             }
         }
 
-        try!(untrusted::read_all_optional(
-                potential_issuer.name_constraints, Error::BadDER,
-                |value| name::check_name_constraints(value, &cert)));
+        untrusted::read_all_optional(
+            potential_issuer.name_constraints, Error::BadDER,
+            |value| name::check_name_constraints(value, &cert))?;
 
         let next_sub_ca_count = match used_as_ca {
             UsedAsCA::No => sub_ca_count,
@@ -119,8 +117,8 @@ fn check_signatures(supported_sig_algs: &[&SignatureAlgorithm],
     let mut spki_value = trust_anchor_key;
     let mut cert = cert_chain;
     loop {
-        try!(signed_data::verify_signed_data(supported_sig_algs, spki_value,
-                                             &cert.signed_data));
+        signed_data::verify_signed_data(supported_sig_algs, spki_value,
+                                        &cert.signed_data)?;
 
         // TODO: check revocation
 
@@ -140,8 +138,7 @@ fn check_issuer_independent_properties<'a>(
         cert: &Cert<'a>, time: time::Time, used_as_ca: UsedAsCA,
         sub_ca_count: usize, required_eku_if_present: KeyPurposeId)
         -> Result<(), Error> {
-    // TODO: try!(check_distrust(trust_anchor_subject,
-    //                           trust_anchor_spki));
+    // TODO: check_distrust(trust_anchor_subject, trust_anchor_spki)?;
     // TODO: Check signature algorithm like mozilla::pkix.
     // TODO: Check SPKI like mozilla::pkix.
     // TODO: check for active distrust like mozilla::pkix.
@@ -149,14 +146,13 @@ fn check_issuer_independent_properties<'a>(
     // See the comment in `remember_extension` for why we don't check the
     // KeyUsage extension.
 
-    try!(cert.validity.read_all(Error::BadDER,
-                                |value| check_validity(value, time)));
-    try!(untrusted::read_all_optional(
-            cert.basic_constraints, Error::BadDER,
-            |value| check_basic_constraints(value, used_as_ca, sub_ca_count)));
-    try!(untrusted::read_all_optional(
-            cert.eku, Error::BadDER,
-            |value| check_eku(value, used_as_ca, required_eku_if_present)));
+    cert.validity.read_all(Error::BadDER, |value| check_validity(value, time))?;
+    untrusted::read_all_optional(
+        cert.basic_constraints, Error::BadDER,
+        |value| check_basic_constraints(value, used_as_ca, sub_ca_count))?;
+    untrusted::read_all_optional(
+        cert.eku, Error::BadDER,
+        |value| check_eku(value, used_as_ca, required_eku_if_present))?;
 
     Ok(())
 }
@@ -164,8 +160,8 @@ fn check_issuer_independent_properties<'a>(
 // https://tools.ietf.org/html/rfc5280#section-4.1.2.5
 fn check_validity(input: &mut untrusted::Reader, time: time::Time)
                   -> Result<(), Error> {
-    let not_before = try!(der::time_choice(input));
-    let not_after = try!(der::time_choice(input));
+    let not_before = der::time_choice(input)?;
+    let not_after = der::time_choice(input)?;
 
     if not_before > not_after {
         return Err(Error::InvalidCertValidity);
@@ -200,7 +196,7 @@ fn check_basic_constraints(input: Option<&mut untrusted::Reader>,
                            -> Result<(), Error> {
     let (is_ca, path_len_constraint) = match input {
         Some(input) => {
-            let is_ca = try!(der::optional_boolean(input));
+            let is_ca = der::optional_boolean(input)?;
 
             // https://bugzilla.mozilla.org/show_bug.cgi?id=985025: RFC 5280
             // says that a certificate must not have pathLenConstraint unless
@@ -208,7 +204,7 @@ fn check_basic_constraints(input: Option<&mut untrusted::Reader>,
             // certificates have pathLenConstraint.
             let path_len_constraint =
                 if !input.at_end() {
-                    let value = try!(der::small_nonnegative_integer(input));
+                    let value = der::small_nonnegative_integer(input)?;
                     Some(value as usize)
                 } else {
                     None
@@ -281,8 +277,7 @@ fn check_eku(input: Option<&mut untrusted::Reader>, used_as_ca: UsedAsCA,
             };
 
             loop {
-                let value =
-                    try!(der::expect_tag_and_get_value(input, der::Tag::OID));
+                let value = der::expect_tag_and_get_value(input, der::Tag::OID)?;
                 if value == required_eku_if_present.oid_value ||
                    (match_step_up &&
                     value == EKU_NETSCAPE_SERVER_STEP_UP.oid_value) {

@@ -56,24 +56,22 @@ pub fn check_name_constraints<'a>(input: Option<&mut untrusted::Reader<'a>>,
         if !inner.peek(subtrees_tag as u8) {
             return Ok(None);
         }
-        let subtrees = try!(der::nested(inner, subtrees_tag,
-                                        Error::BadDER, |tagged| {
+        let subtrees = der::nested(inner, subtrees_tag, Error::BadDER, |tagged| {
             der::expect_tag_and_get_value(tagged, der::Tag::Sequence)
-        }));
+        })?;
         Ok(Some(subtrees))
     }
 
     let permitted_subtrees =
-        try!(parse_subtrees(input, der::Tag::ContextSpecificConstructed0));
+        parse_subtrees(input, der::Tag::ContextSpecificConstructed0)?;
     let excluded_subtrees =
-        try!(parse_subtrees(input, der::Tag::ContextSpecificConstructed1));
+        parse_subtrees(input, der::Tag::ContextSpecificConstructed1)?;
 
     let mut child = subordinate_certs;
     loop {
-        try!(iterate_names(child.subject, child.subject_alt_name, Ok(()),
-                           &|name| check_presented_id_conforms_to_constraints(
-                                        name, permitted_subtrees,
-                                        excluded_subtrees)));
+        iterate_names(child.subject, child.subject_alt_name, Ok(()),
+                      &|name| check_presented_id_conforms_to_constraints(
+                          name, permitted_subtrees, excluded_subtrees))?;
 
         child = match child.ee_or_ca {
             EndEntityOrCA::CA(child_cert) => child_cert,
@@ -125,7 +123,7 @@ fn check_presented_id_conforms_to_constraints_in_subtree(
         fn general_subtree<'b>(input: &mut untrusted::Reader<'b>)
                                -> Result<GeneralName<'b>, Error> {
             let general_subtree =
-                try!(der::expect_tag_and_get_value(input, der::Tag::Sequence));
+                der::expect_tag_and_get_value(input, der::Tag::Sequence)?;
             general_subtree.read_all(Error::BadDER,
                                      |subtree| general_name(subtree))
         }
@@ -236,11 +234,11 @@ fn presented_ip_address_matches_constraint(name: untrusted::Input,
     }
 
     let (constraint_address, constraint_mask) =
-        try!(constraint.read_all(Error::BadDER, |value| {
+        constraint.read_all(Error::BadDER, |value| {
             let address = value.skip_and_get_input(constraint.len() / 2).unwrap();
             let mask = value.skip_and_get_input(constraint.len() / 2).unwrap();
             Ok((address, mask))
-        }));
+        })?;
 
     let mut name = untrusted::Reader::new(name);
     let mut constraint_address = untrusted::Reader::new(constraint_address);
@@ -280,7 +278,7 @@ fn iterate_names(subject: untrusted::Input,
             // attempting to parse the first entry allows us to return a better
             // error code.
             while !subject_alt_name.at_end() {
-                let name = try!(general_name(&mut subject_alt_name));
+                let name = general_name(&mut subject_alt_name)?;
                 match f(name) {
                     NameIteration::Stop(result) => { return result; },
                     NameIteration::KeepGoing => ()
@@ -326,7 +324,7 @@ fn general_name<'a>(input: &mut untrusted::Reader<'a>)
     const IP_ADDRESS_TAG: u8 = CONTEXT_SPECIFIC | 7;
     const REGISTERED_ID_TAG: u8 = CONTEXT_SPECIFIC | 8;
 
-    let (tag, value) = try!(der::read_tag_and_get_value(input));
+    let (tag, value) = der::read_tag_and_get_value(input)?;
     let name = match tag {
         DNS_NAME_TAG => GeneralName::DNSName(value),
         DIRECTORY_NAME_TAG => GeneralName::DirectoryName(value),

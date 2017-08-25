@@ -71,12 +71,11 @@ pub fn parse_signed_data<'a>(der: &mut untrusted::Reader<'a>)
                              -> Result<(untrusted::Input<'a>, SignedData<'a>),
                                        Error> {
     let mark1 = der.mark();
-    let tbs = try!(der::expect_tag_and_get_value(der, der::Tag::Sequence));
+    let tbs = der::expect_tag_and_get_value(der, der::Tag::Sequence)?;
     let mark2 = der.mark();
     let data = der.get_input_between_marks(mark1, mark2).unwrap();
-    let algorithm = try!(der::expect_tag_and_get_value(der,
-                                                       der::Tag::Sequence));
-    let signature = try!(der::bit_string_with_no_unused_bits(der));
+    let algorithm = der::expect_tag_and_get_value(der, der::Tag::Sequence)?;
+    let signature = der::bit_string_with_no_unused_bits(der)?;
 
     Ok((tbs, SignedData { data, algorithm, signature }))
 }
@@ -136,7 +135,7 @@ pub fn verify_signed_data(supported_algorithms: &[&SignatureAlgorithm],
 pub fn verify_signature(signature_alg: &SignatureAlgorithm,
                         spki_value: untrusted::Input, msg: untrusted::Input,
                         signature: untrusted::Input) -> Result<(), Error> {
-    let spki = try!(parse_spki_value(spki_value));
+    let spki = parse_spki_value(spki_value)?;
     if !signature_alg.public_key_alg_id
                      .matches_algorithm_id_value(spki.algorithm_id_value) {
         return Err(Error::UnsupportedSignatureAlgorithmForPublicKey);
@@ -160,8 +159,8 @@ fn parse_spki_value(input: untrusted::Input)
                     -> Result<SubjectPublicKeyInfo, Error> {
     input.read_all(Error::BadDER, |input| {
         let algorithm_id_value =
-                try!(der::expect_tag_and_get_value(input, der::Tag::Sequence));
-        let key_value = try!(der::bit_string_with_no_unused_bits(input));
+            der::expect_tag_and_get_value(input, der::Tag::Sequence)?;
+        let key_value = der::bit_string_with_no_unused_bits(input)?;
         Ok(SubjectPublicKeyInfo {
             algorithm_id_value: algorithm_id_value,
             key_value: key_value,

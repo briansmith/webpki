@@ -19,7 +19,7 @@ pub fn time_from_ymdhms_utc(year: u64, month: u64, day_of_month: u64,
                             hours: u64, minutes: u64, seconds: u64)
                             -> Result<Time, Error> {
     let days_before_year_since_unix_epoch =
-        try!(days_before_year_since_unix_epoch(year));
+        days_before_year_since_unix_epoch(year)?;
 
     const JAN: u64 = 31;
     let feb = days_in_feb(year);
