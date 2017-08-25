@@ -167,11 +167,11 @@ impl <'a> EndEntityCert<'a> {
     /// current time).
     pub fn verify_is_valid_tls_server_cert(
             &self, supported_sig_algs: &[&SignatureAlgorithm],
-            trust_anchors: TLSServerTrustAnchors,
+            &TLSServerTrustAnchors(trust_anchors): &TLSServerTrustAnchors,
             intermediate_certs: &[untrusted::Input], time: Time)
             -> Result<(), Error> {
         verify_cert::build_chain(verify_cert::EKU_SERVER_AUTH,
-                                 supported_sig_algs, trust_anchors.0,
+                                 supported_sig_algs, trust_anchors,
                                  intermediate_certs, &self.inner, time, 0)
     }
 
