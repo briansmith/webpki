@@ -104,11 +104,23 @@ pub use time::Time;
 /// steps. All of these steps are necessary:
 ///
 /// * `EndEntityCert.verify_is_valid_tls_server_cert`: Verify that the server's
-///   certificate is currently valid.
+///   certificate is currently valid *for use by a TLS server*.
 /// * `EndEntityCert.verify_is_valid_for_dns_name`: Verify that the server's
 ///   certificate is valid for the host that is being connected to.
 /// * `EndEntityCert.verify_signature`: Verify that the signature of server's
 ///   `ServerKeyExchange` message is valid for the server's certificate.
+///
+/// Client certificate processing in a TLS connection consists of analogous
+/// steps. All of these steps are necessary:
+///
+/// * `EndEntityCert.verify_is_valid_tls_client_cert`: Verify that the client's
+///   certificate is currently valid *for use by a TLS client*.
+/// * `EndEntityCert.verify_is_valid_for_dns_name`: Verify that the client's
+///   certificate is valid for the host that is making the connection.
+///   (Currently client authentication only works when the client is identified
+///   by a DNS hostname.)
+/// * `EndEntityCert.verify_signature`: Verify that the signature of server's
+///   `CertificateVerify` message is valid for the client's certificate.
 ///
 /// Although it would be less error-prone to combine all these steps into a
 /// single function call, some significant optimizations are possible if the
