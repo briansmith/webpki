@@ -31,6 +31,7 @@ static ALL_SIGALGS: &'static [&'static webpki::SignatureAlgorithm] = &[
 
 /* Checks we can verify netflix's cert chain.  This is notable
  * because they're rooted at a Verisign v1 root. */
+#[cfg(feature = "trust_anchor_util")]
 #[test]
 pub fn netflix()
 {
@@ -55,6 +56,7 @@ pub fn netflix()
         .unwrap();
 }
 
+#[cfg(feature = "trust_anchor_util")]
 #[test]
 fn read_root_with_zero_serial() {
     let ca = include_bytes!("misc/serial_zero.der");
@@ -63,6 +65,7 @@ fn read_root_with_zero_serial() {
     ).expect("godaddy cert should parse as anchor");
 }
 
+#[cfg(feature = "trust_anchor_util")]
 #[test]
 fn read_root_with_neg_serial() {
     let ca = include_bytes!("misc/serial_neg.der");
