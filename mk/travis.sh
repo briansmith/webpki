@@ -31,9 +31,12 @@ if [[ "$MODE_X" == "RELWITHDEBINFO" ]]; then mode=--release; fi
 
 CC=$CC_X CXX=$CXX_X cargo build -j2 ${mode-} -vv
 
+# Default features
 CC=$CC_X CXX=$CXX_X cargo test -j2 ${mode-} -vv
 
-CC=$CC_X CXX=$CXX_X cargo test -j2 ${mode-} --features std -vv
+CC=$CC_X CXX=$CXX_X cargo test -j2 ${mode-} --all-features -vv
+
+CC=$CC_X CXX=$CXX_X cargo test -j2 ${mode-} --no-default-features -vv
 
 CC=$CC_X CXX=$CXX_X cargo doc --verbose
 
