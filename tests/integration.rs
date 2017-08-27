@@ -12,9 +12,31 @@
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
+#![deny(
+    box_pointers,
+)]
+
+#![forbid(
+    anonymous_parameters,
+    fat_ptr_transmutes,
+    legacy_directory_ownership,
+    missing_copy_implementations,
+    missing_debug_implementations,
+    missing_docs,
+    trivial_casts,
+    trivial_numeric_casts,
+    unsafe_code,
+    unstable_features,
+    unused_extern_crates,
+    unused_import_braces,
+    unused_qualifications,
+    unused_results,
+    variant_size_differences,
+    warnings,
+)]
+
 extern crate untrusted;
 extern crate webpki;
-extern crate ring;
 
 #[cfg(feature = "trust_anchor_util")]
 static ALL_SIGALGS: &'static [&'static webpki::SignatureAlgorithm] = &[
@@ -31,6 +53,7 @@ static ALL_SIGALGS: &'static [&'static webpki::SignatureAlgorithm] = &[
 
 /* Checks we can verify netflix's cert chain.  This is notable
  * because they're rooted at a Verisign v1 root. */
+#[allow(box_pointers)]
 #[cfg(feature = "trust_anchor_util")]
 #[test]
 pub fn netflix()
@@ -51,8 +74,8 @@ pub fn netflix()
     let time = webpki::Time::from_seconds_since_unix_epoch(1492441716);
 
     let cert = webpki::EndEntityCert::from(ee_input).unwrap();
-    cert.verify_is_valid_tls_server_cert(ALL_SIGALGS, &anchors,
-                                         &inter_vec, time)
+    let _ = cert.verify_is_valid_tls_server_cert(ALL_SIGALGS, &anchors,
+                                                 &inter_vec, time)
         .unwrap();
 }
 
@@ -60,7 +83,7 @@ pub fn netflix()
 #[test]
 fn read_root_with_zero_serial() {
     let ca = include_bytes!("misc/serial_zero.der");
-    webpki::trust_anchor_util::cert_der_as_trust_anchor(
+    let _ = webpki::trust_anchor_util::cert_der_as_trust_anchor(
         untrusted::Input::from(ca)
     ).expect("godaddy cert should parse as anchor");
 }
@@ -69,7 +92,7 @@ fn read_root_with_zero_serial() {
 #[test]
 fn read_root_with_neg_serial() {
     let ca = include_bytes!("misc/serial_neg.der");
-    webpki::trust_anchor_util::cert_der_as_trust_anchor(
+    let _ = webpki::trust_anchor_util::cert_der_as_trust_anchor(
         untrusted::Input::from(ca)
     ).expect("idcat cert should parse as anchor");
 }
@@ -79,5 +102,5 @@ fn read_root_with_neg_serial() {
 fn time_constructor() {
     use std;
 
-    webpki::Time::try_from(std::time::SystemTime::now()).unwrap();
+    let _ = webpki::Time::try_from(std::time::SystemTime::now()).unwrap();
 }
