@@ -46,7 +46,7 @@ impl Time {
     /// # }
     /// ```
     #[cfg(feature = "std")]
-    pub fn try_from(time: &std::time::SystemTime)
+    pub fn try_from(time: std::time::SystemTime)
                     -> Result<Time, ring::error::Unspecified> {
         time.duration_since(std::time::UNIX_EPOCH)
           .map(|d| Time::from_seconds_since_unix_epoch(d.as_secs()))
