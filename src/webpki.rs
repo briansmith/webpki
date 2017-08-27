@@ -23,12 +23,9 @@
 
 #![no_std]
 
-// TODO: Deny `unused_qualifications` after
-// https://github.com/rust-lang/rust/issues/37345 is fixed.
 #![allow(
     missing_copy_implementations,
     missing_debug_implementations,
-    unused_qualifications,
 )]
 #![deny(
     const_err,
@@ -69,6 +66,7 @@
     unused_must_use,
     unused_mut,
     unused_parens,
+    unused_qualifications,
     unused_results,
     unused_unsafe,
     unused_variables,
