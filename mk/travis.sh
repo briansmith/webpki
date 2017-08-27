@@ -38,6 +38,8 @@ CC=$CC_X CXX=$CXX_X cargo test -j2 ${mode-} --all-features -vv
 
 CC=$CC_X CXX=$CXX_X cargo test -j2 ${mode-} --no-default-features -vv
 
+CC=$CC_X CXX=$CXX_X cargo test --no-default-features --features=trust_anchor_util -vv
+
 CC=$CC_X CXX=$CXX_X cargo doc --verbose
 
 CC=$CC_X CXX=$CXX_X cargo clean --verbose
