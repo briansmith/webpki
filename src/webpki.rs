@@ -24,7 +24,6 @@
 #![no_std]
 
 #![allow(
-    missing_copy_implementations,
     missing_debug_implementations,
 )]
 #![deny(
@@ -34,6 +33,7 @@
     exceeding_bitshifts,
     fat_ptr_transmutes,
     improper_ctypes,
+    missing_copy_implementations,
     missing_docs,
     mutable_transmutes,
     no_mangle_const_items,
