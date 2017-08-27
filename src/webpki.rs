@@ -26,7 +26,13 @@
 #![allow(
     missing_debug_implementations,
 )]
+
+// `#[derive(...)]` uses `#[allow(unused_qualifications )]` internally.
 #![deny(
+    unused_qualifications,
+)]
+
+#![forbid(
     anonymous_parameters,
     box_pointers,
     fat_ptr_transmutes,
@@ -38,7 +44,6 @@
     unstable_features,
     unused_extern_crates,
     unused_import_braces,
-    unused_qualifications,
     unused_results,
     variant_size_differences,
     warnings,
