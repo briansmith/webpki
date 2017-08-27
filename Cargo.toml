@@ -21,7 +21,7 @@ license-file = "LICENSE"
 name = "webpki"
 readme = "README.md"
 repository = "https://github.com/briansmith/webpki"
-version = "0.15.0"
+version = "0.16.0"
 
 include = [
     "Cargo.toml",
