@@ -27,7 +27,7 @@
     missing_debug_implementations,
 )]
 
-// `#[derive(...)]` uses `#[allow(unused_qualifications )]` internally.
+// `#[derive(...)]` uses `#[allow(unused_qualifications)]` internally.
 #![deny(
     unused_qualifications,
 )]
