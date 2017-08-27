@@ -14,14 +14,14 @@ matrix:
     - env: TARGET_X=x86_64-apple-darwin CC_X=clang CXX_X=clang++ MODE_X=DEBUG KCOV=0
       rust: stable
       os: osx
-      osx_image: xcode8.2
+      osx_image: xcode7.2
 
     - env: TARGET_X=x86_64-apple-darwin CC_X=clang CXX_X=clang++ MODE_X=RELWITHDEBINFO KCOV=0
       rust: stable
       os: osx
-      osx_image: xcode8.2
+      osx_image: xcode7.2
 
-    - env: TARGET_X=i686-unknown-linux-gnu CC_X=gcc-4.6 CXX_X=g++-4.6 MODE_X=DEBUG KCOV=0
+    - env: TARGET_X=i686-unknown-linux-gnu CC_X=gcc CXX_X=g++ MODE_X=DEBUG KCOV=0
       rust: stable
       os: linux
       addons:
@@ -33,7 +33,7 @@ matrix:
           sources:
             - ubuntu-toolchain-r-test
 
-    - env: TARGET_X=i686-unknown-linux-gnu CC_X=gcc-4.6 CXX_X=g++-4.6 MODE_X=RELWITHDEBINFO KCOV=0
+    - env: TARGET_X=i686-unknown-linux-gnu CC_X=gcc CXX_X=g++ MODE_X=RELWITHDEBINFO KCOV=0
       rust: stable
       os: linux
       addons:
@@ -45,11 +45,11 @@ matrix:
           sources:
             - ubuntu-toolchain-r-test
 
-    - env: TARGET_X=x86_64-unknown-linux-gnu CC_X=gcc-4.6 CXX_X=g++-4.6 MODE_X=DEBUG KCOV=0
+    - env: TARGET_X=x86_64-unknown-linux-gnu CC_X=gcc CXX_X=g++ MODE_X=DEBUG KCOV=0
       rust: stable
       os: linux
 
-    - env: TARGET_X=x86_64-unknown-linux-gnu CC_X=gcc-4.6 CXX_X=g++-4.6 MODE_X=RELWITHDEBINFO KCOV=0
+    - env: TARGET_X=x86_64-unknown-linux-gnu CC_X=gcc CXX_X=g++ MODE_X=RELWITHDEBINFO KCOV=0
       rust: stable
       os: linux
 
@@ -106,14 +106,14 @@ matrix:
     - env: TARGET_X=x86_64-apple-darwin CC_X=clang CXX_X=clang++ MODE_X=DEBUG KCOV=0
       rust: nightly
       os: osx
-      osx_image: xcode8.2
+      osx_image: xcode7.2
 
     - env: TARGET_X=x86_64-apple-darwin CC_X=clang CXX_X=clang++ MODE_X=RELWITHDEBINFO KCOV=0
       rust: nightly
       os: osx
-      osx_image: xcode8.2
+      osx_image: xcode7.2
 
-    - env: TARGET_X=i686-unknown-linux-gnu CC_X=gcc-4.6 CXX_X=g++-4.6 MODE_X=DEBUG KCOV=0
+    - env: TARGET_X=i686-unknown-linux-gnu CC_X=gcc CXX_X=g++ MODE_X=DEBUG KCOV=0
       rust: nightly
       os: linux
       addons:
@@ -125,7 +125,7 @@ matrix:
           sources:
             - ubuntu-toolchain-r-test
 
-    - env: TARGET_X=i686-unknown-linux-gnu CC_X=gcc-4.6 CXX_X=g++-4.6 MODE_X=RELWITHDEBINFO KCOV=0
+    - env: TARGET_X=i686-unknown-linux-gnu CC_X=gcc CXX_X=g++ MODE_X=RELWITHDEBINFO KCOV=0
       rust: nightly
       os: linux
       addons:
@@ -137,11 +137,11 @@ matrix:
           sources:
             - ubuntu-toolchain-r-test
 
-    - env: TARGET_X=x86_64-unknown-linux-gnu CC_X=gcc-4.6 CXX_X=g++-4.6 MODE_X=DEBUG KCOV=0
+    - env: TARGET_X=x86_64-unknown-linux-gnu CC_X=gcc CXX_X=g++ MODE_X=DEBUG KCOV=0
       rust: nightly
       os: linux
 
-    - env: TARGET_X=x86_64-unknown-linux-gnu CC_X=gcc-4.6 CXX_X=g++-4.6 MODE_X=RELWITHDEBINFO KCOV=0
+    - env: TARGET_X=x86_64-unknown-linux-gnu CC_X=gcc CXX_X=g++ MODE_X=RELWITHDEBINFO KCOV=0
       rust: nightly
       os: linux
 
@@ -208,14 +208,14 @@ matrix:
     - env: TARGET_X=x86_64-apple-darwin CC_X=clang CXX_X=clang++ MODE_X=DEBUG KCOV=0
       rust: beta
       os: osx
-      osx_image: xcode8.2
+      osx_image: xcode7.2
 
     - env: TARGET_X=x86_64-apple-darwin CC_X=clang CXX_X=clang++ MODE_X=RELWITHDEBINFO KCOV=0
       rust: beta
       os: osx
-      osx_image: xcode8.2
+      osx_image: xcode7.2
 
-    - env: TARGET_X=i686-unknown-linux-gnu CC_X=gcc-4.6 CXX_X=g++-4.6 MODE_X=DEBUG KCOV=0
+    - env: TARGET_X=i686-unknown-linux-gnu CC_X=gcc CXX_X=g++ MODE_X=DEBUG KCOV=0
       rust: beta
       os: linux
       addons:
@@ -227,7 +227,7 @@ matrix:
           sources:
             - ubuntu-toolchain-r-test
 
-    - env: TARGET_X=i686-unknown-linux-gnu CC_X=gcc-4.6 CXX_X=g++-4.6 MODE_X=RELWITHDEBINFO KCOV=0
+    - env: TARGET_X=i686-unknown-linux-gnu CC_X=gcc CXX_X=g++ MODE_X=RELWITHDEBINFO KCOV=0
       rust: beta
       os: linux
       addons:
@@ -239,11 +239,11 @@ matrix:
           sources:
             - ubuntu-toolchain-r-test
 
-    - env: TARGET_X=x86_64-unknown-linux-gnu CC_X=gcc-4.6 CXX_X=g++-4.6 MODE_X=DEBUG KCOV=0
+    - env: TARGET_X=x86_64-unknown-linux-gnu CC_X=gcc CXX_X=g++ MODE_X=DEBUG KCOV=0
       rust: beta
       os: linux
 
-    - env: TARGET_X=x86_64-unknown-linux-gnu CC_X=gcc-4.6 CXX_X=g++-4.6 MODE_X=RELWITHDEBINFO KCOV=0
+    - env: TARGET_X=x86_64-unknown-linux-gnu CC_X=gcc CXX_X=g++ MODE_X=RELWITHDEBINFO KCOV=0
       rust: beta
       os: linux
 

@@ -30,7 +30,7 @@ linux_compilers = [
     # compiler for Ubuntu 12.04 LTS, and in particular Travis CI. This is run
     # first because it is the one most likely to break, especially since it is
     # not supported by BoringSSL.
-    "gcc-4.6",
+    "gcc",
 
     # Pre-release of clang.
     # XXX: clang 3.9 doesn't work:
@@ -47,9 +47,9 @@ linux_compilers = [
     "gcc-5",
 ]
 
-# Clang 3.4 and GCC 4.6 are already installed by default.
+# Clang 3.4 and GCC are already installed by default.
 linux_default_clang = "clang-3.4"
-linux_default_gcc = "gcc-4.6"
+linux_default_gcc = "gcc"
 
 osx_compilers = [
      "clang",
