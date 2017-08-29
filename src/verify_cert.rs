@@ -237,6 +237,11 @@ pub static EKU_SERVER_AUTH: KeyPurposeId = KeyPurposeId {
     oid_value: &[(40 * 1) + 3, 6, 1, 5, 5, 7, 3, 1]
 };
 
+// id-kp-clientAuth   OBJECT IDENTIFIER ::= { id-kp 2 }
+pub static EKU_CLIENT_AUTH: KeyPurposeId = KeyPurposeId {
+    oid_value: &[(40 * 1) + 3, 6, 1, 5, 5, 7, 3, 2]
+};
+
 // id-kp-OCSPSigning  OBJECT IDENTIFIER ::= { id-kp 9 }
 pub static EKU_OCSP_SIGNING: KeyPurposeId = KeyPurposeId {
     oid_value: &[(40 * 1) + 3, 6, 1, 5, 5, 7, 3, 9]
