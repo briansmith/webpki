@@ -16,13 +16,40 @@ use cert::{Cert, EndEntityOrCA};
 use {der, Error};
 use untrusted;
 
-pub fn verify_cert_dns_name(cert: &super::EndEntityCert,
-                            dns_name: untrusted::Input) -> Result<(), Error> {
-    let cert = &cert.inner;
+/// A DNS Name suitable for use in the TLS Server Name Indication (SNI)
+/// extension and/or for use as the reference hostname for which to verify a
+/// certificate.
+///
+/// A `DNSNameRef` is guaranteed to be syntactically valid.
+#[derive(Clone, Copy)]
+pub struct DNSNameRef<'a>(untrusted::Input<'a>);
 
-    if !is_valid_reference_dns_id(dns_name) {
-        return Err(Error::InvalidReferenceName);
+impl<'a> DNSNameRef<'a> {
+    /// Constructs a `DNSName` from the given input if the input is a
+    /// syntactically-valid DNS name.
+    pub fn try_from_ascii(dns_name: untrusted::Input<'a>) -> Result<Self, ()> {
+        if !is_valid_reference_dns_id(dns_name) {
+            return Err(());
+        }
+
+        Ok(DNSNameRef(dns_name))
     }
+
+    /// Constructs a `DNSNameRef` from the given input if the input is a
+    /// syntactically-valid DNS name.
+    pub fn try_from_ascii_str(dns_name: &str) -> Result<DNSNameRef, ()> {
+        DNSNameRef::try_from_ascii(untrusted::Input::from(dns_name.as_bytes()))
+    }
+}
+
+impl<'a> From<DNSNameRef<'a>> for untrusted::Input<'a> {
+    fn from(DNSNameRef(dns_name): DNSNameRef<'a>) -> Self { dns_name }
+}
+
+pub fn verify_cert_dns_name(cert: &super::EndEntityCert,
+                            DNSNameRef(dns_name): DNSNameRef)
+                            -> Result<(), Error> {
+    let cert = &cert.inner;
 
     iterate_names(cert.subject, cert.subject_alt_name,
                   Err(Error::CertNotValidForName), &|name| {

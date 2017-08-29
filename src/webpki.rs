@@ -74,6 +74,8 @@ pub mod trust_anchor_util;
 
 mod verify_cert;
 
+pub use name::DNSNameRef;
+
 pub use signed_data::{
     SignatureAlgorithm,
     ECDSA_P256_SHA256,
@@ -151,7 +153,7 @@ impl <'a> EndEntityCert<'a> {
     ///
     /// `dns_name` is assumed to a normalized ASCII (punycode if non-ASCII) DNS
     /// name.
-    pub fn verify_is_valid_for_dns_name(&self, dns_name: untrusted::Input)
+    pub fn verify_is_valid_for_dns_name(&self, dns_name: DNSNameRef)
                                         -> Result<(), Error> {
         name::verify_cert_dns_name(&self, dns_name)
     }
@@ -217,11 +219,6 @@ pub enum Error {
     /// The certificate validity period (notBefore, notAfter) is invalid; e.g.
     /// the notAfter time is earlier than the notBefore time.
     InvalidCertValidity,
-
-    /// The name that a certificate is being validated for is malformed. This
-    /// is not a problem with the certificate, but with the name it is being
-    /// validated for.
-    InvalidReferenceName,
 
     /// The signature is invalid for the given public key.
     InvalidSignatureForPublicKey,
