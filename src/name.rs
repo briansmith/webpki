@@ -77,6 +77,14 @@ impl<'a> DNSNameRef<'a> {
     }
 }
 
+impl<'a> Into<&'a str> for DNSNameRef<'a> {
+    fn into(self) -> &'a str {
+        // The unwrap won't fail because DNSNameRefs are guaranteed to be ASCII
+        // and ASCII is a subset of UTF-8.
+        std::str::from_utf8(self.0.as_slice_less_safe()).unwrap()
+    }
+}
+
 impl<'a> From<DNSNameRef<'a>> for untrusted::Input<'a> {
     fn from(DNSNameRef(dns_name): DNSNameRef<'a>) -> Self { dns_name }
 }
