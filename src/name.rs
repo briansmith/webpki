@@ -16,16 +16,50 @@ use cert::{Cert, EndEntityOrCA};
 use {der, Error};
 use untrusted;
 
+#[cfg(feature = "std")]
+use std;
+
+#[cfg(feature = "std")]
+use std::string::String;
+
 /// A DNS Name suitable for use in the TLS Server Name Indication (SNI)
 /// extension and/or for use as the reference hostname for which to verify a
 /// certificate.
+///
+/// A `DNSName` is guaranteed to be syntactically valid.
+///
+/// `DNSName` stores a copy of the input it was constructed from in a `String`
+/// and so it is only available when the `std` default feature is enabled.
+#[cfg(feature = "std")]
+pub struct DNSName(String);
+
+#[cfg(feature = "std")]
+impl DNSName {
+    /// Returns a `DNSNameRef` that refers to this `DNSName`.
+    pub fn as_ref(&self) -> DNSNameRef {
+        DNSNameRef(untrusted::Input::from(self.0.as_bytes()))
+    }
+}
+
+impl<'a> From<DNSNameRef<'a>> for DNSName {
+    fn from(DNSNameRef(dns_name): DNSNameRef<'a>) -> Self {
+        // The `unwrap()` won't fail because a DNSNameRef is already guaranteed
+        // to be valid ASCII, which is a subset of UTF-8.
+        let s = std::str::from_utf8(dns_name.as_slice_less_safe()).unwrap();
+        DNSName(String::from(s))
+    }
+}
+
+/// A reference to a DNS Name suitable for use in the TLS Server Name Indication
+/// (SNI) extension and/or for use as the reference hostname for which to verify
+/// a certificate.
 ///
 /// A `DNSNameRef` is guaranteed to be syntactically valid.
 #[derive(Clone, Copy)]
 pub struct DNSNameRef<'a>(untrusted::Input<'a>);
 
 impl<'a> DNSNameRef<'a> {
-    /// Constructs a `DNSName` from the given input if the input is a
+    /// Constructs a `DNSNameRef` from the given input if the input is a
     /// syntactically-valid DNS name.
     pub fn try_from_ascii(dns_name: untrusted::Input<'a>) -> Result<Self, ()> {
         if !is_valid_reference_dns_id(dns_name) {
