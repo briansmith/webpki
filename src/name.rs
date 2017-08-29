@@ -13,6 +13,7 @@
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 use cert::{Cert, EndEntityOrCA};
+use core;
 use {der, Error};
 use untrusted;
 
@@ -31,7 +32,7 @@ use std::string::String;
 /// `DNSName` stores a copy of the input it was constructed from in a `String`
 /// and so it is only available when the `std` default feature is enabled.
 #[cfg(feature = "std")]
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct DNSName(String);
 
 #[cfg(feature = "std")]
@@ -74,6 +75,12 @@ impl<'a> DNSNameRef<'a> {
     /// syntactically-valid DNS name.
     pub fn try_from_ascii_str(dns_name: &str) -> Result<DNSNameRef, ()> {
         DNSNameRef::try_from_ascii(untrusted::Input::from(dns_name.as_bytes()))
+    }
+}
+
+impl<'a> core::fmt::Debug for DNSNameRef<'a> {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> Result<(), core::fmt::Error> {
+        DNSName::from(*self).fmt(f)
     }
 }
 
