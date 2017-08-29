@@ -31,6 +31,7 @@ use std::string::String;
 /// `DNSName` stores a copy of the input it was constructed from in a `String`
 /// and so it is only available when the `std` default feature is enabled.
 #[cfg(feature = "std")]
+#[derive(Clone)]
 pub struct DNSName(String);
 
 #[cfg(feature = "std")]
