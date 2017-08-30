@@ -42,6 +42,13 @@ include = [
 
     "src/data/**/*",
 
+    "tests/integration.rs",
+    "tests/misc/serial_neg.der",
+    "tests/misc/serial_zero.der",
+    "tests/netflix/ca.der",
+    "tests/netflix/ee.der",
+    "tests/netflix/inter.der",
+
     "third-party/chromium/**/*",
 ]
 
