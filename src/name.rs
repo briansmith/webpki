@@ -31,6 +31,10 @@ use std::string::String;
 ///
 /// `DNSName` stores a copy of the input it was constructed from in a `String`
 /// and so it is only available when the `std` default feature is enabled.
+///
+/// `Eq`, `PartialEq`, etc. are not implemented because name comparison
+/// frequently should be done case-insensitively and/or with other caveats that
+/// depend on the specific circumstances in which the comparison is done.
 #[cfg(feature = "std")]
 #[derive(Clone, Debug)]
 pub struct DNSName(String);
@@ -57,6 +61,10 @@ impl<'a> From<DNSNameRef<'a>> for DNSName {
 /// a certificate.
 ///
 /// A `DNSNameRef` is guaranteed to be syntactically valid.
+///
+/// `Eq`, `PartialEq`, etc. are not implemented because name comparison
+/// frequently should be done case-insensitively and/or with other caveats that
+/// depend on the specific circumstances in which the comparison is done.
 #[derive(Clone, Copy)]
 pub struct DNSNameRef<'a>(untrusted::Input<'a>);
 
