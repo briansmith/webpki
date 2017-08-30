@@ -27,7 +27,9 @@ use std::string::String;
 /// extension and/or for use as the reference hostname for which to verify a
 /// certificate.
 ///
-/// A `DNSName` is guaranteed to be syntactically valid.
+/// A `DNSName` is guaranteed to be syntactically valid. The validity rules are
+/// specified in [RFC 5280 Section 7.2], except that underscores are also
+/// allowed.
 ///
 /// `DNSName` stores a copy of the input it was constructed from in a `String`
 /// and so it is only available when the `std` default feature is enabled.
@@ -35,6 +37,8 @@ use std::string::String;
 /// `Eq`, `PartialEq`, etc. are not implemented because name comparison
 /// frequently should be done case-insensitively and/or with other caveats that
 /// depend on the specific circumstances in which the comparison is done.
+///
+/// [RFC 5280 Section 7.2]: https://tools.ietf.org/html/rfc5280#section-7.2
 #[cfg(feature = "std")]
 #[derive(Clone, Debug)]
 pub struct DNSName(String);
@@ -60,11 +64,15 @@ impl<'a> From<DNSNameRef<'a>> for DNSName {
 /// (SNI) extension and/or for use as the reference hostname for which to verify
 /// a certificate.
 ///
-/// A `DNSNameRef` is guaranteed to be syntactically valid.
+/// A `DNSNameRef` is guaranteed to be syntactically valid. The validity rules
+/// are specified in [RFC 5280 Section 7.2], except that underscores are also
+/// allowed.
 ///
 /// `Eq`, `PartialEq`, etc. are not implemented because name comparison
 /// frequently should be done case-insensitively and/or with other caveats that
 /// depend on the specific circumstances in which the comparison is done.
+///
+/// [RFC 5280 Section 7.2]: https://tools.ietf.org/html/rfc5280#section-7.2
 #[derive(Clone, Copy)]
 pub struct DNSNameRef<'a>(untrusted::Input<'a>);
 
