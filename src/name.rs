@@ -708,7 +708,8 @@ fn is_valid_reference_dns_id(hostname: untrusted::Input) -> bool {
 // requirement above, underscores are also allowed in names for compatibility.
 fn is_valid_dns_id(hostname: untrusted::Input, id_role: IDRole,
                    allow_wildcards: AllowWildcards) -> bool {
-    if hostname.len() > 255 {
+    // https://blogs.msdn.microsoft.com/oldnewthing/20120412-00/?p=7873/
+    if hostname.len() > 253 {
         return false;
     }
 
