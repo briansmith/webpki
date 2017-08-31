@@ -10,6 +10,42 @@ static DNS_NAME_VALIDITY: &[(&'static [u8], bool)] = &[
     (b"a.b.c", true),
     (b"a.b.c.d", true),
 
+    // Hyphens, one component.
+    (b"-", false),
+    (b"-a", false),
+    (b"a-", false),
+    (b"a-b", true),
+
+    // Hyphens, last component.
+    (b"a.-", false),
+    (b"a.-a", false),
+    (b"a.a-", false),
+    (b"a.a-b", true),
+
+    // Hyphens, not last component.
+    (b"-.a", false),
+    (b"-a.a", false),
+    (b"a-.a", false),
+    (b"a-b.a", true),
+
+    // Underscores, one component.
+    (b"_", true), // TODO: Perhaps this should be rejected for '_' being sole character?.
+    (b"_a", true), // TODO: Perhaps this should be rejected for '_' being 1st?
+    (b"a_", true),
+    (b"a_b", true),
+
+    // Underscores, last component.
+    (b"a._", true), // TODO: Perhaps this should be rejected for '_' being sole character?.
+    (b"a._a", true), // TODO: Perhaps this should be rejected for '_' being 1st?
+    (b"a.a_", true),
+    (b"a.a_b", true),
+
+    // Underscores, not last component.
+    (b"_.a", true), // TODO: Perhaps this should be rejected for '_' being sole character?.
+    (b"_a.a", true),
+    (b"a_.a", true),
+    (b"a_b.a", true),
+
     // empty labels
     (b"", false),
     (b".", false),
