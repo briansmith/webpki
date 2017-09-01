@@ -51,6 +51,7 @@ impl DNSName {
     }
 }
 
+#[cfg(feature = "std")]
 impl<'a> From<DNSNameRef<'a>> for DNSName {
     fn from(DNSNameRef(dns_name): DNSNameRef<'a>) -> Self {
         // The `unwrap()` won't fail because a DNSNameRef is already guaranteed
@@ -94,6 +95,7 @@ impl<'a> DNSNameRef<'a> {
     }
 }
 
+#[cfg(feature = "std")]
 impl<'a> core::fmt::Debug for DNSNameRef<'a> {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> Result<(), core::fmt::Error> {
         DNSName::from(*self).fmt(f)
@@ -104,7 +106,7 @@ impl<'a> Into<&'a str> for DNSNameRef<'a> {
     fn into(self) -> &'a str {
         // The unwrap won't fail because DNSNameRefs are guaranteed to be ASCII
         // and ASCII is a subset of UTF-8.
-        std::str::from_utf8(self.0.as_slice_less_safe()).unwrap()
+        core::str::from_utf8(self.0.as_slice_less_safe()).unwrap()
     }
 }
 

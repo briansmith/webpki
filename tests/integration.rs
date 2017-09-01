@@ -35,7 +35,10 @@
     warnings,
 )]
 
+#[cfg(feature = "trust_anchor_util")]
 extern crate untrusted;
+
+#[cfg(any(feature = "std", feature = "trust_anchor_util"))]
 extern crate webpki;
 
 #[cfg(feature = "trust_anchor_util")]

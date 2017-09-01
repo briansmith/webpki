@@ -74,7 +74,11 @@ pub mod trust_anchor_util;
 
 mod verify_cert;
 
-pub use name::{DNSName, DNSNameRef};
+pub use name::DNSNameRef;
+
+#[cfg(feature = "std")]
+pub use name::DNSName;
+
 
 pub use signed_data::{
     SignatureAlgorithm,
