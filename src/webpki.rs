@@ -154,9 +154,6 @@ impl <'a> EndEntityCert<'a> {
     }
 
     /// Verifies that the certificate is valid for the given DNS host name.
-    ///
-    /// `dns_name` is assumed to a normalized ASCII (punycode if non-ASCII) DNS
-    /// name.
     pub fn verify_is_valid_for_dns_name(&self, dns_name: DNSNameRef)
                                         -> Result<(), Error> {
         name::verify_cert_dns_name(&self, dns_name)
