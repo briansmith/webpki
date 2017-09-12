@@ -648,7 +648,7 @@ fn presented_dns_id_matches_reference_dns_id(
     loop {
         let presented_byte =
             match (presented.read_byte(), reference.read_byte()) {
-                (Ok(p), Ok(r)) if p == r => p,
+                (Ok(p), Ok(r)) if ascii_lower(p) == ascii_lower(r) => p,
                 _ => { return Some(false); }
             };
 
@@ -679,6 +679,14 @@ fn presented_dns_id_matches_reference_dns_id(
     assert!(reference.at_end());
 
     return Some(true);
+}
+
+#[inline]
+fn ascii_lower(b: u8) -> u8 {
+    match b {
+        b'A'...b'Z' => b + b'a' - b'A',
+        _ => b,
+    }
 }
 
 #[derive(PartialEq)]
