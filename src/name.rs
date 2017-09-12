@@ -831,17 +831,6 @@ fn is_valid_dns_id(hostname: untrusted::Input, id_role: IDRole,
         if label_count < 3 {
             return false;
         }
-
-        // XXX: RFC6125 says that we shouldn't accept wildcards within an IDN
-        // A-Label. The consequence of this is that we effectively discriminate
-        // against users of languages that cannot be encoded with ASCII.
-        let mut maybe_idn = untrusted::Reader::new(hostname);
-        if maybe_idn.read_byte() == Ok(b'x') &&
-           maybe_idn.read_byte() == Ok(b'n') &&
-           maybe_idn.read_byte() == Ok(b'-') &&
-           maybe_idn.read_byte() == Ok(b'-') {
-            return false;
-        }
     }
 
     true
