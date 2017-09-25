@@ -28,7 +28,7 @@ little about the ideas underlying both mozilla::pkix and webpki in
 [insanity::pkix: A New Certificate Path Building & Validation
 Library](https://briansmith.org/insanity-pkix.html).
 
-The Rust compiler static guarantees there are no buffer overflows,
+The Rust compiler statically guarantees there are no buffer overflows,
 uses-after-free, double-frees, data races, etc. in webpki. webpki takes
 advantage of Rust's borrow checker to ensure that its **zero-copy parsing**
 strategy is safe and efficient. webpki *never* allocates memory on the heap,
