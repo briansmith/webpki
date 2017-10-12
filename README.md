@@ -54,7 +54,8 @@ including:
 Demo
 ====
 
-There is a demo program at https://github.com/briansmith/verify_tls_cert.
+See https://github.com/ctz/rustls#example-code for an example of using
+webpki.
 
 
 
