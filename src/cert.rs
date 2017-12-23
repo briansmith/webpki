@@ -137,8 +137,13 @@ pub fn certificate_serial_number<'a>(input: &mut untrusted::Reader<'a>)
     // https://tools.ietf.org/html/rfc5280#section-4.1.2.2:
     // * Conforming CAs MUST NOT use serialNumber values longer than 20 octets."
     // * "The serial number MUST be a positive integer [...]"
+    //
+    // Unfortunately, there are certificates in the wild that have zero or
+    // negative serial numbers (e.g. certs for usbmuxd/lockdown).
+    // RFC5280 states that "certificate users SHOULD be prepared to gracefully
+    // handle such certificates". Thus, only check the length of the serial number.
 
-    let value = der::positive_integer(input)?;
+    let value = der::expect_tag_and_get_value(input, der::Tag::Integer)?;
     if value.len() > 20 {
         return Err(Error::BadDER);
     }
