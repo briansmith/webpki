@@ -63,8 +63,8 @@ trust_anchor_util = ["std"]
 std = []
 
 [dependencies]
-ring = "0.12"
-untrusted = "0.5.1"
+ring = "0.13.0-alpha"
+untrusted = "0.6.1"
 
 [dev-dependencies]
 base64 = "0.6.0"
