@@ -130,3 +130,114 @@ fn time_constructor() {
 
     let _ = webpki::Time::try_from(std::time::SystemTime::now()).unwrap();
 }
+
+#[cfg(feature = "std")]
+#[test]
+pub fn list_netflix_names()
+{
+    let ee = include_bytes!("netflix/ee.der");
+
+    expect_cert_dns_names(ee, &[
+        "account.netflix.com",
+        "ca.netflix.com",
+        "netflix.ca",
+        "netflix.com",
+        "signup.netflix.com",
+        "www.netflix.ca",
+        "www1.netflix.com",
+        "www2.netflix.com",
+        "www3.netflix.com",
+        "develop-stage.netflix.com",
+        "release-stage.netflix.com",
+        "www.netflix.com",
+    ]);
+}
+
+#[cfg(feature = "std")]
+#[test]
+pub fn invalid_subject_alt_names()
+{
+    // same as netflix ee certificate, but with the last name in the list
+    // changed to 'www.netflix:com'
+    let data = include_bytes!("misc/invalid_subject_alternative_name.der");
+
+    expect_cert_dns_names(data, &[
+        "account.netflix.com",
+        "ca.netflix.com",
+        "netflix.ca",
+        "netflix.com",
+        "signup.netflix.com",
+        "www.netflix.ca",
+        "www1.netflix.com",
+        "www2.netflix.com",
+        "www3.netflix.com",
+        "develop-stage.netflix.com",
+        "release-stage.netflix.com",
+        // NOT 'www.netflix:com'
+    ]);
+}
+
+#[cfg(feature = "std")]
+#[test]
+pub fn wildcard_subject_alternative_names()
+{
+    // same as netflix ee certificate, but with the last name in the list
+    // changed to 'ww*.netflix:com'
+    let data = include_bytes!("misc/dns_names_and_wildcards.der");
+
+    expect_cert_dns_names(data, &[
+        "account.netflix.com",
+        // NOT "c*.netflix.com",
+        "netflix.ca",
+        "netflix.com",
+        "signup.netflix.com",
+        "www.netflix.ca",
+        "www1.netflix.com",
+        "www2.netflix.com",
+        "www3.netflix.com",
+        "develop-stage.netflix.com",
+        "release-stage.netflix.com",
+        "www.netflix.com"
+    ]);
+}
+
+#[cfg(feature = "std")]
+fn expect_cert_dns_names(data: &[u8], expected_names: &[&str])
+{
+    use std::iter::FromIterator;
+
+    let input = untrusted::Input::from(data);
+    let cert = webpki::EndEntityCert::from(input)
+      .expect("should parse end entity certificate correctly");
+
+    let expected_names =
+        std::collections::HashSet::from_iter(expected_names.iter().cloned());
+
+    let mut actual_names = cert.dns_names()
+      .expect("should get all DNS names correctly for end entity cert");
+
+    // Ensure that converting the list to a set doesn't throw away
+    // any duplicates that aren't supposed to be there
+    assert_eq!(actual_names.len(), expected_names.len());
+
+    let actual_names: std::collections::HashSet<&str> = actual_names.drain(..).map(|name| {
+        name.into()
+    }).collect();
+
+    assert_eq!(actual_names, expected_names);
+}
+
+#[cfg(feature = "std")]
+#[test]
+pub fn no_subject_alt_names()
+{
+    let data = include_bytes!("misc/no_subject_alternative_name.der");
+
+    let input = untrusted::Input::from(data);
+    let cert = webpki::EndEntityCert::from(input)
+      .expect("should parse end entity certificate correctly");
+
+    let names = cert.dns_names().expect("we should get a result even without subjectAltNames");
+
+    assert!(names.is_empty());
+}

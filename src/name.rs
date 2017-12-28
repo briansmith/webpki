@@ -20,6 +20,9 @@ use untrusted;
 #[cfg(feature = "std")]
 use std::string::String;
 
+#[cfg(feature = "std")]
+use std::vec::Vec;
+
 /// A DNS Name suitable for use in the TLS Server Name Indication (SNI)
 /// extension and/or for use as the reference hostname for which to verify a
 /// certificate.
@@ -146,6 +149,27 @@ pub fn verify_cert_dns_name(cert: &super::EndEntityCert,
         }
         NameIteration::KeepGoing
     })
+}
+
+
+#[cfg(feature = "std")]
+pub fn list_cert_dns_names<'names>(cert: &super::EndEntityCert<'names>)
+                                   -> Result<Vec<DNSNameRef<'names>>, Error> {
+    let cert = &cert.inner;
+    let names = std::cell::RefCell::new(Vec::new());
+
+    iterate_names(cert.subject, cert.subject_alt_name, Ok(()), &|name| {
+        match name {
+            GeneralName::DNSName(presented_id) => {
+                match DNSNameRef::try_from_ascii(presented_id) {
+                    Ok(name) => names.borrow_mut().push(name),
+                    Err(()) => { /* keep going */ },
+                };
+            },
+            _ => ()
+        }
+        NameIteration::KeepGoing
+    }).map(|_| names.into_inner())
 }
 
 // https://tools.ietf.org/html/rfc5280#section-4.2.1.10
@@ -370,10 +394,10 @@ enum NameIteration {
     Stop(Result<(), Error>)
 }
 
-fn iterate_names(subject: untrusted::Input,
-                 subject_alt_name: Option<untrusted::Input>,
+fn iterate_names<'input>(subject: untrusted::Input<'input>,
+                 subject_alt_name: Option<untrusted::Input<'input>>,
                  result_if_never_stopped_early: Result<(), Error>,
-                 f: &Fn(GeneralName) -> NameIteration) -> Result<(), Error> {
+                 f: &Fn(GeneralName<'input>) -> NameIteration) -> Result<(), Error> {
     match subject_alt_name {
         Some(subject_alt_name) => {
             let mut subject_alt_name = untrusted::Reader::new(subject_alt_name);
