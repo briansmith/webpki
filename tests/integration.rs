@@ -106,3 +106,78 @@ fn time_constructor() {
 
     let _ = webpki::Time::try_from(std::time::SystemTime::now()).unwrap();
 }
+
+#[cfg(feature = "std")]
+#[test]
+pub fn list_netflix_names()
+{
+    use std::iter::FromIterator;
+
+    let ee = include_bytes!("netflix/ee.der");
+
+    let ee_input = untrusted::Input::from(ee);
+    let cert = webpki::EndEntityCert::from(ee_input)
+      .expect("should parse netflix end entity certificate correctly");
+
+    let expected_names = {
+        const EXPECTED_NAMES: &'static [&'static str] = &[
+            "account.netflix.com",
+            "ca.netflix.com",
+            "netflix.ca",
+            "netflix.com",
+            "signup.netflix.com",
+            "www.netflix.ca",
+            "www1.netflix.com",
+            "www2.netflix.com",
+            "www3.netflix.com",
+            "develop-stage.netflix.com",
+            "release-stage.netflix.com",
+            "www.netflix.com",
+        ];
+
+        std::collections::HashSet::from_iter(EXPECTED_NAMES.iter().cloned())
+    };
+
+    let mut actual_names = cert.dns_names()
+      .expect("should get all DNS names correctly for netflix end entity cert");
+
+    // Ensure that converting the list to a set doesn't throw away
+    // any duplicates that aren't supposed to be there
+    assert_eq!(actual_names.len(), expected_names.len());
+
+    let actual_names: std::collections::HashSet<&str> = actual_names.drain(..).map(|name| {
+        name.into()
+    }).collect();
+
+    assert_eq!(actual_names, expected_names);
+}
+
+#[cfg(feature = "std")]
+#[test]
+pub fn no_subject_alt_names()
+{
+    let data = include_bytes!("misc/no_subject_alternative_name.der");
+
+    let input = untrusted::Input::from(data);
+    let cert = webpki::EndEntityCert::from(input)
+      .expect("should parse netflix end entity certificate correctly");
+
+    let names = cert.dns_names().expect("we should get a result even without subjectAltNames");
+
+    assert!(names.is_empty());
+}
+
+#[cfg(feature = "std")]
+#[test]
+pub fn invalid_subject_alt_names()
+{
+    // same as netflix ee certificate, but with the last name in the list
+    // changed to 'www.netflix:com'
+    let data = include_bytes!("misc/invalid_subject_alternative_name.der");
+
+    let input = untrusted::Input::from(data);
+    let cert = webpki::EndEntityCert::from(input)
+      .expect("should parse netflix end entity certificate correctly");
+
+    assert_eq!(cert.dns_names().unwrap_err(), webpki::Error::BadDER);
+}
