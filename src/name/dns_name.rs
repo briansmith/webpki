@@ -24,7 +24,7 @@ use alloc::string::String;
 /// allowed.
 ///
 /// `DnsName` stores a copy of the input it was constructed from in a `String`
-/// and so it is only available when the `std` default feature is enabled.
+/// and so it is only available when the `alloc` default feature is enabled.
 ///
 /// `Eq`, `PartialEq`, etc. are not implemented because name comparison
 /// frequently should be done case-insensitively and/or with other caveats that
@@ -141,6 +141,131 @@ impl core::fmt::Debug for DnsNameRef<'_> {
 
 impl<'a> From<DnsNameRef<'a>> for &'a str {
     fn from(DnsNameRef(d): DnsNameRef<'a>) -> Self {
+        // The unwrap won't fail because DnsNameRefs are guaranteed to be ASCII
+        // and ASCII is a subset of UTF-8.
+        core::str::from_utf8(d).unwrap()
+    }
+}
+
+/// A DNS Name suitable for use in the TLS Server Name Indication (SNI)
+/// extension and/or for use as the reference hostname for which to verify a
+/// certificate.
+pub enum GeneralDnsNameRef<'name> {
+    /// a valid DNS name
+    DnsName(DnsNameRef<'name>),
+    /// a DNS name containing a wildcard
+    Wildcard(WildcardDnsNameRef<'name>),
+}
+
+impl<'a> From<GeneralDnsNameRef<'a>> for &'a str {
+    fn from(d: GeneralDnsNameRef<'a>) -> Self {
+        match d {
+            GeneralDnsNameRef::DnsName(name) => name.into(),
+            GeneralDnsNameRef::Wildcard(name) => name.into(),
+        }
+    }
+}
+
+/// A reference to a DNS Name suitable for use in the TLS Server Name Indication
+/// (SNI) extension and/or for use as the reference hostname for which to verify
+/// a certificate. Compared to `DnsName`, this one will store domain names containing
+/// a wildcard.
+///
+/// A `WildcardDnsName` is guaranteed to be syntactically valid. The validity rules are
+/// specified in [RFC 5280 Section 7.2], except that underscores are also
+/// allowed, and following [RFC 6125].
+///
+/// `WildcardDnsName` stores a copy of the input it was constructed from in a `String`
+/// and so it is only available when the `alloc` default feature is enabled.
+///
+/// `Eq`, `PartialEq`, etc. are not implemented because name comparison
+/// frequently should be done case-insensitively and/or with other caveats that
+/// depend on the specific circumstances in which the comparison is done.
+///
+/// [RFC 5280 Section 7.2]: https://tools.ietf.org/html/rfc5280#section-7.2
+/// [RFC 6125]: https://tools.ietf.org/html/rfc6125
+#[cfg(feature = "alloc")]
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+pub struct WildcardDnsName(String);
+
+#[cfg(feature = "alloc")]
+impl WildcardDnsName {
+    /// Returns a `WildcardDnsNameRef` that refers to this `WildcardDnsName`.
+    pub fn as_ref(&self) -> WildcardDnsNameRef {
+        WildcardDnsNameRef(self.0.as_bytes())
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl AsRef<str> for WildcardDnsName {
+    fn as_ref(&self) -> &str {
+        self.0.as_ref()
+    }
+}
+
+// Deprecated
+#[cfg(feature = "alloc")]
+impl From<WildcardDnsNameRef<'_>> for WildcardDnsName {
+    fn from(dns_name: WildcardDnsNameRef) -> Self {
+        dns_name.to_owned()
+    }
+}
+
+/// A reference to a DNS Name suitable for use in the TLS Server Name Indication
+/// (SNI) extension and/or for use as the reference hostname for which to verify
+/// a certificate.
+///
+/// A `WildcardDnsNameRef` is guaranteed to be syntactically valid. The validity rules
+/// are specified in [RFC 5280 Section 7.2], except that underscores are also
+/// allowed.
+///
+/// `Eq`, `PartialEq`, etc. are not implemented because name comparison
+/// frequently should be done case-insensitively and/or with other caveats that
+/// depend on the specific circumstances in which the comparison is done.
+///
+/// [RFC 5280 Section 7.2]: https://tools.ietf.org/html/rfc5280#section-7.2
+#[derive(Clone, Copy)]
+pub struct WildcardDnsNameRef<'a>(&'a [u8]);
+
+impl<'a> WildcardDnsNameRef<'a> {
+    /// Constructs a `WildcardDnsNameRef` from the given input if the input is a
+    /// syntactically-valid DNS name.
+    pub fn try_from_ascii(dns_name: &'a [u8]) -> Result<Self, InvalidDnsNameError> {
+        if !is_valid_wildcard_dns_id(untrusted::Input::from(dns_name)) {
+            return Err(InvalidDnsNameError);
+        }
+
+        Ok(Self(dns_name))
+    }
+
+    /// Constructs a `WildcardDnsNameRef` from the given input if the input is a
+    /// syntactically-valid DNS name.
+    pub fn try_from_ascii_str(dns_name: &'a str) -> Result<Self, InvalidDnsNameError> {
+        Self::try_from_ascii(dns_name.as_bytes())
+    }
+
+    /// Constructs a `WildcardDnsName` from this `WildcardDnsNameRef`
+    #[cfg(feature = "alloc")]
+    pub fn to_owned(&self) -> WildcardDnsName {
+        // WildcardDnsNameRef is already guaranteed to be valid ASCII, which is a
+        // subset of UTF-8.
+        let s: &str = self.clone().into();
+        WildcardDnsName(s.to_ascii_lowercase())
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl core::fmt::Debug for WildcardDnsNameRef<'_> {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> Result<(), core::fmt::Error> {
+        let lowercase = self.clone().to_owned();
+        f.debug_tuple("WildcardDnsNameRef")
+            .field(&lowercase.0)
+            .finish()
+    }
+}
+
+impl<'a> From<WildcardDnsNameRef<'a>> for &'a str {
+    fn from(WildcardDnsNameRef(d): WildcardDnsNameRef<'a>) -> Self {
         // The unwrap won't fail because DnsNameRefs are guaranteed to be ASCII
         // and ASCII is a subset of UTF-8.
         core::str::from_utf8(d).unwrap()
@@ -575,6 +700,10 @@ fn is_valid_dns_id(
     }
 
     true
+}
+
+fn is_valid_wildcard_dns_id(hostname: untrusted::Input) -> bool {
+    is_valid_dns_id(hostname, IDRole::ReferenceID, AllowWildcards::Yes)
 }
 
 #[cfg(test)]
