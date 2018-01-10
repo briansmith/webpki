@@ -124,7 +124,7 @@ pub fn verify_cert_dns_name(cert: &super::EndEntityCert,
         match name {
             GeneralName::DNSName(presented_id) => {
                 match presented_dns_id_matches_reference_dns_id(
-                        presented_id, IDRole::ReferenceID, dns_name) {
+                        presented_id, dns_name) {
                     Some(true) => { return NameIteration::Stop(Ok(())); },
                     Some(false) => (),
                     None => { return NameIteration::Stop(Err(Error::BadDER)); },
@@ -231,9 +231,8 @@ fn check_presented_id_conforms_to_constraints_in_subtree(
         let matches = match (name, base) {
             (GeneralName::DNSName(name),
              GeneralName::DNSName(base)) =>
-                presented_dns_id_matches_reference_dns_id(
-                    name, IDRole::NameConstraint, base)
-                        .ok_or(Error::BadDER),
+                presented_dns_id_matches_dns_id_constraint(name, base)
+                    .ok_or(Error::BadDER),
 
             (GeneralName::DirectoryName(name),
              GeneralName::DirectoryName(base)) =>
@@ -438,6 +437,20 @@ fn general_name<'a>(input: &mut untrusted::Reader<'a>)
     Ok(name)
 }
 
+fn presented_dns_id_matches_reference_dns_id(
+        presented_dns_id: untrusted::Input,
+        reference_dns_id: untrusted::Input) -> Option<bool> {
+    presented_dns_id_matches_reference_dns_id_internal(
+        presented_dns_id, IDRole::ReferenceID, reference_dns_id)
+}
+
+fn presented_dns_id_matches_dns_id_constraint(
+    presented_dns_id: untrusted::Input,
+    reference_dns_id: untrusted::Input) -> Option<bool> {
+    presented_dns_id_matches_reference_dns_id_internal(
+        presented_dns_id, IDRole::NameConstraint, reference_dns_id)
+}
+
 // We do not distinguish between a syntactically-invalid presented_dns_id and
 // one that is syntactically valid but does not match reference_dns_id; in both
 // cases, the result is false.
@@ -558,7 +571,7 @@ fn general_name<'a>(input: &mut untrusted::Reader<'a>)
 // [4] Feedback on the lack of clarify in the definition that never got
 //     incorporated into the spec:
 //     https://www.ietf.org/mail-archive/web/pkix/current/msg21192.html
-fn presented_dns_id_matches_reference_dns_id(
+fn presented_dns_id_matches_reference_dns_id_internal(
         presented_dns_id: untrusted::Input, reference_dns_id_role: IDRole,
         reference_dns_id: untrusted::Input) -> Option<bool> {
     if !is_valid_dns_id(presented_dns_id, IDRole::PresentedID,
@@ -1044,8 +1057,7 @@ mod tests {
     fn presented_matches_reference_test() {
         for &(presented, reference, expected_result) in PRESENTED_MATCHES_REFERENCE {
             let actual_result = presented_dns_id_matches_reference_dns_id(
-                untrusted::Input::from(presented), IDRole::ReferenceID,
-                untrusted::Input::from(reference));
+                untrusted::Input::from(presented), untrusted::Input::from(reference));
             assert_eq!(actual_result, expected_result,
                 "presented_dns_id_matches_reference_dns_id(\"{}\", IDRole::ReferenceID, \"{}\")",
                 String::from_utf8_lossy(presented),
