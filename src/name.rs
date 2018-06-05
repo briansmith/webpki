@@ -48,6 +48,13 @@ impl DNSName {
     }
 }
 
+#[cfg(feature = "std")]
+impl AsRef<str> for DNSName {
+    fn as_ref(&self) -> &str {
+       self.0.as_ref()
+    }
+}
+
 // Deprecated
 #[cfg(feature = "std")]
 impl<'a> From<DNSNameRef<'a>> for DNSName {
@@ -99,7 +106,10 @@ impl<'a> DNSNameRef<'a> {
 #[cfg(feature = "std")]
 impl<'a> core::fmt::Debug for DNSNameRef<'a> {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> Result<(), core::fmt::Error> {
-        self.to_owned().fmt(f)
+        let lowercase = self.clone().to_owned();
+        f.debug_tuple("DNSNameRef")
+            .field(&lowercase.0)
+            .finish()
     }
 }
 
