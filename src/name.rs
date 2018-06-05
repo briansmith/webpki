@@ -18,9 +18,6 @@ use {der, Error};
 use untrusted;
 
 #[cfg(feature = "std")]
-use std;
-
-#[cfg(feature = "std")]
 use std::string::String;
 
 /// A DNS Name suitable for use in the TLS Server Name Indication (SNI)
@@ -40,7 +37,7 @@ use std::string::String;
 ///
 /// [RFC 5280 Section 7.2]: https://tools.ietf.org/html/rfc5280#section-7.2
 #[cfg(feature = "std")]
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct DNSName(String);
 
 #[cfg(feature = "std")]
@@ -53,11 +50,11 @@ impl DNSName {
 
 #[cfg(feature = "std")]
 impl<'a> From<DNSNameRef<'a>> for DNSName {
-    fn from(DNSNameRef(dns_name): DNSNameRef<'a>) -> Self {
-        // The `unwrap()` won't fail because a DNSNameRef is already guaranteed
-        // to be valid ASCII, which is a subset of UTF-8.
-        let s = std::str::from_utf8(dns_name.as_slice_less_safe()).unwrap();
-        DNSName(String::from(s))
+    fn from(dns_name: DNSNameRef<'a>) -> Self {
+        // DNSNameRef is already guaranteed to be valid ASCII, which is a
+        // subset of UTF-8.
+        let as_str: &str = dns_name.into();
+        DNSName(as_str.to_ascii_lowercase())
     }
 }
 
