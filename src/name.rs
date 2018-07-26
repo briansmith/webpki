@@ -95,6 +95,7 @@ impl<'a> DNSNameRef<'a> {
     }
 
     /// Constructs a `DNSName` from this `DNSNameRef`
+    #[cfg(feature = "std")]
     pub fn to_owned(&self) -> DNSName {
         // DNSNameRef is already guaranteed to be valid ASCII, which is a
         // subset of UTF-8.
