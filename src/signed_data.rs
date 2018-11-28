@@ -204,14 +204,6 @@ pub static ECDSA_P384_SHA384: SignatureAlgorithm = SignatureAlgorithm {
     verification_alg: &signature::ECDSA_P384_SHA384_ASN1,
 };
 
-/// RSA PKCS#1 1.5 signatures using SHA-1 for keys of 2048-8192 bits.
-/// Deprecated.
-pub static RSA_PKCS1_2048_8192_SHA1: SignatureAlgorithm = SignatureAlgorithm {
-    public_key_alg_id: RSA_ENCRYPTION,
-    signature_alg_id: RSA_PKCS1_SHA1,
-    verification_alg: &signature::RSA_PKCS1_2048_8192_SHA1,
-};
-
 /// RSA PKCS#1 1.5 signatures using SHA-256 for keys of 2048-8192 bits.
 pub static RSA_PKCS1_2048_8192_SHA256: SignatureAlgorithm = SignatureAlgorithm {
     public_key_alg_id: RSA_ENCRYPTION,
@@ -297,10 +289,6 @@ const ECDSA_SHA384: AlgorithmIdentifier = AlgorithmIdentifier {
 
 const RSA_ENCRYPTION: AlgorithmIdentifier = AlgorithmIdentifier {
     asn1_id_value: include_bytes!("data/alg-rsa-encryption.der"),
-};
-
-const RSA_PKCS1_SHA1: AlgorithmIdentifier = AlgorithmIdentifier {
-    asn1_id_value: include_bytes!("data/alg-rsa-pkcs1-sha1.der"),
 };
 
 const RSA_PKCS1_SHA256: AlgorithmIdentifier = AlgorithmIdentifier {
@@ -479,20 +467,16 @@ mod tests {
                                Error::BadDER);
     test_verify_signed_data!(test_rsa_pkcs1_sha1_key_params_absent,
                              "rsa-pkcs1-sha1-key-params-absent.pem",
-                             Err(Error::UnsupportedSignatureAlgorithmForPublicKey));
+                             Err(Error::UnsupportedSignatureAlgorithm));
     test_verify_signed_data!(
         test_rsa_pkcs1_sha1_using_pss_key_no_params,
         "rsa-pkcs1-sha1-using-pss-key-no-params.pem",
-        Err(Error::UnsupportedSignatureAlgorithmForPublicKey));
+        Err(Error::UnsupportedSignatureAlgorithm));
     test_verify_signed_data!(test_rsa_pkcs1_sha1_wrong_algorithm,
                              "rsa-pkcs1-sha1-wrong-algorithm.pem",
                              Err(Error::InvalidSignatureForPublicKey));
-    // XXX: RSA PKCS#1 with SHA-1 is a supported algorithm, but we only accept
-    // 2048-8192 bit keys, and this test file is using a 1024 bit key. Thus,
-    // our results differ from Chromium's. TODO: this means we need a 2048+ bit
-    // version of this test.
     test_verify_signed_data!(test_rsa_pkcs1_sha1, "rsa-pkcs1-sha1.pem",
-                             Err(Error::InvalidSignatureForPublicKey));
+                             Err(Error::UnsupportedSignatureAlgorithm));
     // XXX: RSA PKCS#1 with SHA-1 is a supported algorithm, but we only accept
     // 2048-8192 bit keys, and this test file is using a 1024 bit key. Thus,
     // our results differ from Chromium's. TODO: this means we need a 2048+ bit
@@ -640,8 +624,5 @@ mod tests {
         // they are nonsensical combinations.
         &signed_data::ECDSA_P256_SHA384, // Truncates digest.
         &signed_data::ECDSA_P384_SHA256, // Digest is unnecessarily short.
-
-        // Algorithms deprecated because they are bad.
-        &signed_data::RSA_PKCS1_2048_8192_SHA1, // SHA-1
     ];
 }
