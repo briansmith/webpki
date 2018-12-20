@@ -19,7 +19,7 @@
 //! See `EndEntityCert`'s documentation for a description of the certificate
 //! processing steps necessary for a TLS connection.
 
-#![doc(html_root_url="https://briansmith.org/rustdoc/")]
+#![doc(html_root_url="https://briansmith.org/rustdoc/webpki/")]
 
 #![no_std]
 
