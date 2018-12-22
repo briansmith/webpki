@@ -139,7 +139,7 @@ pub fn certificate_serial_number<'a>(input: &mut untrusted::Reader<'a>)
     // * "The serial number MUST be a positive integer [...]"
 
     let value = der::positive_integer(input)?;
-    if value.len() > 20 {
+    if value.big_endian_without_leading_zero().len() > 20 {
         return Err(Error::BadDER);
     }
     Ok(())

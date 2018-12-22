@@ -13,12 +13,15 @@
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 use ring;
-pub use ring::der::{
-    CONSTRUCTED,
+pub use ring::io::{
+    der::{
+        CONSTRUCTED,
 
-    Tag,
+        Tag,
 
-    nested,
+        nested,
+    },
+    Positive,
 };
 use Error;
 use calendar;
@@ -29,13 +32,13 @@ use untrusted;
 pub fn expect_tag_and_get_value<'a>(input: &mut untrusted::Reader<'a>,
                                     tag: Tag) ->
                                     Result<untrusted::Input<'a>, Error> {
-    ring::der::expect_tag_and_get_value(input, tag).map_err(|_| Error::BadDER)
+    ring::io::der::expect_tag_and_get_value(input, tag).map_err(|_| Error::BadDER)
 }
 
 #[inline(always)]
 pub fn read_tag_and_get_value<'a>(input: &mut untrusted::Reader<'a>)
                                   -> Result<(u8, untrusted::Input<'a>), Error> {
-    ring::der::read_tag_and_get_value(input).map_err(|_| Error::BadDER)
+    ring::io::der::read_tag_and_get_value(input).map_err(|_| Error::BadDER)
 }
 
 // TODO: investigate taking decoder as a reference to reduce generated code
@@ -96,13 +99,13 @@ pub fn optional_boolean(input: &mut untrusted::Reader) -> Result<bool, Error> {
 }
 
 pub fn positive_integer<'a>(input: &'a mut untrusted::Reader)
-                            -> Result<untrusted::Input<'a>, Error> {
-    ring::der::positive_integer(input).map_err(|_| Error::BadDER)
+                            -> Result<Positive<'a>, Error> {
+    ring::io::der::positive_integer(input).map_err(|_| Error::BadDER)
 }
 
 pub fn small_nonnegative_integer<'a>(input: &'a mut untrusted::Reader)
                                      -> Result<u8, Error> {
-    ring::der::small_nonnegative_integer(input).map_err(|_| Error::BadDER)
+    ring::io::der::small_nonnegative_integer(input).map_err(|_| Error::BadDER)
 }
 
 
