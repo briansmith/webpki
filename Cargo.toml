@@ -63,7 +63,7 @@ trust_anchor_util = ["std"]
 std = []
 
 [dependencies]
-ring = "0.14.0-alpha2"
+ring = "0.14.0-alpha4"
 untrusted = "0.6.2"
 
 [dev-dependencies]
