@@ -50,7 +50,8 @@ static ALL_SIGALGS: &'static [&'static webpki::SignatureAlgorithm] = &[
     &webpki::RSA_PKCS1_2048_8192_SHA256,
     &webpki::RSA_PKCS1_2048_8192_SHA384,
     &webpki::RSA_PKCS1_2048_8192_SHA512,
-    &webpki::RSA_PKCS1_3072_8192_SHA384
+    &webpki::RSA_PKCS1_3072_8192_SHA384,
+    &webpki::ED25519,
 ];
 
 /* Checks we can verify netflix's cert chain.  This is notable
@@ -78,6 +79,29 @@ pub fn netflix()
     let cert = webpki::EndEntityCert::from(ee_input).unwrap();
     let _ = cert.verify_is_valid_tls_server_cert(ALL_SIGALGS, &anchors,
                                                  &inter_vec, time)
+        .unwrap();
+}
+
+#[cfg(feature = "trust_anchor_util")]
+#[test]
+pub fn ed25519()
+{
+    let ee = include_bytes!("ed25519/ee.der");
+    let ca = include_bytes!("ed25519/ca.der");
+
+    let ee_input = untrusted::Input::from(ee);
+    let anchors = vec![
+        webpki::trust_anchor_util::cert_der_as_trust_anchor(
+            untrusted::Input::from(ca)
+        ).unwrap()
+    ];
+    let anchors = webpki::TLSServerTrustAnchors(&anchors);
+
+    let time = webpki::Time::from_seconds_since_unix_epoch(1547363522);
+
+    let cert = webpki::EndEntityCert::from(ee_input).unwrap();
+    let _ = cert.verify_is_valid_tls_server_cert(ALL_SIGALGS, &anchors,
+                                                 &[], time)
         .unwrap();
 }
 

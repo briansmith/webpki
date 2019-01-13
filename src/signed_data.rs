@@ -267,6 +267,14 @@ pub static RSA_PSS_2048_8192_SHA512_LEGACY_KEY: SignatureAlgorithm =
     verification_alg: &signature::RSA_PSS_2048_8192_SHA512,
 };
 
+/// ED25519 signatures according to RFC 8410
+pub static ED25519: SignatureAlgorithm =
+        SignatureAlgorithm {
+    public_key_alg_id: ED_25519,
+    signature_alg_id: ED_25519,
+    verification_alg: &signature::ED25519,
+};
+
 struct AlgorithmIdentifier {
     asn1_id_value: &'static [u8],
 }
@@ -327,6 +335,9 @@ const RSA_PSS_SHA512: AlgorithmIdentifier = AlgorithmIdentifier {
     asn1_id_value: include_bytes!("data/alg-rsa-pss-sha512.der"),
 };
 
+const ED_25519: AlgorithmIdentifier = AlgorithmIdentifier {
+    asn1_id_value: include_bytes!("data/alg-ed25519.der"),
+};
 
 #[cfg(test)]
 mod tests {
@@ -635,6 +646,7 @@ mod tests {
         &signed_data::RSA_PSS_2048_8192_SHA256_LEGACY_KEY,
         &signed_data::RSA_PSS_2048_8192_SHA384_LEGACY_KEY,
         &signed_data::RSA_PSS_2048_8192_SHA512_LEGACY_KEY,
+        &signed_data::ED25519,
 
         // Algorithms deprecated because they are annoying (P-521) or because
         // they are nonsensical combinations.

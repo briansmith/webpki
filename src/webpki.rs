@@ -93,6 +93,7 @@ pub use signed_data::{
     RSA_PSS_2048_8192_SHA256_LEGACY_KEY,
     RSA_PSS_2048_8192_SHA384_LEGACY_KEY,
     RSA_PSS_2048_8192_SHA512_LEGACY_KEY,
+    ED25519,
 };
 
 pub use time::Time;
