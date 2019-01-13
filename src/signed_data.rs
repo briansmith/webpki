@@ -15,6 +15,7 @@
 use {der, Error};
 use ring::signature;
 use untrusted;
+use cert::SubjectPublicKeyInfoRef;
 
 /// X.509 certificates and related items that are signed are almost always
 /// encoded in the format "tbs||signatureAlgorithm||signature". This structure
@@ -90,7 +91,7 @@ pub fn parse_signed_data<'a>(der: &mut untrusted::Reader<'a>)
 /// but generally more common algorithms should go first, as it is scanned
 /// linearly for matches.
 pub fn verify_signed_data(supported_algorithms: &[&SignatureAlgorithm],
-                          spki_value: untrusted::Input,
+                          spki_value: SubjectPublicKeyInfoRef,
                           signed_data: &SignedData) -> Result<(), Error> {
     // We need to verify the signature in `signed_data` using the public key
     // in `public_key`. In order to know which *ring* signature verification
@@ -133,41 +134,18 @@ pub fn verify_signed_data(supported_algorithms: &[&SignatureAlgorithm],
 }
 
 pub fn verify_signature(signature_alg: &SignatureAlgorithm,
-                        spki_value: untrusted::Input, msg: untrusted::Input,
+                        spki_value: SubjectPublicKeyInfoRef,
+                        msg: untrusted::Input,
                         signature: untrusted::Input) -> Result<(), Error> {
-    let spki = parse_spki_value(spki_value)?;
+    let spki = spki_value.parse()?;
     if !signature_alg.public_key_alg_id
                      .matches_algorithm_id_value(spki.algorithm_id_value) {
         return Err(Error::UnsupportedSignatureAlgorithmForPublicKey);
     }
-    signature::verify(signature_alg.verification_alg, spki.key_value, msg,
-                      signature)
+    signature::verify(signature_alg.verification_alg, spki.key_value.into(),
+                      msg, signature)
         .map_err(|_| Error::InvalidSignatureForPublicKey)
 }
-
-
-struct SubjectPublicKeyInfo<'a> {
-    algorithm_id_value: untrusted::Input<'a>,
-    key_value: untrusted::Input<'a>,
-}
-
-// Parse the public key into an algorithm OID, an optional curve OID, and the
-// key value. The caller needs to check whether these match the
-// `PublicKeyAlgorithm` for the `SignatureAlgorithm` that is matched when
-// parsing the signature.
-fn parse_spki_value(input: untrusted::Input)
-                    -> Result<SubjectPublicKeyInfo, Error> {
-    input.read_all(Error::BadDER, |input| {
-        let algorithm_id_value =
-            der::expect_tag_and_get_value(input, der::Tag::Sequence)?;
-        let key_value = der::bit_string_with_no_unused_bits(input)?;
-        Ok(SubjectPublicKeyInfo {
-            algorithm_id_value: algorithm_id_value,
-            key_value: key_value,
-        })
-    })
-}
-
 
 /// A signature algorithm.
 pub struct SignatureAlgorithm {
@@ -345,6 +323,7 @@ mod tests {
     use std;
     use std::io::BufRead;
     use {der, Error, signed_data};
+    use cert::SubjectPublicKeyInfoRef;
     use untrusted;
 
     // TODO: The expected results need to be modified for SHA-1 deprecation.
@@ -365,6 +344,7 @@ mod tests {
         let spki_value = spki_value.read_all(Error::BadDER, |input| {
             der::expect_tag_and_get_value(input, der::Tag::Sequence)
         }).unwrap();
+        let spki_value = SubjectPublicKeyInfoRef(spki_value);
 
         // we can't use `parse_signed_data` because it requires `data`
         // to be an ASN.1 SEQUENCE, and that isn't the case with

@@ -72,9 +72,10 @@ pub fn generate_code_for_trust_anchors(name: &str,
 }
 
 fn trust_anchor_from_cert<'a>(cert: Cert<'a>) -> TrustAnchor<'a> {
+    let spki: untrusted::Input = From::from(cert.spki);
     TrustAnchor {
         subject: cert.subject.as_slice_less_safe(),
-        spki: cert.spki.as_slice_less_safe(),
+        spki: spki.as_slice_less_safe(),
         name_constraints: cert.name_constraints
                               .map(|nc| nc.as_slice_less_safe())
     }

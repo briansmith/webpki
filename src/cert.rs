@@ -27,7 +27,7 @@ pub struct Cert<'a> {
     pub issuer: untrusted::Input<'a>,
     pub validity: untrusted::Input<'a>,
     pub subject: untrusted::Input<'a>,
-    pub spki: untrusted::Input<'a>,
+    pub spki: SubjectPublicKeyInfoRef<'a>,
 
     pub basic_constraints: Option<untrusted::Input<'a>>,
     pub eku: Option<untrusted::Input<'a>>,
@@ -68,7 +68,9 @@ pub fn parse_cert_internal<'a>(
         let issuer = der::expect_tag_and_get_value(tbs, der::Tag::Sequence)?;
         let validity = der::expect_tag_and_get_value(tbs, der::Tag::Sequence)?;
         let subject = der::expect_tag_and_get_value(tbs, der::Tag::Sequence)?;
-        let spki = der::expect_tag_and_get_value(tbs, der::Tag::Sequence)?;
+        let spki = SubjectPublicKeyInfoRef(
+            der::expect_tag_and_get_value(tbs, der::Tag::Sequence)?
+        );
 
         // In theory there could be fields [1] issuerUniqueID and [2]
         // subjectUniqueID, but in practice there never are, and to keep the
@@ -202,3 +204,46 @@ fn remember_extension<'a>(cert: &mut Cert<'a>, extn_id: untrusted::Input,
 
     Ok(Understood::Yes)
 }
+
+pub struct SubjectPublicKeyInfo<'a> {
+    pub algorithm_id_value: untrusted::Input<'a>,
+    pub key_value: SubjectPublicKeyRef<'a>,
+}
+
+#[derive(PartialEq, Eq, Clone, Copy)]
+pub struct SubjectPublicKeyInfoRef<'a>(pub untrusted::Input<'a>);
+
+impl<'a> SubjectPublicKeyInfoRef<'a> {
+    // Parse the public key into an algorithm OID, an optional curve OID, and the
+    // key value. The caller needs to check whether these match the
+    // `PublicKeyAlgorithm` for the `SignatureAlgorithm` that is matched when
+    // parsing the signature.
+    pub fn parse(self) -> Result<SubjectPublicKeyInfo<'a>, Error> {
+        let input: untrusted::Input = From::from(self);
+        input.read_all(Error::BadDER, |input| {
+            let algorithm_id_value =
+                der::expect_tag_and_get_value(input, der::Tag::Sequence)?;
+            let key_value = der::bit_string_with_no_unused_bits(input)?;
+            Ok(SubjectPublicKeyInfo {
+                algorithm_id_value: algorithm_id_value,
+                key_value: SubjectPublicKeyRef(key_value),
+            })
+        })
+    }
+}
+
+impl<'a> From<SubjectPublicKeyInfoRef<'a>> for untrusted::Input<'a> {
+    fn from(spkir: SubjectPublicKeyInfoRef<'a>) -> Self {
+        spkir.0
+    }
+}
+
+#[derive(PartialEq, Eq)]
+pub struct SubjectPublicKeyRef<'a>(pub untrusted::Input<'a>);
+
+impl<'a> From<SubjectPublicKeyRef<'a>> for untrusted::Input<'a> {
+    fn from(spkr: SubjectPublicKeyRef<'a>) -> Self {
+        spkr.0
+    }
+}
+
