@@ -77,12 +77,26 @@ impl<'a> From<DNSNameRef<'a>> for DNSName {
 #[derive(Clone, Copy)]
 pub struct DNSNameRef<'a>(untrusted::Input<'a>);
 
+/// An error indicating that a `DNSNameRef` could not built from the provided input.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct InvalidDNSNameError;
+
+#[cfg(feature = "std")]
+impl core::fmt::Display for InvalidDNSNameError {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+#[cfg(feature = "std")]
+impl ::std::error::Error for InvalidDNSNameError {}
+
 impl<'a> DNSNameRef<'a> {
     /// Constructs a `DNSNameRef` from the given input if the input is a
     /// syntactically-valid DNS name.
-    pub fn try_from_ascii(dns_name: untrusted::Input<'a>) -> Result<Self, ()> {
+    pub fn try_from_ascii(dns_name: untrusted::Input<'a>) -> Result<Self, InvalidDNSNameError> {
         if !is_valid_reference_dns_id(dns_name) {
-            return Err(());
+            return Err(InvalidDNSNameError);
         }
 
         Ok(DNSNameRef(dns_name))
@@ -90,7 +104,7 @@ impl<'a> DNSNameRef<'a> {
 
     /// Constructs a `DNSNameRef` from the given input if the input is a
     /// syntactically-valid DNS name.
-    pub fn try_from_ascii_str(dns_name: &str) -> Result<DNSNameRef, ()> {
+    pub fn try_from_ascii_str(dns_name: &str) -> Result<DNSNameRef, InvalidDNSNameError> {
         DNSNameRef::try_from_ascii(untrusted::Input::from(dns_name.as_bytes()))
     }
 
