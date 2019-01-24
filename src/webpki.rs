@@ -75,7 +75,7 @@ pub mod trust_anchor_util;
 mod verify_cert;
 
 pub use error::Error;
-pub use name::DNSNameRef;
+pub use name::{DNSNameRef, InvalidDNSNameError};
 
 #[cfg(feature = "std")]
 pub use name::DNSName;
