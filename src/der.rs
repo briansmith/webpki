@@ -46,7 +46,7 @@ where
     F: FnMut(&mut untrusted::Reader<'a>) -> Result<R, E>,
 {
     let inner = expect_tag_and_get_value(input, tag).map_err(|_| error)?;
-    inner.read_all_mut(error, decoder).map_err(|_| error)
+    inner.read_all(error, decoder).map_err(|_| error)
 }
 
 // TODO: investigate taking decoder as a reference to reduce generated code
