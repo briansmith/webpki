@@ -46,11 +46,10 @@ impl Time {
     /// # }
     /// ```
     #[cfg(feature = "std")]
-    pub fn try_from(time: std::time::SystemTime)
-                    -> Result<Time, ring::error::Unspecified> {
+    pub fn try_from(time: std::time::SystemTime) -> Result<Time, ring::error::Unspecified> {
         time.duration_since(std::time::UNIX_EPOCH)
-          .map(|d| Time::from_seconds_since_unix_epoch(d.as_secs()))
-          .map_err(|_| ring::error::Unspecified)
+            .map(|d| Time::from_seconds_since_unix_epoch(d.as_secs()))
+            .map_err(|_| ring::error::Unspecified)
     }
 
     /// Create a `webpki::Time` from a unix timestamp.
@@ -59,7 +58,5 @@ impl Time {
     /// `webpki::Time::try_from(time: &std::time::SystemTime)` instead when
     /// `std::time::SystemTime` is available (when `#![no_std]` isn't being
     /// used).
-    pub fn from_seconds_since_unix_epoch(secs: u64) -> Time {
-        Time(secs)
-    }
+    pub fn from_seconds_since_unix_epoch(secs: u64) -> Time { Time(secs) }
 }
