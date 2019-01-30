@@ -14,9 +14,8 @@
 
 use cert::{Cert, EndEntityOrCA};
 use core;
-use der;
+use {der, Error};
 use untrusted;
-use Error;
 
 #[cfg(feature = "std")]
 use std::string::String;
@@ -44,12 +43,16 @@ pub struct DNSName(String);
 #[cfg(feature = "std")]
 impl DNSName {
     /// Returns a `DNSNameRef` that refers to this `DNSName`.
-    pub fn as_ref(&self) -> DNSNameRef { DNSNameRef(untrusted::Input::from(self.0.as_bytes())) }
+    pub fn as_ref(&self) -> DNSNameRef {
+        DNSNameRef(untrusted::Input::from(self.0.as_bytes()))
+    }
 }
 
 #[cfg(feature = "std")]
 impl AsRef<str> for DNSName {
-    fn as_ref(&self) -> &str { self.0.as_ref() }
+    fn as_ref(&self) -> &str {
+       self.0.as_ref()
+    }
 }
 
 // Deprecated
@@ -105,7 +108,9 @@ impl<'a> DNSNameRef<'a> {
 impl<'a> core::fmt::Debug for DNSNameRef<'a> {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> Result<(), core::fmt::Error> {
         let lowercase = self.clone().to_owned();
-        f.debug_tuple("DNSNameRef").field(&lowercase.0).finish()
+        f.debug_tuple("DNSNameRef")
+            .field(&lowercase.0)
+            .finish()
     }
 }
 
@@ -121,48 +126,40 @@ impl<'a> From<DNSNameRef<'a>> for untrusted::Input<'a> {
     fn from(DNSNameRef(dns_name): DNSNameRef<'a>) -> Self { dns_name }
 }
 
-pub fn verify_cert_dns_name(
-    cert: &super::EndEntityCert, DNSNameRef(dns_name): DNSNameRef,
-) -> Result<(), Error> {
+pub fn verify_cert_dns_name(cert: &super::EndEntityCert,
+                            DNSNameRef(dns_name): DNSNameRef)
+                            -> Result<(), Error> {
     let cert = &cert.inner;
 
-    iterate_names(
-        cert.subject,
-        cert.subject_alt_name,
-        Err(Error::CertNotValidForName),
-        &|name| {
-            match name {
-                GeneralName::DNSName(presented_id) =>
-                    match presented_dns_id_matches_reference_dns_id(presented_id, dns_name) {
-                        Some(true) => {
-                            return NameIteration::Stop(Ok(()));
-                        },
-                        Some(false) => (),
-                        None => {
-                            return NameIteration::Stop(Err(Error::BadDER));
-                        },
-                    },
-                _ => (),
-            }
-            NameIteration::KeepGoing
-        },
-    )
+    iterate_names(cert.subject, cert.subject_alt_name,
+                  Err(Error::CertNotValidForName), &|name| {
+        match name {
+            GeneralName::DNSName(presented_id) => {
+                match presented_dns_id_matches_reference_dns_id(
+                        presented_id, dns_name) {
+                    Some(true) => { return NameIteration::Stop(Ok(())); },
+                    Some(false) => (),
+                    None => { return NameIteration::Stop(Err(Error::BadDER)); },
+                }
+            },
+            _ => ()
+        }
+        NameIteration::KeepGoing
+    })
 }
 
 // https://tools.ietf.org/html/rfc5280#section-4.2.1.10
-pub fn check_name_constraints<'a>(
-    input: Option<&mut untrusted::Reader<'a>>, subordinate_certs: &Cert,
-) -> Result<(), Error> {
+pub fn check_name_constraints<'a>(input: Option<&mut untrusted::Reader<'a>>,
+                                  subordinate_certs: &Cert)
+                                  -> Result<(), Error> {
     let input = match input {
         Some(input) => input,
-        None => {
-            return Ok(());
-        },
+        None => { return Ok(()); }
     };
 
-    fn parse_subtrees<'b>(
-        inner: &mut untrusted::Reader<'b>, subtrees_tag: der::Tag,
-    ) -> Result<Option<untrusted::Input<'b>>, Error> {
+    fn parse_subtrees<'b>(inner: &mut untrusted::Reader<'b>,
+                          subtrees_tag: der::Tag)
+                          -> Result<Option<untrusted::Input<'b>>, Error> {
         if !inner.peek(subtrees_tag as u8) {
             return Ok(None);
         }
@@ -172,20 +169,20 @@ pub fn check_name_constraints<'a>(
         Ok(Some(subtrees))
     }
 
-    let permitted_subtrees = parse_subtrees(input, der::Tag::ContextSpecificConstructed0)?;
-    let excluded_subtrees = parse_subtrees(input, der::Tag::ContextSpecificConstructed1)?;
+    let permitted_subtrees =
+        parse_subtrees(input, der::Tag::ContextSpecificConstructed0)?;
+    let excluded_subtrees =
+        parse_subtrees(input, der::Tag::ContextSpecificConstructed1)?;
 
     let mut child = subordinate_certs;
     loop {
-        iterate_names(child.subject, child.subject_alt_name, Ok(()), &|name| {
-            check_presented_id_conforms_to_constraints(name, permitted_subtrees, excluded_subtrees)
-        })?;
+        iterate_names(child.subject, child.subject_alt_name, Ok(()),
+                      &|name| check_presented_id_conforms_to_constraints(
+                          name, permitted_subtrees, excluded_subtrees))?;
 
         child = match child.ee_or_ca {
             EndEntityOrCA::CA(child_cert) => child_cert,
-            EndEntityOrCA::EndEntity => {
-                break;
-            },
+            EndEntityOrCA::EndEntity => { break; }
         };
     }
 
@@ -193,41 +190,30 @@ pub fn check_name_constraints<'a>(
 }
 
 fn check_presented_id_conforms_to_constraints(
-    name: GeneralName, permitted_subtrees: Option<untrusted::Input>,
-    excluded_subtrees: Option<untrusted::Input>,
-) -> NameIteration {
+        name: GeneralName, permitted_subtrees: Option<untrusted::Input>,
+        excluded_subtrees: Option<untrusted::Input>) -> NameIteration {
     match check_presented_id_conforms_to_constraints_in_subtree(
-        name,
-        Subtrees::PermittedSubtrees,
-        permitted_subtrees,
-    ) {
-        stop @ NameIteration::Stop(..) => {
-            return stop;
-        },
-        NameIteration::KeepGoing => (),
+            name, Subtrees::PermittedSubtrees, permitted_subtrees) {
+        stop @ NameIteration::Stop(..) => { return stop; },
+        NameIteration::KeepGoing => ()
     };
 
     check_presented_id_conforms_to_constraints_in_subtree(
-        name,
-        Subtrees::ExcludedSubtrees,
-        excluded_subtrees,
-    )
+        name, Subtrees::ExcludedSubtrees, excluded_subtrees)
 }
 
 #[derive(Clone, Copy)]
 enum Subtrees {
     PermittedSubtrees,
-    ExcludedSubtrees,
+    ExcludedSubtrees
 }
 
 fn check_presented_id_conforms_to_constraints_in_subtree(
-    name: GeneralName, subtrees: Subtrees, constraints: Option<untrusted::Input>,
-) -> NameIteration {
+        name: GeneralName, subtrees: Subtrees,
+        constraints: Option<untrusted::Input>) -> NameIteration {
     let mut constraints = match constraints {
         Some(constraints) => untrusted::Reader::new(constraints),
-        None => {
-            return NameIteration::KeepGoing;
-        },
+        None => { return NameIteration::KeepGoing; }
     };
 
     let mut has_permitted_subtrees_match = false;
@@ -241,28 +227,32 @@ fn check_presented_id_conforms_to_constraints_in_subtree(
         // Since the default value isn't allowed to be encoded according to the
         // DER encoding rules for DEFAULT, this is equivalent to saying that
         // neither minimum or maximum must be encoded.
-        fn general_subtree<'b>(
-            input: &mut untrusted::Reader<'b>,
-        ) -> Result<GeneralName<'b>, Error> {
-            let general_subtree = der::expect_tag_and_get_value(input, der::Tag::Sequence)?;
-            general_subtree.read_all(Error::BadDER, |subtree| general_name(subtree))
+        fn general_subtree<'b>(input: &mut untrusted::Reader<'b>)
+                               -> Result<GeneralName<'b>, Error> {
+            let general_subtree =
+                der::expect_tag_and_get_value(input, der::Tag::Sequence)?;
+            general_subtree.read_all(Error::BadDER,
+                                     |subtree| general_name(subtree))
         }
 
         let base = match general_subtree(&mut constraints) {
             Ok(base) => base,
-            Err(err) => {
-                return NameIteration::Stop(Err(err));
-            },
+            Err(err) => { return NameIteration::Stop(Err(err)); }
         };
 
         let matches = match (name, base) {
-            (GeneralName::DNSName(name), GeneralName::DNSName(base)) =>
-                presented_dns_id_matches_dns_id_constraint(name, base).ok_or(Error::BadDER),
+            (GeneralName::DNSName(name),
+             GeneralName::DNSName(base)) =>
+                presented_dns_id_matches_dns_id_constraint(name, base)
+                    .ok_or(Error::BadDER),
 
-            (GeneralName::DirectoryName(name), GeneralName::DirectoryName(base)) =>
-                presented_directory_name_matches_constraint(name, base, subtrees),
+            (GeneralName::DirectoryName(name),
+             GeneralName::DirectoryName(base)) =>
+                presented_directory_name_matches_constraint(name, base,
+                                                            subtrees),
 
-            (GeneralName::IPAddress(name), GeneralName::IPAddress(base)) =>
+            (GeneralName::IPAddress(name),
+             GeneralName::IPAddress(base)) =>
                 presented_ip_address_matches_constraint(name, base),
 
             // RFC 4280 says "If a name constraints extension that is marked as
@@ -273,11 +263,11 @@ fn check_presented_id_conforms_to_constraints_in_subtree(
             // certificate." Later, the CABForum agreed to support non-critical
             // constraints, so it is important to reject the cert without
             // considering whether the name constraint it critical.
-            (GeneralName::Unsupported(name_tag), GeneralName::Unsupported(base_tag))
-                if name_tag == base_tag =>
+            (GeneralName::Unsupported(name_tag),
+             GeneralName::Unsupported(base_tag)) if name_tag == base_tag =>
                 Err(Error::NameConstraintViolation),
 
-            _ => Ok(false),
+            _ => Ok(false)
         };
 
         match (subtrees, matches) {
@@ -297,7 +287,7 @@ fn check_presented_id_conforms_to_constraints_in_subtree(
 
             (_, Err(err)) => {
                 return NameIteration::Stop(Err(err));
-            },
+            }
         }
 
         if constraints.at_end() {
@@ -317,8 +307,8 @@ fn check_presented_id_conforms_to_constraints_in_subtree(
 
 // TODO: document this.
 fn presented_directory_name_matches_constraint<'a>(
-    name: untrusted::Input<'a>, constraint: untrusted::Input<'a>, subtrees: Subtrees,
-) -> Result<bool, Error> {
+        name: untrusted::Input<'a>, constraint: untrusted::Input<'a>,
+        subtrees: Subtrees) -> Result<bool, Error> {
     match subtrees {
         Subtrees::PermittedSubtrees => Ok(name == constraint),
         Subtrees::ExcludedSubtrees => Ok(true),
@@ -334,9 +324,9 @@ fn presented_directory_name_matches_constraint<'a>(
 //     constraint for "class C" subnet 192.0.2.0 is represented as the
 //     octets C0 00 02 00 FF FF FF 00, representing the CIDR notation
 //     192.0.2.0/24 (mask 255.255.255.0).
-fn presented_ip_address_matches_constraint(
-    name: untrusted::Input, constraint: untrusted::Input,
-) -> Result<bool, Error> {
+fn presented_ip_address_matches_constraint(name: untrusted::Input,
+                                           constraint: untrusted::Input)
+                                           -> Result<bool, Error> {
     if name.len() != 4 && name.len() != 16 {
         return Err(Error::BadDER);
     }
@@ -349,11 +339,12 @@ fn presented_ip_address_matches_constraint(
         return Ok(false);
     }
 
-    let (constraint_address, constraint_mask) = constraint.read_all(Error::BadDER, |value| {
-        let address = value.skip_and_get_input(constraint.len() / 2).unwrap();
-        let mask = value.skip_and_get_input(constraint.len() / 2).unwrap();
-        Ok((address, mask))
-    })?;
+    let (constraint_address, constraint_mask) =
+        constraint.read_all(Error::BadDER, |value| {
+            let address = value.skip_and_get_input(constraint.len() / 2).unwrap();
+            let mask = value.skip_and_get_input(constraint.len() / 2).unwrap();
+            Ok((address, mask))
+        })?;
 
     let mut name = untrusted::Reader::new(name);
     let mut constraint_address = untrusted::Reader::new(constraint_address);
@@ -376,13 +367,13 @@ fn presented_ip_address_matches_constraint(
 #[derive(Clone, Copy)]
 enum NameIteration {
     KeepGoing,
-    Stop(Result<(), Error>),
+    Stop(Result<(), Error>)
 }
 
-fn iterate_names(
-    subject: untrusted::Input, subject_alt_name: Option<untrusted::Input>,
-    result_if_never_stopped_early: Result<(), Error>, f: &Fn(GeneralName) -> NameIteration,
-) -> Result<(), Error> {
+fn iterate_names(subject: untrusted::Input,
+                 subject_alt_name: Option<untrusted::Input>,
+                 result_if_never_stopped_early: Result<(), Error>,
+                 f: &Fn(GeneralName) -> NameIteration) -> Result<(), Error> {
     match subject_alt_name {
         Some(subject_alt_name) => {
             let mut subject_alt_name = untrusted::Reader::new(subject_alt_name);
@@ -395,19 +386,17 @@ fn iterate_names(
             while !subject_alt_name.at_end() {
                 let name = general_name(&mut subject_alt_name)?;
                 match f(name) {
-                    NameIteration::Stop(result) => {
-                        return result;
-                    },
-                    NameIteration::KeepGoing => (),
+                    NameIteration::Stop(result) => { return result; },
+                    NameIteration::KeepGoing => ()
                 }
             }
         },
-        None => (),
+        None => ()
     }
 
     match f(GeneralName::DirectoryName(subject)) {
         NameIteration::Stop(result) => result,
-        NameIteration::KeepGoing => result_if_never_stopped_early,
+        NameIteration::KeepGoing => result_if_never_stopped_early
     }
 }
 
@@ -425,15 +414,16 @@ enum GeneralName<'a> {
     // The value is the `tag & ~(der::CONTEXT_SPECIFIC | der::CONSTRUCTED)` so
     // that the name constraint checking matches tags regardless of whether
     // those bits are set.
-    Unsupported(u8),
+    Unsupported(u8)
 }
 
-fn general_name<'a>(input: &mut untrusted::Reader<'a>) -> Result<GeneralName<'a>, Error> {
+fn general_name<'a>(input: &mut untrusted::Reader<'a>)
+                    -> Result<GeneralName<'a>, Error> {
     use ring::io::der::{CONSTRUCTED, CONTEXT_SPECIFIC};
     const OTHER_NAME_TAG: u8 = CONTEXT_SPECIFIC | CONSTRUCTED | 0;
     const RFC822_NAME_TAG: u8 = CONTEXT_SPECIFIC | 1;
     const DNS_NAME_TAG: u8 = CONTEXT_SPECIFIC | 2;
-    const X400_ADDRESS_TAG: u8 = CONTEXT_SPECIFIC | CONSTRUCTED | 3;
+    const X400_ADDRESS_TAG : u8 = CONTEXT_SPECIFIC | CONSTRUCTED | 3;
     const DIRECTORY_NAME_TAG: u8 = CONTEXT_SPECIFIC | CONSTRUCTED | 4;
     const EDI_PARTY_NAME_TAG: u8 = CONTEXT_SPECIFIC | CONSTRUCTED | 5;
     const UNIFORM_RESOURCE_IDENTIFIER_TAG: u8 = CONTEXT_SPECIFIC | 6;
@@ -446,36 +436,31 @@ fn general_name<'a>(input: &mut untrusted::Reader<'a>) -> Result<GeneralName<'a>
         DIRECTORY_NAME_TAG => GeneralName::DirectoryName(value),
         IP_ADDRESS_TAG => GeneralName::IPAddress(value),
 
-        OTHER_NAME_TAG
-        | RFC822_NAME_TAG
-        | X400_ADDRESS_TAG
-        | EDI_PARTY_NAME_TAG
-        | UNIFORM_RESOURCE_IDENTIFIER_TAG
-        | REGISTERED_ID_TAG => GeneralName::Unsupported(tag & !(CONTEXT_SPECIFIC | CONSTRUCTED)),
+        OTHER_NAME_TAG |
+        RFC822_NAME_TAG |
+        X400_ADDRESS_TAG |
+        EDI_PARTY_NAME_TAG |
+        UNIFORM_RESOURCE_IDENTIFIER_TAG |
+        REGISTERED_ID_TAG =>
+            GeneralName::Unsupported(tag & !(CONTEXT_SPECIFIC | CONSTRUCTED)),
 
-        _ => return Err(Error::BadDER),
+        _ => return Err(Error::BadDER)
     };
     Ok(name)
 }
 
 fn presented_dns_id_matches_reference_dns_id(
-    presented_dns_id: untrusted::Input, reference_dns_id: untrusted::Input,
-) -> Option<bool> {
+        presented_dns_id: untrusted::Input,
+        reference_dns_id: untrusted::Input) -> Option<bool> {
     presented_dns_id_matches_reference_dns_id_internal(
-        presented_dns_id,
-        IDRole::ReferenceID,
-        reference_dns_id,
-    )
+        presented_dns_id, IDRole::ReferenceID, reference_dns_id)
 }
 
 fn presented_dns_id_matches_dns_id_constraint(
-    presented_dns_id: untrusted::Input, reference_dns_id: untrusted::Input,
-) -> Option<bool> {
+    presented_dns_id: untrusted::Input,
+    reference_dns_id: untrusted::Input) -> Option<bool> {
     presented_dns_id_matches_reference_dns_id_internal(
-        presented_dns_id,
-        IDRole::NameConstraint,
-        reference_dns_id,
-    )
+        presented_dns_id, IDRole::NameConstraint, reference_dns_id)
 }
 
 // We do not distinguish between a syntactically-invalid presented_dns_id and
@@ -599,14 +584,15 @@ fn presented_dns_id_matches_dns_id_constraint(
 //     incorporated into the spec:
 //     https://www.ietf.org/mail-archive/web/pkix/current/msg21192.html
 fn presented_dns_id_matches_reference_dns_id_internal(
-    presented_dns_id: untrusted::Input, reference_dns_id_role: IDRole,
-    reference_dns_id: untrusted::Input,
-) -> Option<bool> {
-    if !is_valid_dns_id(presented_dns_id, IDRole::PresentedID, AllowWildcards::Yes) {
+        presented_dns_id: untrusted::Input, reference_dns_id_role: IDRole,
+        reference_dns_id: untrusted::Input) -> Option<bool> {
+    if !is_valid_dns_id(presented_dns_id, IDRole::PresentedID,
+                        AllowWildcards::Yes) {
         return None;
     }
 
-    if !is_valid_dns_id(reference_dns_id, reference_dns_id_role, AllowWildcards::No) {
+    if !is_valid_dns_id(reference_dns_id, reference_dns_id_role,
+                        AllowWildcards::No) {
         return None;
     }
 
@@ -616,7 +602,9 @@ fn presented_dns_id_matches_reference_dns_id_internal(
     match reference_dns_id_role {
         IDRole::ReferenceID => (),
 
-        IDRole::NameConstraint if presented_dns_id.len() > reference_dns_id.len() => {
+        IDRole::NameConstraint
+            if presented_dns_id.len() > reference_dns_id.len() => {
+
             if reference_dns_id.len() == 0 {
                 // An empty constraint matches everything.
                 return Some(true);
@@ -646,17 +634,13 @@ fn presented_dns_id_matches_reference_dns_id_internal(
             //                reference ID:      example.com       example.com
             //
             if reference.peek(b'.') {
-                if presented
-                    .skip(presented_dns_id.len() - reference_dns_id.len())
-                    .is_err()
-                {
+                if presented.skip(presented_dns_id.len() -
+                                  reference_dns_id.len()).is_err() {
                     unreachable!();
                 }
             } else {
-                if presented
-                    .skip(presented_dns_id.len() - reference_dns_id.len() - 1)
-                    .is_err()
-                {
+                if presented.skip(presented_dns_id.len() -
+                                 reference_dns_id.len() - 1).is_err() {
                     unreachable!();
                 }
                 if presented.read_byte() != Ok(b'.') {
@@ -667,7 +651,7 @@ fn presented_dns_id_matches_reference_dns_id_internal(
 
         IDRole::NameConstraint => (),
 
-        IDRole::PresentedID => unreachable!(),
+        IDRole::PresentedID => unreachable!()
     }
 
     // Only allow wildcard labels that consist only of '*'.
@@ -687,12 +671,11 @@ fn presented_dns_id_matches_reference_dns_id_internal(
     }
 
     loop {
-        let presented_byte = match (presented.read_byte(), reference.read_byte()) {
-            (Ok(p), Ok(r)) if ascii_lower(p) == ascii_lower(r) => p,
-            _ => {
-                return Some(false);
-            },
-        };
+        let presented_byte =
+            match (presented.read_byte(), reference.read_byte()) {
+                (Ok(p), Ok(r)) if ascii_lower(p) == ascii_lower(r) => p,
+                _ => { return Some(false); }
+            };
 
         if presented.at_end() {
             // Don't allow presented IDs to be absolute.
@@ -709,9 +692,7 @@ fn presented_dns_id_matches_reference_dns_id_internal(
         if reference_dns_id_role != IDRole::NameConstraint {
             match reference.read_byte() {
                 Ok(b'.') => (),
-                _ => {
-                    return Some(false);
-                },
+                _ => { return Some(false); }
             };
         }
         if !reference.at_end() {
@@ -736,14 +717,14 @@ fn ascii_lower(b: u8) -> u8 {
 #[derive(PartialEq)]
 enum AllowWildcards {
     No,
-    Yes,
+    Yes
 }
 
 #[derive(Clone, Copy, PartialEq)]
 enum IDRole {
-    ReferenceID,
-    PresentedID,
-    NameConstraint,
+  ReferenceID,
+  PresentedID,
+  NameConstraint,
 }
 
 fn is_valid_reference_dns_id(hostname: untrusted::Input) -> bool {
@@ -760,9 +741,8 @@ fn is_valid_reference_dns_id(hostname: untrusted::Input) -> bool {
 //
 // https://bugzilla.mozilla.org/show_bug.cgi?id=1136616: As an exception to the
 // requirement above, underscores are also allowed in names for compatibility.
-fn is_valid_dns_id(
-    hostname: untrusted::Input, id_role: IDRole, allow_wildcards: AllowWildcards,
-) -> bool {
+fn is_valid_dns_id(hostname: untrusted::Input, id_role: IDRole,
+                   allow_wildcards: AllowWildcards) -> bool {
     // https://blogs.msdn.microsoft.com/oldnewthing/20120412-00/?p=7873/
     if hostname.len() > 253 {
         return false;
@@ -782,10 +762,12 @@ fn is_valid_dns_id(
     // Only presented IDs are allowed to have wildcard labels. And, like
     // Chromium, be stricter than RFC 6125 requires by insisting that a
     // wildcard label consist only of '*'.
-    let is_wildcard = allow_wildcards == AllowWildcards::Yes && input.peek(b'*');
+    let is_wildcard = allow_wildcards == AllowWildcards::Yes &&
+                     input.peek(b'*');
     let mut is_first_byte = !is_wildcard;
     if is_wildcard {
-        if input.read_byte() != Ok(b'*') || input.read_byte() != Ok(b'.') {
+        if input.read_byte() != Ok(b'*') ||
+           input.read_byte() != Ok(b'.') {
             return false;
         }
         dot_count += 1;
@@ -829,18 +811,17 @@ fn is_valid_dns_id(
 
             Ok(b'.') => {
                 dot_count += 1;
-                if label_length == 0 && (id_role != IDRole::NameConstraint || !is_first_byte) {
-                    return false;
+                if label_length == 0 &&
+                   (id_role != IDRole::NameConstraint || !is_first_byte) {
+                  return false;
                 }
                 if label_ends_with_hyphen {
-                    return false; // Labels must not end with a hyphen.
+                  return false; // Labels must not end with a hyphen.
                 }
                 label_length = 0;
             },
 
-            _ => {
-                return false;
-            },
+            _ => { return false; }
         }
         is_first_byte = false;
 
@@ -865,11 +846,8 @@ fn is_valid_dns_id(
 
     if is_wildcard {
         // If the DNS ID ends with a dot, the last dot signifies an absolute ID.
-        let label_count = if label_length == 0 {
-            dot_count
-        } else {
-            dot_count + 1
-        };
+        let label_count = if label_length == 0 { dot_count }
+                          else { dot_count + 1 };
 
         // Like NSS, require at least two labels to follow the wildcard label.
         // TODO: Allow the TrustDomain to control this on a per-eTLD+1 basis,
@@ -885,36 +863,35 @@ fn is_valid_dns_id(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::string::String;
+    use super::*;
     use untrusted;
 
-    const PRESENTED_MATCHES_REFERENCE: &[(&'static [u8], &'static [u8], Option<bool>)] = &[
+    const PRESENTED_MATCHES_REFERENCE:
+            &[(&'static [u8], &'static [u8], Option<bool>)] = &[
         (b"", b"a", None),
+
         (b"a", b"a", Some(true)),
         (b"b", b"a", Some(false)),
+
         (b"*.b.a", b"c.b.a", Some(true)),
         (b"*.b.a", b"b.a", Some(false)),
         (b"*.b.a", b"b.a.", Some(false)),
+
         // Wildcard not in leftmost label
         (b"d.c.b.a", b"d.c.b.a", Some(true)),
         (b"d.*.b.a", b"d.c.b.a", None),
         (b"d.c*.b.a", b"d.c.b.a", None),
         (b"d.c*.b.a", b"d.cc.b.a", None),
+
         // case sensitivity
-        (
-            b"abcdefghijklmnopqrstuvwxyz",
-            b"ABCDEFGHIJKLMNOPQRSTUVWXYZ",
-            Some(true),
-        ),
-        (
-            b"ABCDEFGHIJKLMNOPQRSTUVWXYZ",
-            b"abcdefghijklmnopqrstuvwxyz",
-            Some(true),
-        ),
+        (b"abcdefghijklmnopqrstuvwxyz", b"ABCDEFGHIJKLMNOPQRSTUVWXYZ", Some(true)),
+        (b"ABCDEFGHIJKLMNOPQRSTUVWXYZ", b"abcdefghijklmnopqrstuvwxyz", Some(true)),
         (b"aBc", b"Abc", Some(true)),
+
         // digits
         (b"a1", b"a1", Some(true)),
+
         // A trailing dot indicates an absolute name, and absolute names can match
         // relative names, and vice-versa.
         (b"example", b"example", Some(true)),
@@ -928,6 +905,7 @@ mod tests {
         (b"example.com..", b"example.com.", None),
         (b"example.com..", b"example.com", None),
         (b"example.com...", b"example.com.", None),
+
         // xn-- IDN prefix
         (b"x*.b.a", b"xa.b.a", None),
         (b"x*.b.a", b"xna.b.a", None),
@@ -940,8 +918,10 @@ mod tests {
         (b"xn-*.b.a", b"xn--a.b.a", None),
         (b"xn--*.b.a", b"xn--a.b.a", None),
         (b"xn---*.b.a", b"xn--a.b.a", None),
+
         // "*" cannot expand to nothing.
         (b"c*.b.a", b"c.b.a", None),
+
         // --------------------------------------------------------------------------
         // The rest of these are test cases adapted from Chromium's
         // x509_certificate_unittest.cc. The parameter order is the opposite in
@@ -961,8 +941,10 @@ mod tests {
         (b"www.foo.com\0*.foo.com", b"www.foo.com", None),
         (b"ww.house.example", b"www.house.example", Some(false)),
         (b"www.test.org", b"test.org", Some(false)),
+
         (b"*.test.org", b"test.org", Some(false)),
         (b"*.org", b"test.org", None),
+
         // '*' must be the only character in the wildcard label
         (b"w*.bar.foo.com", b"w.bar.foo.com", None),
         (b"ww*ww.bar.foo.com", b"www.bar.foo.com", None),
@@ -971,10 +953,12 @@ mod tests {
         (b"w*w.bar.foo.c0m", b"wwww.bar.foo.com", None),
         (b"wa*.bar.foo.com", b"WALLY.bar.foo.com", None),
         (b"*Ly.bar.foo.com", b"wally.bar.foo.com", None),
+
         // Chromium does URL decoding of the reference ID, but we don't, and we also
         // require that the reference ID is valid, so we can't test these two.
         //     (b"www.foo.com", b"ww%57.foo.com", Some(true)),
         //     (b"www&.foo.com", b"www%26.foo.com", Some(true)),
+
         (b"*.test.de", b"www.test.co.jp", Some(false)),
         (b"*.jp", b"www.test.co.jp", None),
         (b"www.test.co.uk", b"www.test.co.jp", Some(false)),
@@ -982,10 +966,13 @@ mod tests {
         (b"www.bar.foo.com", b"www.bar.foo.com", Some(true)),
         (b"*.foo.com", b"www.bar.foo.com", Some(false)),
         (b"*.*.foo.com", b"www.bar.foo.com", None),
+
         // Our matcher requires the reference ID to be a valid DNS name, so we cannot
         // test this case.
         //     (b"*.*.bar.foo.com", b"*..bar.foo.com", Some(false)),
+
         (b"www.bath.org", b"www.bath.org", Some(true)),
+
         // Our matcher requires the reference ID to be a valid DNS name, so we cannot
         // test these cases.
         // DNS_ID_MISMATCH("www.bath.org", ""),
@@ -993,24 +980,13 @@ mod tests {
         //     (b"www.bath.org", b"66.77.88.99", Some(false)),
 
         // IDN tests
-        (
-            b"xn--poema-9qae5a.com.br",
-            b"xn--poema-9qae5a.com.br",
-            Some(true),
-        ),
-        (
-            b"*.xn--poema-9qae5a.com.br",
-            b"www.xn--poema-9qae5a.com.br",
-            Some(true),
-        ),
-        (
-            b"*.xn--poema-9qae5a.com.br",
-            b"xn--poema-9qae5a.com.br",
-            Some(false),
-        ),
+        (b"xn--poema-9qae5a.com.br", b"xn--poema-9qae5a.com.br", Some(true)),
+        (b"*.xn--poema-9qae5a.com.br", b"www.xn--poema-9qae5a.com.br", Some(true)),
+        (b"*.xn--poema-9qae5a.com.br", b"xn--poema-9qae5a.com.br", Some(false)),
         (b"xn--poema-*.com.br", b"xn--poema-9qae5a.com.br", None),
         (b"xn--*-9qae5a.com.br", b"xn--poema-9qae5a.com.br", None),
         (b"*--poema-9qae5a.com.br", b"xn--poema-9qae5a.com.br", None),
+
         // The following are adapted from the examples quoted from
         //   http://tools.ietf.org/html/rfc6125#section-6.4.3
         // (e.g., *.example.com would match foo.example.com but
@@ -1018,9 +994,11 @@ mod tests {
         (b"*.example.com", b"foo.example.com", Some(true)),
         (b"*.example.com", b"bar.foo.example.com", Some(false)),
         (b"*.example.com", b"example.com", Some(false)),
+
         (b"baz*.example.net", b"baz1.example.net", None),
         (b"*baz.example.net", b"foobaz.example.net", None),
         (b"b*z.example.net", b"buzz.example.net", None),
+
         // Wildcards should not be valid for public registry controlled domains,
         // and unknown/unrecognized domains, at least three domain components must
         // be present. For mozilla::pkix and NSS, there must always be at least two
@@ -1028,36 +1006,35 @@ mod tests {
         (b"*.test.example", b"www.test.example", Some(true)),
         (b"*.example.co.uk", b"test.example.co.uk", Some(true)),
         (b"*.example", b"test.example", None),
+
         // The result is different than Chromium, because Chromium takes into account
         // the additional knowledge it has that "co.uk" is a TLD. mozilla::pkix does
         // not know that.
         (b"*.co.uk", b"example.co.uk", Some(true)),
+
         (b"*.com", b"foo.com", None),
         (b"*.us", b"foo.us", None),
         (b"*", b"foo", None),
+
         // IDN variants of wildcards and registry controlled domains.
-        (
-            b"*.xn--poema-9qae5a.com.br",
-            b"www.xn--poema-9qae5a.com.br",
-            Some(true),
-        ),
-        (
-            b"*.example.xn--mgbaam7a8h",
-            b"test.example.xn--mgbaam7a8h",
-            Some(true),
-        ),
+        (b"*.xn--poema-9qae5a.com.br", b"www.xn--poema-9qae5a.com.br", Some(true)),
+        (b"*.example.xn--mgbaam7a8h", b"test.example.xn--mgbaam7a8h", Some(true)),
+
         // RFC6126 allows this, and NSS accepts it, but Chromium disallows it.
         // TODO: File bug against Chromium.
         (b"*.com.br", b"xn--poema-9qae5a.com.br", Some(true)),
+
         (b"*.xn--mgbaam7a8h", b"example.xn--mgbaam7a8h", None),
         // Wildcards should be permissible for 'private' registry-controlled
         // domains. (In mozilla::pkix, we do not know if it is a private registry-
         // controlled domain or not.)
         (b"*.appspot.com", b"www.appspot.com", Some(true)),
         (b"*.s3.amazonaws.com", b"foo.s3.amazonaws.com", Some(true)),
+
         // Multiple wildcards are not valid.
         (b"*.*.com", b"foo.example.com", None),
         (b"*.bar.*.com", b"foo.bar.example.com", None),
+
         // Absolute vs relative DNS name tests. Although not explicitly specified
         // in RFC 6125, absolute reference names (those ending in a .) should
         // match either absolute or relative presented names.
@@ -1071,14 +1048,17 @@ mod tests {
         (b"*.bar.foo.com.", b"www-3.bar.foo.com", None),
         (b"*.bar.foo.com", b"www-3.bar.foo.com.", Some(true)),
         (b"*.bar.foo.com.", b"www-3.bar.foo.com.", None),
+
         // We require the reference ID to be a valid DNS name, so we cannot test this
         // case.
         //     (b".", b".", Some(false)),
+
         (b"*.com.", b"example.com", None),
         (b"*.com", b"example.com.", None),
         (b"*.com.", b"example.com.", None),
         (b"*.", b"foo.", None),
         (b"*.", b"foo", None),
+
         // The result is different than Chromium because we don't know that co.uk is
         // a TLD.
         (b"*.co.uk.", b"foo.co.uk", None),
@@ -1089,16 +1069,11 @@ mod tests {
     fn presented_matches_reference_test() {
         for &(presented, reference, expected_result) in PRESENTED_MATCHES_REFERENCE {
             let actual_result = presented_dns_id_matches_reference_dns_id(
-                untrusted::Input::from(presented),
-                untrusted::Input::from(reference),
-            );
-            assert_eq!(
-                actual_result,
-                expected_result,
+                untrusted::Input::from(presented), untrusted::Input::from(reference));
+            assert_eq!(actual_result, expected_result,
                 "presented_dns_id_matches_reference_dns_id(\"{}\", IDRole::ReferenceID, \"{}\")",
                 String::from_utf8_lossy(presented),
-                String::from_utf8_lossy(reference)
-            );
+                String::from_utf8_lossy(reference));
         }
     }
 }

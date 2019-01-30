@@ -12,30 +12,21 @@
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-use cert::{self, Cert, EndEntityOrCA};
-use der;
-use name;
-use signed_data;
-use time;
 use untrusted;
-use Error;
-use SignatureAlgorithm;
-use TrustAnchor;
+use {cert, der, Error, name, signed_data, SignatureAlgorithm, time,
+     TrustAnchor};
+use cert::{Cert, EndEntityOrCA};
 
-pub fn build_chain<'a>(
-    required_eku_if_present: KeyPurposeId, supported_sig_algs: &[&SignatureAlgorithm],
-    trust_anchors: &'a [TrustAnchor], intermediate_certs: &[untrusted::Input<'a>], cert: &Cert<'a>,
-    time: time::Time, sub_ca_count: usize,
-) -> Result<(), Error> {
+pub fn build_chain<'a>(required_eku_if_present: KeyPurposeId,
+                       supported_sig_algs: &[&SignatureAlgorithm],
+                       trust_anchors: &'a [TrustAnchor],
+                       intermediate_certs: &[untrusted::Input<'a>],
+                       cert: &Cert<'a>, time: time::Time, sub_ca_count: usize)
+                       -> Result<(), Error> {
     let used_as_ca = used_as_ca(&cert.ee_or_ca);
 
-    check_issuer_independent_properties(
-        cert,
-        time,
-        used_as_ca,
-        sub_ca_count,
-        required_eku_if_present,
-    )?;
+    check_issuer_independent_properties(cert, time, used_as_ca, sub_ca_count,
+                                        required_eku_if_present)?;
 
     // TODO: HPKP checks.
 
@@ -49,22 +40,24 @@ pub fn build_chain<'a>(
         },
         UsedAsCA::No => {
             assert_eq!(0, sub_ca_count);
-        },
+        }
     }
 
     // TODO: revocation.
 
-    match loop_while_non_fatal_error(trust_anchors, |trust_anchor: &TrustAnchor<'a>| {
+    match loop_while_non_fatal_error(trust_anchors,
+                                     |trust_anchor: &TrustAnchor<'a>| {
         let trust_anchor_subject = untrusted::Input::from(trust_anchor.subject);
         if cert.issuer != trust_anchor_subject {
             return Err(Error::UnknownIssuer);
         }
 
-        let name_constraints = trust_anchor.name_constraints.map(untrusted::Input::from);
+        let name_constraints =
+            trust_anchor.name_constraints.map(untrusted::Input::from);
 
-        untrusted::read_all_optional(name_constraints, Error::BadDER, |value| {
-            name::check_name_constraints(value, &cert)
-        })?;
+        untrusted::read_all_optional(
+            name_constraints, Error::BadDER,
+            |value| name::check_name_constraints(value, &cert))?;
 
         let trust_anchor_spki = untrusted::Input::from(trust_anchor.spki);
 
@@ -79,61 +72,53 @@ pub fn build_chain<'a>(
         },
         Err(..) => {
             // If the error is not fatal, then keep going.
-        },
+        }
     }
 
     loop_while_non_fatal_error(intermediate_certs, |cert_der| {
-        let potential_issuer = cert::parse_cert(*cert_der, EndEntityOrCA::CA(&cert))?;
+        let potential_issuer =
+            cert::parse_cert(*cert_der, EndEntityOrCA::CA(&cert))?;
 
         if potential_issuer.subject != cert.issuer {
-            return Err(Error::UnknownIssuer);
+            return Err(Error::UnknownIssuer)
         }
 
         // Prevent loops; see RFC 4158 section 5.2.
         let mut prev = cert;
         loop {
-            if potential_issuer.spki == prev.spki && potential_issuer.subject == prev.subject {
+            if potential_issuer.spki == prev.spki &&
+               potential_issuer.subject == prev.subject {
                 return Err(Error::UnknownIssuer);
             }
             match &prev.ee_or_ca {
-                &EndEntityOrCA::EndEntity => {
-                    break;
-                },
-                &EndEntityOrCA::CA(child_cert) => {
-                    prev = child_cert;
-                },
+                &EndEntityOrCA::EndEntity => { break; },
+                &EndEntityOrCA::CA(child_cert) => { prev = child_cert; }
             }
         }
 
-        untrusted::read_all_optional(potential_issuer.name_constraints, Error::BadDER, |value| {
-            name::check_name_constraints(value, &cert)
-        })?;
+        untrusted::read_all_optional(
+            potential_issuer.name_constraints, Error::BadDER,
+            |value| name::check_name_constraints(value, &cert))?;
 
         let next_sub_ca_count = match used_as_ca {
             UsedAsCA::No => sub_ca_count,
-            UsedAsCA::Yes => sub_ca_count + 1,
+            UsedAsCA::Yes => sub_ca_count + 1
         };
 
-        build_chain(
-            required_eku_if_present,
-            supported_sig_algs,
-            trust_anchors,
-            intermediate_certs,
-            &potential_issuer,
-            time,
-            next_sub_ca_count,
-        )
+        build_chain(required_eku_if_present, supported_sig_algs, trust_anchors,
+                    intermediate_certs, &potential_issuer, time,
+                    next_sub_ca_count)
     })
 }
 
-fn check_signatures(
-    supported_sig_algs: &[&SignatureAlgorithm], cert_chain: &Cert,
-    trust_anchor_key: untrusted::Input,
-) -> Result<(), Error> {
+fn check_signatures(supported_sig_algs: &[&SignatureAlgorithm],
+                    cert_chain: &Cert, trust_anchor_key: untrusted::Input)
+                    -> Result<(), Error> {
     let mut spki_value = trust_anchor_key;
     let mut cert = cert_chain;
     loop {
-        signed_data::verify_signed_data(supported_sig_algs, spki_value, &cert.signed_data)?;
+        signed_data::verify_signed_data(supported_sig_algs, spki_value,
+                                        &cert.signed_data)?;
 
         // TODO: check revocation
 
@@ -142,9 +127,7 @@ fn check_signatures(
                 spki_value = cert.spki;
                 cert = child_cert;
             },
-            &EndEntityOrCA::EndEntity => {
-                break;
-            },
+            &EndEntityOrCA::EndEntity => { break; }
         }
     }
 
@@ -152,9 +135,9 @@ fn check_signatures(
 }
 
 fn check_issuer_independent_properties<'a>(
-    cert: &Cert<'a>, time: time::Time, used_as_ca: UsedAsCA, sub_ca_count: usize,
-    required_eku_if_present: KeyPurposeId,
-) -> Result<(), Error> {
+        cert: &Cert<'a>, time: time::Time, used_as_ca: UsedAsCA,
+        sub_ca_count: usize, required_eku_if_present: KeyPurposeId)
+        -> Result<(), Error> {
     // TODO: check_distrust(trust_anchor_subject, trust_anchor_spki)?;
     // TODO: Check signature algorithm like mozilla::pkix.
     // TODO: Check SPKI like mozilla::pkix.
@@ -163,20 +146,20 @@ fn check_issuer_independent_properties<'a>(
     // See the comment in `remember_extension` for why we don't check the
     // KeyUsage extension.
 
-    cert.validity
-        .read_all(Error::BadDER, |value| check_validity(value, time))?;
-    untrusted::read_all_optional(cert.basic_constraints, Error::BadDER, |value| {
-        check_basic_constraints(value, used_as_ca, sub_ca_count)
-    })?;
-    untrusted::read_all_optional(cert.eku, Error::BadDER, |value| {
-        check_eku(value, required_eku_if_present)
-    })?;
+    cert.validity.read_all(Error::BadDER, |value| check_validity(value, time))?;
+    untrusted::read_all_optional(
+        cert.basic_constraints, Error::BadDER,
+        |value| check_basic_constraints(value, used_as_ca, sub_ca_count))?;
+    untrusted::read_all_optional(
+        cert.eku, Error::BadDER,
+        |value| check_eku(value, required_eku_if_present))?;
 
     Ok(())
 }
 
 // https://tools.ietf.org/html/rfc5280#section-4.1.2.5
-fn check_validity(input: &mut untrusted::Reader, time: time::Time) -> Result<(), Error> {
+fn check_validity(input: &mut untrusted::Reader, time: time::Time)
+                  -> Result<(), Error> {
     let not_before = der::time_choice(input)?;
     let not_after = der::time_choice(input)?;
 
@@ -198,22 +181,19 @@ fn check_validity(input: &mut untrusted::Reader, time: time::Time) -> Result<(),
 }
 
 #[derive(Clone, Copy)]
-enum UsedAsCA {
-    Yes,
-    No,
-}
+enum UsedAsCA { Yes, No }
 
 fn used_as_ca(ee_or_ca: &EndEntityOrCA) -> UsedAsCA {
     match ee_or_ca {
         &EndEntityOrCA::EndEntity => UsedAsCA::No,
-        &EndEntityOrCA::CA(..) => UsedAsCA::Yes,
+        &EndEntityOrCA::CA(..) => UsedAsCA::Yes
     }
 }
 
 // https://tools.ietf.org/html/rfc5280#section-4.2.1.9
-fn check_basic_constraints(
-    input: Option<&mut untrusted::Reader>, used_as_ca: UsedAsCA, sub_ca_count: usize,
-) -> Result<(), Error> {
+fn check_basic_constraints(input: Option<&mut untrusted::Reader>,
+                           used_as_ca: UsedAsCA, sub_ca_count: usize)
+                           -> Result<(), Error> {
     let (is_ca, path_len_constraint) = match input {
         Some(input) => {
             let is_ca = der::optional_boolean(input)?;
@@ -222,16 +202,17 @@ fn check_basic_constraints(
             // says that a certificate must not have pathLenConstraint unless
             // it is a CA certificate, but some real-world end-entity
             // certificates have pathLenConstraint.
-            let path_len_constraint = if !input.at_end() {
-                let value = der::small_nonnegative_integer(input)?;
-                Some(value as usize)
-            } else {
-                None
-            };
+            let path_len_constraint =
+                if !input.at_end() {
+                    let value = der::small_nonnegative_integer(input)?;
+                    Some(value as usize)
+                } else {
+                    None
+                };
 
             (is_ca, path_len_constraint)
         },
-        None => (false, None),
+        None => (false, None)
     };
 
     match (used_as_ca, is_ca, path_len_constraint) {
@@ -239,13 +220,13 @@ fn check_basic_constraints(
         (UsedAsCA::Yes, false, _) => Err(Error::EndEntityUsedAsCA),
         (UsedAsCA::Yes, true, Some(len)) if sub_ca_count > len =>
             Err(Error::PathLenConstraintViolated),
-        _ => Ok(()),
+        _ => Ok(())
     }
 }
 
 #[derive(Clone, Copy)]
 pub struct KeyPurposeId {
-    oid_value: &'static [u8],
+    oid_value: &'static [u8]
 }
 
 // id-pkix            OBJECT IDENTIFIER ::= { 1 3 6 1 5 5 7 }
@@ -253,17 +234,17 @@ pub struct KeyPurposeId {
 
 // id-kp-serverAuth   OBJECT IDENTIFIER ::= { id-kp 1 }
 pub static EKU_SERVER_AUTH: KeyPurposeId = KeyPurposeId {
-    oid_value: &[(40 * 1) + 3, 6, 1, 5, 5, 7, 3, 1],
+    oid_value: &[(40 * 1) + 3, 6, 1, 5, 5, 7, 3, 1]
 };
 
 // id-kp-clientAuth   OBJECT IDENTIFIER ::= { id-kp 2 }
 pub static EKU_CLIENT_AUTH: KeyPurposeId = KeyPurposeId {
-    oid_value: &[(40 * 1) + 3, 6, 1, 5, 5, 7, 3, 2],
+    oid_value: &[(40 * 1) + 3, 6, 1, 5, 5, 7, 3, 2]
 };
 
 // id-kp-OCSPSigning  OBJECT IDENTIFIER ::= { id-kp 9 }
 pub static EKU_OCSP_SIGNING: KeyPurposeId = KeyPurposeId {
-    oid_value: &[(40 * 1) + 3, 6, 1, 5, 5, 7, 3, 9],
+    oid_value: &[(40 * 1) + 3, 6, 1, 5, 5, 7, 3, 9]
 };
 
 // https://tools.ietf.org/html/rfc5280#section-4.2.1.12
@@ -281,10 +262,10 @@ pub static EKU_OCSP_SIGNING: KeyPurposeId = KeyPurposeId {
 //
 // * We treat id-Netscape-stepUp as being equivalent to id-kp-serverAuth in CA
 //   certificates (only). Comodo has issued certificates that require this
-//   behavior that don't expire until June 2020. See https://bugzilla.mozilla.org/show_bug.cgi?id=982292.
-fn check_eku(
-    input: Option<&mut untrusted::Reader>, required_eku_if_present: KeyPurposeId,
-) -> Result<(), Error> {
+//   behavior that don't expire until June 2020. See
+//   https://bugzilla.mozilla.org/show_bug.cgi?id=982292.
+fn check_eku(input: Option<&mut untrusted::Reader>, required_eku_if_present: KeyPurposeId)
+             -> Result<(), Error> {
     match input {
         Some(input) => {
             loop {
@@ -314,15 +295,13 @@ fn check_eku(
             }
 
             Ok(())
-        },
+        }
     }
 }
 
 fn loop_while_non_fatal_error<V, F>(values: V, f: F) -> Result<(), Error>
-where
-    V: IntoIterator,
-    F: Fn(V::Item) -> Result<(), Error>,
-{
+                                    where V: IntoIterator,
+                                          F: Fn(V::Item) -> Result<(), Error> {
     for v in values {
         match f(v) {
             Ok(()) => {
@@ -330,7 +309,7 @@ where
             },
             Err(..) => {
                 // If the error is not fatal, then keep going.
-            },
+            }
         }
     }
     Err(Error::UnknownIssuer)
