@@ -236,7 +236,7 @@ impl<'a> EndEntityCert<'a> {
     ) -> Result<(), Error> {
         signed_data::verify_signature(
             signature_alg,
-            self.inner.spki,
+            self.inner.spki.value(),
             untrusted::Input::from(msg),
             untrusted::Input::from(signature),
         )

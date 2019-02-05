@@ -26,7 +26,7 @@ pub struct Cert<'a> {
     pub issuer: untrusted::Input<'a>,
     pub validity: untrusted::Input<'a>,
     pub subject: untrusted::Input<'a>,
-    pub spki: untrusted::Input<'a>,
+    pub spki: der::Value<'a>,
 
     pub basic_constraints: Option<untrusted::Input<'a>>,
     pub eku: Option<untrusted::Input<'a>>,
@@ -71,7 +71,7 @@ pub(crate) fn parse_cert_internal<'a>(
         let issuer = der::expect_tag_and_get_value(tbs, der::Tag::Sequence)?;
         let validity = der::expect_tag_and_get_value(tbs, der::Tag::Sequence)?;
         let subject = der::expect_tag_and_get_value(tbs, der::Tag::Sequence)?;
-        let spki = der::expect_tag_and_get_value(tbs, der::Tag::Sequence)?;
+        let spki = der::expect_tag(tbs, der::Tag::Sequence)?;
 
         // In theory there could be fields [1] issuerUniqueID and [2]
         // subjectUniqueID, but in practice there never are, and to keep the
