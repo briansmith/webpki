@@ -25,6 +25,35 @@ pub fn expect_tag_and_get_value<'a>(
     ring::io::der::expect_tag_and_get_value(input, tag).map_err(|_| Error::BadDER)
 }
 
+pub struct Value<'a> {
+    tlv: untrusted::Input<'a>,
+    value: untrusted::Input<'a>,
+}
+
+impl<'a> Value<'a> {
+    #[allow(dead_code)] // TODO: remove this.
+    pub fn tlv(&self) -> untrusted::Input<'a> { self.tlv }
+
+    pub fn value(&self) -> untrusted::Input<'a> { self.value }
+}
+
+pub fn expect_tag<'a>(input: &mut untrusted::Reader<'a>, tag: Tag) -> Result<Value<'a>, Error> {
+    let start = input.mark();
+
+    let (actual_tag, value) = read_tag_and_get_value(input)?;
+    if usize::from(tag) != usize::from(actual_tag) {
+        return Err(Error::BadDER);
+    }
+
+    let end = input.mark();
+
+    let tlv = input
+        .get_input_between_marks(start, end)
+        .map_err(|untrusted::EndOfInput| Error::BadDER)?;
+
+    Ok(Value { tlv, value })
+}
+
 #[inline(always)]
 pub fn read_tag_and_get_value<'a>(
     input: &mut untrusted::Reader<'a>,
