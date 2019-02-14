@@ -271,7 +271,7 @@ fn check_eku(input: Option<&mut untrusted::Reader>, required_eku_if_present: Key
             loop {
                 let value = der::expect_tag_and_get_value(input, der::Tag::OID)?;
                 if value == required_eku_if_present.oid_value {
-                    let _ = input.skip_to_end();
+                    input.skip_to_end();
                     break;
                 }
                 if input.at_end() {

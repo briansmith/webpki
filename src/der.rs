@@ -79,7 +79,7 @@ pub fn bit_string_with_no_unused_bits<'a>(input: &mut untrusted::Reader<'a>)
         if unused_bits_at_end != 0 {
             return Err(Error::BadDER);
         }
-        Ok(value.skip_to_end())
+        Ok(value.read_bytes_to_end())
     })
 }
 

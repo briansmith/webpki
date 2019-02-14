@@ -355,8 +355,8 @@ fn presented_ip_address_matches_constraint(name: untrusted::Input,
 
     let (constraint_address, constraint_mask) =
         constraint.read_all(Error::BadDER, |value| {
-            let address = value.skip_and_get_input(constraint.len() / 2).unwrap();
-            let mask = value.skip_and_get_input(constraint.len() / 2).unwrap();
+            let address = value.read_bytes(constraint.len() / 2).unwrap();
+            let mask = value.read_bytes(constraint.len() / 2).unwrap();
             Ok((address, mask))
         })?;
 

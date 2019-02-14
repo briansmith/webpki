@@ -70,10 +70,9 @@ pub struct SignedData<'a> {
 pub fn parse_signed_data<'a>(der: &mut untrusted::Reader<'a>)
                              -> Result<(untrusted::Input<'a>, SignedData<'a>),
                                        Error> {
-    let mark1 = der.mark();
-    let tbs = der::expect_tag_and_get_value(der, der::Tag::Sequence)?;
-    let mark2 = der.mark();
-    let data = der.get_input_between_marks(mark1, mark2).unwrap();
+    let (data, tbs) = der.read_partial(|input| {
+        der::expect_tag_and_get_value(input, der::Tag::Sequence)
+    })?;
     let algorithm = der::expect_tag_and_get_value(der, der::Tag::Sequence)?;
     let signature = der::bit_string_with_no_unused_bits(der)?;
 
