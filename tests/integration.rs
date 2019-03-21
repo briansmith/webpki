@@ -41,7 +41,7 @@ extern crate untrusted;
 extern crate webpki;
 
 #[cfg(feature = "trust_anchor_util")]
-static ALL_SIGALGS: &'static [&'static webpki::SignatureAlgorithm] = &[
+static ALL_SIGALGS: &[&webpki::SignatureAlgorithm] = &[
     &webpki::ECDSA_P256_SHA256,
     &webpki::ECDSA_P256_SHA384,
     &webpki::ECDSA_P384_SHA256,

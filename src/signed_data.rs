@@ -618,7 +618,7 @@ mod tests {
     }
 
     static SUPPORTED_ALGORITHMS_IN_TESTS:
-            &'static [&'static signed_data::SignatureAlgorithm] = &[
+            &[&signed_data::SignatureAlgorithm] = &[
         // Reasonable algorithms.
         &signed_data::RSA_PKCS1_2048_8192_SHA256,
         &signed_data::ECDSA_P256_SHA256,

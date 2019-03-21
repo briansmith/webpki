@@ -4,7 +4,7 @@ extern crate untrusted;
 extern crate webpki;
 
 // (name, is_valid)
-static DNS_NAME_VALIDITY: &[(&'static [u8], bool)] = &[
+static DNS_NAME_VALIDITY: &[(&[u8], bool)] = &[
     (b"a", true),
     (b"a.b", true),
     (b"a.b.c", true),
@@ -235,7 +235,7 @@ static DNS_NAME_VALIDITY: &[(&'static [u8], bool)] = &[
 
 // (IP address, is valid DNS name). The comments here refer to the validity of
 // the string as an IP address, not as a DNS name validity.
-static IP_ADDRESS_DNS_VALIDITY: &[(&'static [u8], bool)] = &[
+static IP_ADDRESS_DNS_VALIDITY: &[(&[u8], bool)] = &[
     (b"", false),
 
     (b"1", false),

@@ -882,7 +882,7 @@ mod tests {
     use untrusted;
 
     const PRESENTED_MATCHES_REFERENCE:
-            &[(&'static [u8], &'static [u8], Option<bool>)] = &[
+            &[(&[u8], &[u8], Option<bool>)] = &[
         (b"", b"a", None),
 
         (b"a", b"a", Some(true)),
