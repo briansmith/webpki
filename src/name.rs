@@ -12,13 +12,9 @@
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-use cert::{Cert, EndEntityOrCA};
+use crate::{cert::{Cert, EndEntityOrCA}, der, Error};
 use core;
-use {der, Error};
 use untrusted;
-
-#[cfg(feature = "std")]
-use std::string::String;
 
 /// A DNS Name suitable for use in the TLS Server Name Indication (SNI)
 /// extension and/or for use as the reference hostname for which to verify a
@@ -877,7 +873,6 @@ fn is_valid_dns_id(hostname: untrusted::Input, id_role: IDRole,
 
 #[cfg(test)]
 mod tests {
-    use std::string::String;
     use super::*;
     use untrusted;
 
@@ -1082,6 +1077,8 @@ mod tests {
     #[test]
     fn presented_matches_reference_test() {
         for &(presented, reference, expected_result) in PRESENTED_MATCHES_REFERENCE {
+            use std::string::String;
+
             let actual_result = presented_dns_id_matches_reference_dns_id(
                 untrusted::Input::from(presented), untrusted::Input::from(reference));
             assert_eq!(actual_result, expected_result,

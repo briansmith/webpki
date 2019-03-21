@@ -12,7 +12,7 @@
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-use {Error, der, signed_data};
+use crate::{Error, der, signed_data};
 use untrusted;
 
 pub enum EndEntityOrCA<'a> {

@@ -23,9 +23,7 @@ pub use ring::io::{
     },
     Positive,
 };
-use Error;
-use calendar;
-use time;
+use crate::{Error, calendar, time};
 use untrusted;
 
 #[inline(always)]

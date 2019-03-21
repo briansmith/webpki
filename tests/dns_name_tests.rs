@@ -1,7 +1,7 @@
 // Copyright 2014-2017 Brian Smith.
 
-extern crate untrusted;
-extern crate webpki;
+use untrusted;
+use webpki;
 
 // (name, is_valid)
 static DNS_NAME_VALIDITY: &[(&[u8], bool)] = &[

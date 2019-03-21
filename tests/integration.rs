@@ -125,7 +125,5 @@ fn read_root_with_neg_serial() {
 #[cfg(feature = "std")]
 #[test]
 fn time_constructor() {
-    use std;
-
     let _ = webpki::Time::try_from(std::time::SystemTime::now()).unwrap();
 }

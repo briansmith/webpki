@@ -21,7 +21,7 @@
 
 #![doc(html_root_url="https://briansmith.org/rustdoc/")]
 
-#![no_std]
+#![cfg_attr(not(feature = "std"), no_std)]
 
 #![allow(
     missing_debug_implementations,
@@ -48,16 +48,9 @@
     warnings,
 )]
 
-#[cfg(any(test, feature = "trust_anchor_util"))]
-#[macro_use(format)]
+#[cfg(all(test, not(feature = "std")))]
+#[macro_use]
 extern crate std;
-
-extern crate ring;
-
-#[cfg(test)]
-extern crate base64;
-
-extern crate untrusted;
 
 #[macro_use]
 mod der;
@@ -209,9 +202,9 @@ impl <'a> EndEntityCert<'a> {
     #[cfg(feature = "std")]
     pub fn verify_is_valid_for_at_least_one_dns_name<'names, Names>(
             &self, dns_names: Names)
-            -> Result<std::vec::Vec<DNSNameRef<'names>>, Error>
+            -> Result<Vec<DNSNameRef<'names>>, Error>
             where Names: Iterator<Item=DNSNameRef<'names>> {
-        let result: std::vec::Vec<DNSNameRef<'names>> = dns_names
+        let result: Vec<DNSNameRef<'names>> = dns_names
             .filter(|n| self.verify_is_valid_for_dns_name(*n).is_ok())
             .collect();
         if result.is_empty() {

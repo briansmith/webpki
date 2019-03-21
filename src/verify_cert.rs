@@ -13,9 +13,8 @@
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 use untrusted;
-use {cert, der, Error, name, signed_data, SignatureAlgorithm, time,
+use crate::{cert::{self, Cert, EndEntityOrCA}, der, Error, name, signed_data, SignatureAlgorithm, time,
      TrustAnchor};
-use cert::{Cert, EndEntityOrCA};
 
 pub fn build_chain(required_eku_if_present: KeyPurposeId,
                    supported_sig_algs: &[&SignatureAlgorithm],

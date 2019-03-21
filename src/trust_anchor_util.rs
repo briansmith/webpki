@@ -14,9 +14,10 @@
 
 //! Utilities for efficiently embedding trust anchors in programs.
 
-use {Error, TrustAnchor};
-use cert::{certificate_serial_number, Cert, EndEntityOrCA, parse_cert_internal};
-use std;
+use crate::{
+    cert::{certificate_serial_number, Cert, EndEntityOrCA, parse_cert_internal},
+    Error, TrustAnchor
+};
 use super::der;
 use untrusted;
 
@@ -60,7 +61,7 @@ fn possibly_invalid_certificate_serial_number<'a>(
 /// static variable that will contain the TrustAnchor array.
 pub fn generate_code_for_trust_anchors(name: &str,
                                        trust_anchors: &[TrustAnchor])
-                                       -> std::string::String {
+                                       -> String {
     let decl = format!("static {}: [TrustAnchor<'static>; {}] = ", name,
                        trust_anchors.len());
 
