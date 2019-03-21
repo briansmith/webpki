@@ -128,11 +128,11 @@ impl core::fmt::Debug for DNSNameRef<'_> {
     }
 }
 
-impl<'a> Into<&'a str> for DNSNameRef<'a> {
-    fn into(self) -> &'a str {
+impl<'a> From<DNSNameRef<'a>> for &'a str {
+    fn from(DNSNameRef(d): DNSNameRef<'a>) -> Self {
         // The unwrap won't fail because DNSNameRefs are guaranteed to be ASCII
         // and ASCII is a subset of UTF-8.
-        core::str::from_utf8(self.0.as_slice_less_safe()).unwrap()
+        core::str::from_utf8(d.as_slice_less_safe()).unwrap()
     }
 }
 
