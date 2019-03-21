@@ -17,12 +17,12 @@ use {cert, der, Error, name, signed_data, SignatureAlgorithm, time,
      TrustAnchor};
 use cert::{Cert, EndEntityOrCA};
 
-pub fn build_chain<'a>(required_eku_if_present: KeyPurposeId,
-                       supported_sig_algs: &[&SignatureAlgorithm],
-                       trust_anchors: &'a [TrustAnchor],
-                       intermediate_certs: &[untrusted::Input<'a>],
-                       cert: &Cert<'a>, time: time::Time, sub_ca_count: usize)
-                       -> Result<(), Error> {
+pub fn build_chain(required_eku_if_present: KeyPurposeId,
+                   supported_sig_algs: &[&SignatureAlgorithm],
+                   trust_anchors: &[TrustAnchor],
+                   intermediate_certs: &[untrusted::Input],
+                   cert: &Cert, time: time::Time, sub_ca_count: usize)
+                   -> Result<(), Error> {
     let used_as_ca = used_as_ca(&cert.ee_or_ca);
 
     check_issuer_independent_properties(cert, time, used_as_ca, sub_ca_count,
@@ -46,7 +46,7 @@ pub fn build_chain<'a>(required_eku_if_present: KeyPurposeId,
     // TODO: revocation.
 
     match loop_while_non_fatal_error(trust_anchors,
-                                     |trust_anchor: &TrustAnchor<'a>| {
+                                     |trust_anchor: &TrustAnchor| {
         let trust_anchor_subject = untrusted::Input::from(trust_anchor.subject);
         if cert.issuer != trust_anchor_subject {
             return Err(Error::UnknownIssuer);
@@ -134,10 +134,10 @@ fn check_signatures(supported_sig_algs: &[&SignatureAlgorithm],
     Ok(())
 }
 
-fn check_issuer_independent_properties<'a>(
-        cert: &Cert<'a>, time: time::Time, used_as_ca: UsedAsCA,
-        sub_ca_count: usize, required_eku_if_present: KeyPurposeId)
-        -> Result<(), Error> {
+fn check_issuer_independent_properties(
+    cert: &Cert, time: time::Time, used_as_ca: UsedAsCA,
+    sub_ca_count: usize, required_eku_if_present: KeyPurposeId)
+    -> Result<(), Error> {
     // TODO: check_distrust(trust_anchor_subject, trust_anchor_spki)?;
     // TODO: Check signature algorithm like mozilla::pkix.
     // TODO: Check SPKI like mozilla::pkix.

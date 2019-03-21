@@ -24,8 +24,8 @@ use untrusted;
 /// certificate is not validated. In particular, there is no check that the
 /// certificate is self-signed or even that the certificate has the cA basic
 /// constraint.
-pub fn cert_der_as_trust_anchor<'a>(cert_der: untrusted::Input<'a>)
-                                    -> Result<TrustAnchor<'a>, Error> {
+pub fn cert_der_as_trust_anchor(cert_der: untrusted::Input)
+                                -> Result<TrustAnchor, Error> {
     // XXX: `EndEntityOrCA::EndEntity` is used instead of `EndEntityOrCA::CA`
     // because we don't have a reference to a child cert, which is needed for
     // `EndEntityOrCA::CA`. For this purpose, it doesn't matter.

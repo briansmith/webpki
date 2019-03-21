@@ -57,8 +57,8 @@ impl AsRef<str> for DNSName {
 
 // Deprecated
 #[cfg(feature = "std")]
-impl<'a> From<DNSNameRef<'a>> for DNSName {
-    fn from(dns_name: DNSNameRef<'a>) -> Self { dns_name.to_owned() }
+impl From<DNSNameRef<'_>> for DNSName {
+    fn from(dns_name: DNSNameRef) -> Self { dns_name.to_owned() }
 }
 
 /// A reference to a DNS Name suitable for use in the TLS Server Name Indication
@@ -119,7 +119,7 @@ impl<'a> DNSNameRef<'a> {
 }
 
 #[cfg(feature = "std")]
-impl<'a> core::fmt::Debug for DNSNameRef<'a> {
+impl core::fmt::Debug for DNSNameRef<'_> {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> Result<(), core::fmt::Error> {
         let lowercase = self.clone().to_owned();
         f.debug_tuple("DNSNameRef")
@@ -163,7 +163,7 @@ pub fn verify_cert_dns_name(cert: &super::EndEntityCert,
 }
 
 // https://tools.ietf.org/html/rfc5280#section-4.2.1.10
-pub fn check_name_constraints<'a>(input: Option<&mut untrusted::Reader<'a>>,
+pub fn check_name_constraints(input: Option<&mut untrusted::Reader>,
                                   subordinate_certs: &Cert)
                                   -> Result<(), Error> {
     let input = match input {
@@ -320,8 +320,8 @@ fn check_presented_id_conforms_to_constraints_in_subtree(
 }
 
 // TODO: document this.
-fn presented_directory_name_matches_constraint<'a>(
-        name: untrusted::Input<'a>, constraint: untrusted::Input<'a>,
+fn presented_directory_name_matches_constraint(
+        name: untrusted::Input, constraint: untrusted::Input,
         subtrees: Subtrees) -> Result<bool, Error> {
     match subtrees {
         Subtrees::PermittedSubtrees => Ok(name == constraint),

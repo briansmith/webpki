@@ -45,7 +45,7 @@ pub fn parse_cert<'a>(cert_der: untrusted::Input<'a>,
 /// certificates.
 pub fn parse_cert_internal<'a>(
         cert_der: untrusted::Input<'a>, ee_or_ca: EndEntityOrCA<'a>,
-        serial_number: fn(input: &mut untrusted::Reader<'a>)
+        serial_number: fn(input: &mut untrusted::Reader<'_>)
                           -> Result<(), Error>)
         -> Result<Cert<'a>, Error> {
     let (tbs, signed_data) = cert_der.read_all(Error::BadDER, |cert_der| {
@@ -75,7 +75,7 @@ pub fn parse_cert_internal<'a>(
         // code small and simple we don't accept any certificates that do
         // contain them.
 
-        let mut cert: Cert<'a> = Cert {
+        let mut cert = Cert {
             ee_or_ca: ee_or_ca,
 
             signed_data: signed_data,
@@ -103,7 +103,7 @@ pub fn parse_cert_internal<'a>(
                 let extn_id =
                     der::expect_tag_and_get_value(extension, der::Tag::OID)?;
                 let critical = der::optional_boolean(extension)?;
-                let extn_value: untrusted::Input<'a> =
+                let extn_value =
                     der::expect_tag_and_get_value(extension,
                                                   der::Tag::OctetString)?;
                 match remember_extension(&mut cert, extn_id, extn_value)? {
@@ -132,8 +132,8 @@ fn version3(input: &mut untrusted::Reader) -> Result<(), Error> {
     })
 }
 
-pub fn certificate_serial_number<'a>(input: &mut untrusted::Reader<'a>)
-                                     -> Result<(), Error> {
+pub fn certificate_serial_number(input: &mut untrusted::Reader)
+                                 -> Result<(), Error> {
     // https://tools.ietf.org/html/rfc5280#section-4.1.2.2:
     // * Conforming CAs MUST NOT use serialNumber values longer than 20 octets."
     // * "The serial number MUST be a positive integer [...]"
