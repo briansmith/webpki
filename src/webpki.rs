@@ -142,9 +142,8 @@ pub struct EndEntityCert<'a> {
 impl <'a> EndEntityCert<'a> {
     /// Parse the ASN.1 DER-encoded X.509 encoding of the certificate
     /// `cert_der`.
-    pub fn from(cert_der: untrusted::Input<'a>)
-                -> Result<EndEntityCert<'a>, Error> {
-        Ok(EndEntityCert {
+    pub fn from(cert_der: untrusted::Input<'a>) -> Result<Self, Error> {
+        Ok(Self {
             inner: cert::parse_cert(cert_der, cert::EndEntityOrCA::EndEntity)?
         })
     }
