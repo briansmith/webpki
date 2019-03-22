@@ -246,6 +246,12 @@ impl <'a> EndEntityCert<'a> {
         signed_data::verify_signature(signature_alg, self.inner.spki, msg,
                                       signature)
     }
+
+    /// Returns the certificate's public key.
+    pub fn public_key_bytes(&self) -> Result<untrusted::Input, Error> {
+        let spki = self.inner.spki.parse()?;
+        Ok(spki.key_value.into())
+    }
 }
 
 /// A trust anchor (a.k.a. root CA).

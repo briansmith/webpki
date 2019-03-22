@@ -15,7 +15,7 @@
 use untrusted;
 use {cert, der, Error, name, signed_data, SignatureAlgorithm, time,
      TrustAnchor};
-use cert::{Cert, EndEntityOrCA};
+use cert::{Cert, EndEntityOrCA, SubjectPublicKeyInfoRef};
 
 pub fn build_chain<'a>(required_eku_if_present: KeyPurposeId,
                        supported_sig_algs: &[&SignatureAlgorithm],
@@ -59,7 +59,8 @@ pub fn build_chain<'a>(required_eku_if_present: KeyPurposeId,
             name_constraints, Error::BadDER,
             |value| name::check_name_constraints(value, &cert))?;
 
-        let trust_anchor_spki = untrusted::Input::from(trust_anchor.spki);
+        let trust_anchor_spki =
+            SubjectPublicKeyInfoRef(untrusted::Input::from(trust_anchor.spki));
 
         // TODO: check_distrust(trust_anchor_subject, trust_anchor_spki)?;
 
@@ -112,7 +113,8 @@ pub fn build_chain<'a>(required_eku_if_present: KeyPurposeId,
 }
 
 fn check_signatures(supported_sig_algs: &[&SignatureAlgorithm],
-                    cert_chain: &Cert, trust_anchor_key: untrusted::Input)
+                    cert_chain: &Cert,
+                    trust_anchor_key: SubjectPublicKeyInfoRef)
                     -> Result<(), Error> {
     let mut spki_value = trust_anchor_key;
     let mut cert = cert_chain;
