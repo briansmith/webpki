@@ -77,7 +77,8 @@ impl<'a> From<DNSNameRef<'a>> for DNSName {
 #[derive(Clone, Copy)]
 pub struct DNSNameRef<'a>(untrusted::Input<'a>);
 
-/// An error indicating that a `DNSNameRef` could not built from the provided input.
+/// An error indicating that a `DNSNameRef` could not built because the input
+/// is not a syntactically-valid DNS Name.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct InvalidDNSNameError;
 
