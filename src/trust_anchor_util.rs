@@ -14,19 +14,18 @@
 
 //! Utilities for efficiently embedding trust anchors in programs.
 
-use crate::{
-    cert::{certificate_serial_number, Cert, EndEntityOrCA, parse_cert_internal},
-    Error, TrustAnchor
-};
 use super::der;
+use crate::{
+    cert::{certificate_serial_number, parse_cert_internal, Cert, EndEntityOrCA},
+    Error, TrustAnchor,
+};
 use untrusted;
 
 /// Interprets the given DER-encoded certificate as a `TrustAnchor`. The
 /// certificate is not validated. In particular, there is no check that the
 /// certificate is self-signed or even that the certificate has the cA basic
 /// constraint.
-pub fn cert_der_as_trust_anchor(cert_der: untrusted::Input)
-                                -> Result<TrustAnchor, Error> {
+pub fn cert_der_as_trust_anchor(cert_der: untrusted::Input) -> Result<TrustAnchor, Error> {
     // XXX: `EndEntityOrCA::EndEntity` is used instead of `EndEntityOrCA::CA`
     // because we don't have a reference to a child cert, which is needed for
     // `EndEntityOrCA::CA`. For this purpose, it doesn't matter.
@@ -36,8 +35,11 @@ pub fn cert_der_as_trust_anchor(cert_der: untrusted::Input)
     // certificate using a special parser for v1 certificates. Notably, that
     // parser doesn't allow extensions, so there's no need to worry about
     // embedded name constraints in a v1 certificate.
-    match parse_cert_internal(cert_der, EndEntityOrCA::EndEntity,
-                              possibly_invalid_certificate_serial_number) {
+    match parse_cert_internal(
+        cert_der,
+        EndEntityOrCA::EndEntity,
+        possibly_invalid_certificate_serial_number,
+    ) {
         Ok(cert) => Ok(trust_anchor_from_cert(cert)),
         Err(Error::BadDER) => parse_cert_v1(cert_der).or(Err(Error::BadDER)),
         Err(err) => Err(err),
@@ -45,7 +47,8 @@ pub fn cert_der_as_trust_anchor(cert_der: untrusted::Input)
 }
 
 fn possibly_invalid_certificate_serial_number<'a>(
-        input: &mut untrusted::Reader<'a>) -> Result<(), Error> {
+    input: &mut untrusted::Reader<'a>,
+) -> Result<(), Error> {
     // https://tools.ietf.org/html/rfc5280#section-4.1.2.2:
     // * Conforming CAs MUST NOT use serialNumber values longer than 20 octets."
     // * "The serial number MUST be a positive integer [...]"
@@ -55,15 +58,15 @@ fn possibly_invalid_certificate_serial_number<'a>(
     skip(input, der::Tag::Integer)
 }
 
-
 /// Generates code for hard-coding the given trust anchors into a program. This
 /// is designed to be used in a build script. `name` is the name of the public
 /// static variable that will contain the TrustAnchor array.
-pub fn generate_code_for_trust_anchors(name: &str,
-                                       trust_anchors: &[TrustAnchor])
-                                       -> String {
-    let decl = format!("static {}: [TrustAnchor<'static>; {}] = ", name,
-                       trust_anchors.len());
+pub fn generate_code_for_trust_anchors(name: &str, trust_anchors: &[TrustAnchor]) -> String {
+    let decl = format!(
+        "static {}: [TrustAnchor<'static>; {}] = ",
+        name,
+        trust_anchors.len()
+    );
 
     // "{:?}" formats the array of trust anchors as Rust code, approximately,
     // except that it drops the leading "&" on slices.
@@ -76,34 +79,29 @@ fn trust_anchor_from_cert<'a>(cert: Cert<'a>) -> TrustAnchor<'a> {
     TrustAnchor {
         subject: cert.subject.as_slice_less_safe(),
         spki: cert.spki.as_slice_less_safe(),
-        name_constraints: cert.name_constraints
-                              .map(|nc| nc.as_slice_less_safe())
+        name_constraints: cert.name_constraints.map(|nc| nc.as_slice_less_safe()),
     }
 }
 
 /// Parses a v1 certificate directly into a TrustAnchor.
-fn parse_cert_v1<'a>(cert_der: untrusted::Input<'a>)
-                     -> Result<TrustAnchor<'a>, Error> {
+fn parse_cert_v1<'a>(cert_der: untrusted::Input<'a>) -> Result<TrustAnchor<'a>, Error> {
     // X.509 Certificate: https://tools.ietf.org/html/rfc5280#section-4.1.
     cert_der.read_all(Error::BadDER, |cert_der| {
         der::nested(cert_der, der::Tag::Sequence, Error::BadDER, |cert_der| {
-            let anchor = der::nested(cert_der, der::Tag::Sequence,
-                                     Error::BadDER, |tbs| {
+            let anchor = der::nested(cert_der, der::Tag::Sequence, Error::BadDER, |tbs| {
                 // The version number field does not appear in v1 certificates.
                 certificate_serial_number(tbs)?;
 
                 skip(tbs, der::Tag::Sequence)?; // signature.
                 skip(tbs, der::Tag::Sequence)?; // issuer.
                 skip(tbs, der::Tag::Sequence)?; // validity.
-                let subject =
-                    der::expect_tag_and_get_value(tbs, der::Tag::Sequence)?;
-                let spki =
-                    der::expect_tag_and_get_value(tbs, der::Tag::Sequence)?;
+                let subject = der::expect_tag_and_get_value(tbs, der::Tag::Sequence)?;
+                let spki = der::expect_tag_and_get_value(tbs, der::Tag::Sequence)?;
 
                 Ok(TrustAnchor {
                     subject: subject.as_slice_less_safe(),
                     spki: spki.as_slice_less_safe(),
-                    name_constraints: None
+                    name_constraints: None,
                 })
             });
 

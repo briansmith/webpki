@@ -237,30 +237,25 @@ static DNS_NAME_VALIDITY: &[(&[u8], bool)] = &[
 // the string as an IP address, not as a DNS name validity.
 static IP_ADDRESS_DNS_VALIDITY: &[(&[u8], bool)] = &[
     (b"", false),
-
     (b"1", false),
     (b"1.2", false),
     (b"1.2.3", false),
     (b"1.2.3.4", false),
     (b"1.2.3.4.5", false),
-
     (b"1.2.3.4a", true), // a DNSName!
     (b"a.2.3.4", false), // not even a DNSName!
-    (b"1::2", false), // IPv6 address
-
+    (b"1::2", false),    // IPv6 address
     // Whitespace not allowed
     (b" 1.2.3.4", false),
     (b"1.2.3.4 ", false),
     (b"1 .2.3.4", false),
     (b"\n1.2.3.4", false),
     (b"1.2.3.4\n", false),
-
     // Nulls not allowed
     (b"\0", false),
     (b"\01.2.3.4", false),
     (b"1.2.3.4\0", false),
     (b"1.2.3.4\0.5", false),
-
     // Range
     (b"0.0.0.0", false),
     (b"255.255.255.255", false),
@@ -270,12 +265,10 @@ static IP_ADDRESS_DNS_VALIDITY: &[(&[u8], bool)] = &[
     (b"0.0.0.256", false),
     (b"999.0.0.0", false),
     (b"9999999999999999999.0.0.0", false),
-
     // All digits allowed
     (b"0.1.2.3", false),
     (b"4.5.6.7", false),
     (b"8.9.0.1", false),
-
     // Leading zeros not allowed
     (b"01.2.3.4", false),
     (b"001.2.3.4", false),
@@ -284,33 +277,28 @@ static IP_ADDRESS_DNS_VALIDITY: &[(&[u8], bool)] = &[
     (b"1.02.3.4", false),
     (b"1.2.03.4", false),
     (b"1.2.3.04", false),
-
     // Empty components
     (b".2.3.4", false),
     (b"1..3.4", false),
     (b"1.2..4", false),
     (b"1.2.3.", false),
-
     // Too many components
     (b"1.2.3.4.5", false),
     (b"1.2.3.4.5.6", false),
     (b"0.1.2.3.4", false),
     (b"1.2.3.4.0", false),
-
     // Leading/trailing dot
     (b".1.2.3.4", false),
     (b"1.2.3.4.", false),
-
     // Other common forms of IPv4 address
     // http://en.wikipedia.org/wiki/IPv4#Address_representations
-    (b"192.0.2.235", false), // dotted decimal (control value)
-    (b"0xC0.0x00.0x02.0xEB", true), // dotted hex - actually a DNS name!
+    (b"192.0.2.235", false),         // dotted decimal (control value)
+    (b"0xC0.0x00.0x02.0xEB", true),  // dotted hex - actually a DNS name!
     (b"0301.0000.0002.0353", false), // dotted octal
-    (b"0xC00002EB", true), // non-dotted hex, actually a DNS name!
-    (b"3221226219", false), // non-dotted decimal
-    (b"030000001353", false), // non-dotted octal
-    (b"192.0.0002.0xEB", true), // mixed, actually a DNS name!
-
+    (b"0xC00002EB", true),           // non-dotted hex, actually a DNS name!
+    (b"3221226219", false),          // non-dotted decimal
+    (b"030000001353", false),        // non-dotted octal
+    (b"192.0.0002.0xEB", true),      // mixed, actually a DNS name!
     (b"1234", false),
     (b"1234:5678", false),
     (b"1234:5678:9abc", false),
@@ -322,7 +310,6 @@ static IP_ADDRESS_DNS_VALIDITY: &[(&[u8], bool)] = &[
     (b"1234:5678:9abc:def0:1234:5678:9abc:def0:", false),
     (b":1234:5678:9abc:def0:1234:5678:9abc:def0", false),
     (b"1234:5678:9abc:def0:1234:5678:9abc:def0:0000", false),
-
     // Valid contractions
     (b"::1", false),
     (b"::1234", false),
@@ -330,17 +317,14 @@ static IP_ADDRESS_DNS_VALIDITY: &[(&[u8], bool)] = &[
     (b"1234::5678", false),
     (b"1234:5678::abcd", false),
     (b"1234:5678:9abc:def0:1234:5678:9abc::", false),
-
     // Contraction in full IPv6 addresses not allowed
     (b"::1234:5678:9abc:def0:1234:5678:9abc:def0", false), // start
     (b"1234:5678:9abc:def0:1234:5678:9abc:def0::", false), // end
-    (b"1234:5678::9abc:def0:1234:5678:9abc:def0", false), // interior
-
+    (b"1234:5678::9abc:def0:1234:5678:9abc:def0", false),  // interior
     // Multiple contractions not allowed
     (b"::1::", false),
     (b"::1::2", false),
     (b"1::2::", false),
-
     // Colon madness!
     (b":", false),
     (b"::", false),
@@ -354,16 +338,12 @@ static IP_ADDRESS_DNS_VALIDITY: &[(&[u8], bool)] = &[
     (b"1:2::::", false),
     (b"::1234:", false),
     (b":1234::", false),
-
-    (b"01234::", false), // too many digits, even if zero
+    (b"01234::", false),    // too many digits, even if zero
     (b"12345678::", false), // too many digits or missing colon
-
     // uppercase
     (b"ABCD:EFAB::", false),
-
     // miXeD CAse
     (b"aBcd:eFAb::", false),
-
     // IPv4-style
     (b"::2.3.4.5", false),
     (b"1234::2.3.4.5", false),
@@ -375,13 +355,11 @@ static IP_ADDRESS_DNS_VALIDITY: &[(&[u8], bool)] = &[
     (b"::252.253.254.300", false),
     (b"1234::252.253.254.255:", false),
     (b"1234::252.253.254.255:5678", false),
-
     // Contractions that don't contract
     (b"::1234:5678:9abc:def0:1234:5678:9abc:def0", false),
     (b"1234:5678:9abc:def0:1234:5678:9abc:def0::", false),
     (b"1234:5678:9abc:def0::1234:5678:9abc:def0", false),
     (b"1234:5678:9abc:def0:1234:5678::252.253.254.255", false),
-
     // With and without leading zeros
     (b"::123", false),
     (b"::0123", false),
@@ -397,10 +375,8 @@ static IP_ADDRESS_DNS_VALIDITY: &[(&[u8], bool)] = &[
     (b"::01234", false),
     (b"::00123", false),
     (b"::000123", false),
-
     // Trailing zero
     (b"::12340", false),
-
     // Whitespace
     (b" 1234:5678:9abc:def0:1234:5678:9abc:def0", false),
     (b"\t1234:5678:9abc:def0:1234:5678:9abc:def0", false),
@@ -411,7 +387,6 @@ static IP_ADDRESS_DNS_VALIDITY: &[(&[u8], bool)] = &[
     (b"1234::252.253.254.255 ", false),
     (b"1234::252.253.254.255\n", false),
     (b"1234::252.253. 254.255", false),
-
     // Nulls
     (b"\0", false),
     (b"::1\0:2", false),
@@ -422,12 +397,15 @@ static IP_ADDRESS_DNS_VALIDITY: &[(&[u8], bool)] = &[
 
 #[test]
 fn dns_name_ref_try_from_ascii_test() {
-    for &(s, is_valid) in DNS_NAME_VALIDITY.iter()
-            .chain(IP_ADDRESS_DNS_VALIDITY.iter()) {
+    for &(s, is_valid) in DNS_NAME_VALIDITY
+        .iter()
+        .chain(IP_ADDRESS_DNS_VALIDITY.iter())
+    {
         assert_eq!(
-            webpki::DNSNameRef::try_from_ascii(untrusted::Input::from(s))
-                .is_ok(),
+            webpki::DNSNameRef::try_from_ascii(untrusted::Input::from(s)).is_ok(),
             is_valid,
-            "DNSNameRef::try_from_ascii_str failed for \"{:?}\"", s);
+            "DNSNameRef::try_from_ascii_str failed for \"{:?}\"",
+            s
+        );
     }
 }

@@ -19,19 +19,11 @@
 //! See `EndEntityCert`'s documentation for a description of the certificate
 //! processing steps necessary for a TLS connection.
 
-#![doc(html_root_url="https://briansmith.org/rustdoc/")]
-
+#![doc(html_root_url = "https://briansmith.org/rustdoc/")]
 #![cfg_attr(not(feature = "std"), no_std)]
-
-#![allow(
-    missing_debug_implementations,
-)]
-
+#![allow(missing_debug_implementations)]
 // `#[derive(...)]` uses `#[allow(unused_qualifications)]` internally.
-#![deny(
-    unused_qualifications,
-)]
-
+#![deny(unused_qualifications)]
 #![forbid(
     anonymous_parameters,
     box_pointers,
@@ -45,7 +37,7 @@
     unused_import_braces,
     unused_results,
     variant_size_differences,
-    warnings,
+    warnings
 )]
 
 #[cfg(all(test, not(feature = "std")))]
@@ -55,12 +47,12 @@ extern crate std;
 #[macro_use]
 mod der;
 
+mod calendar;
 mod cert;
+mod error;
 mod name;
 mod signed_data;
-mod calendar;
 mod time;
-mod error;
 
 #[cfg(feature = "trust_anchor_util")]
 pub mod trust_anchor_util;
@@ -73,21 +65,11 @@ pub use name::{DNSNameRef, InvalidDNSNameError};
 #[cfg(feature = "std")]
 pub use name::DNSName;
 
-
 pub use signed_data::{
-    SignatureAlgorithm,
-    ECDSA_P256_SHA256,
-    ECDSA_P256_SHA384,
-    ECDSA_P384_SHA256,
-    ECDSA_P384_SHA384,
-    RSA_PKCS1_2048_8192_SHA256,
-    RSA_PKCS1_2048_8192_SHA384,
-    RSA_PKCS1_2048_8192_SHA512,
-    RSA_PKCS1_3072_8192_SHA384,
-    RSA_PSS_2048_8192_SHA256_LEGACY_KEY,
-    RSA_PSS_2048_8192_SHA384_LEGACY_KEY,
-    RSA_PSS_2048_8192_SHA512_LEGACY_KEY,
-    ED25519,
+    SignatureAlgorithm, ECDSA_P256_SHA256, ECDSA_P256_SHA384, ECDSA_P384_SHA256, ECDSA_P384_SHA384,
+    ED25519, RSA_PKCS1_2048_8192_SHA256, RSA_PKCS1_2048_8192_SHA384, RSA_PKCS1_2048_8192_SHA512,
+    RSA_PKCS1_3072_8192_SHA384, RSA_PSS_2048_8192_SHA256_LEGACY_KEY,
+    RSA_PSS_2048_8192_SHA384_LEGACY_KEY, RSA_PSS_2048_8192_SHA512_LEGACY_KEY,
 };
 
 pub use time::Time;
@@ -131,12 +113,12 @@ pub struct EndEntityCert<'a> {
     inner: cert::Cert<'a>,
 }
 
-impl <'a> EndEntityCert<'a> {
+impl<'a> EndEntityCert<'a> {
     /// Parse the ASN.1 DER-encoded X.509 encoding of the certificate
     /// `cert_der`.
     pub fn from(cert_der: untrusted::Input<'a>) -> Result<Self, Error> {
         Ok(Self {
-            inner: cert::parse_cert(cert_der, cert::EndEntityOrCA::EndEntity)?
+            inner: cert::parse_cert(cert_der, cert::EndEntityOrCA::EndEntity)?,
         })
     }
 
@@ -151,13 +133,19 @@ impl <'a> EndEntityCert<'a> {
     /// `time` is the time for which the validation is effective (usually the
     /// current time).
     pub fn verify_is_valid_tls_server_cert(
-            &self, supported_sig_algs: &[&SignatureAlgorithm],
-            &TLSServerTrustAnchors(trust_anchors): &TLSServerTrustAnchors,
-            intermediate_certs: &[untrusted::Input], time: Time)
-            -> Result<(), Error> {
-        verify_cert::build_chain(verify_cert::EKU_SERVER_AUTH,
-                                 supported_sig_algs, trust_anchors,
-                                 intermediate_certs, &self.inner, time, 0)
+        &self, supported_sig_algs: &[&SignatureAlgorithm],
+        &TLSServerTrustAnchors(trust_anchors): &TLSServerTrustAnchors,
+        intermediate_certs: &[untrusted::Input], time: Time,
+    ) -> Result<(), Error> {
+        verify_cert::build_chain(
+            verify_cert::EKU_SERVER_AUTH,
+            supported_sig_algs,
+            trust_anchors,
+            intermediate_certs,
+            &self.inner,
+            time,
+            0,
+        )
     }
 
     /// Verifies that the end-entity certificate is valid for use by a TLS
@@ -175,18 +163,23 @@ impl <'a> EndEntityCert<'a> {
     /// the time for which the validation is effective (usually the current
     /// time).
     pub fn verify_is_valid_tls_client_cert(
-            &self, supported_sig_algs: &[&SignatureAlgorithm],
-            &TLSClientTrustAnchors(trust_anchors): &TLSClientTrustAnchors,
-            intermediate_certs: &[untrusted::Input], time: Time)
-            -> Result<(), Error> {
-        verify_cert::build_chain(verify_cert::EKU_CLIENT_AUTH,
-                                 supported_sig_algs, trust_anchors,
-                                 intermediate_certs, &self.inner, time, 0)
+        &self, supported_sig_algs: &[&SignatureAlgorithm],
+        &TLSClientTrustAnchors(trust_anchors): &TLSClientTrustAnchors,
+        intermediate_certs: &[untrusted::Input], time: Time,
+    ) -> Result<(), Error> {
+        verify_cert::build_chain(
+            verify_cert::EKU_CLIENT_AUTH,
+            supported_sig_algs,
+            trust_anchors,
+            intermediate_certs,
+            &self.inner,
+            time,
+            0,
+        )
     }
 
     /// Verifies that the certificate is valid for the given DNS host name.
-    pub fn verify_is_valid_for_dns_name(&self, dns_name: DNSNameRef)
-                                        -> Result<(), Error> {
+    pub fn verify_is_valid_for_dns_name(&self, dns_name: DNSNameRef) -> Result<(), Error> {
         name::verify_cert_dns_name(&self, dns_name)
     }
 
@@ -201,9 +194,11 @@ impl <'a> EndEntityCert<'a> {
     /// `#![no_std]` configurations.
     #[cfg(feature = "std")]
     pub fn verify_is_valid_for_at_least_one_dns_name<'names, Names>(
-            &self, dns_names: Names)
-            -> Result<Vec<DNSNameRef<'names>>, Error>
-            where Names: Iterator<Item=DNSNameRef<'names>> {
+        &self, dns_names: Names,
+    ) -> Result<Vec<DNSNameRef<'names>>, Error>
+    where
+        Names: Iterator<Item = DNSNameRef<'names>>,
+    {
         let result: Vec<DNSNameRef<'names>> = dns_names
             .filter(|n| self.verify_is_valid_for_dns_name(*n).is_ok())
             .collect();
@@ -233,11 +228,11 @@ impl <'a> EndEntityCert<'a> {
     /// `algorithm` fields of type `SignatureScheme`. There is (currently) a
     /// one-to-one correspondence between TLS 1.3's `SignatureScheme` and
     /// `SignatureAlgorithm`.
-    pub fn verify_signature(&self, signature_alg: &SignatureAlgorithm,
-                            msg: untrusted::Input,
-                            signature: untrusted::Input) -> Result<(), Error> {
-        signed_data::verify_signature(signature_alg, self.inner.spki, msg,
-                                      signature)
+    pub fn verify_signature(
+        &self, signature_alg: &SignatureAlgorithm, msg: untrusted::Input,
+        signature: untrusted::Input,
+    ) -> Result<(), Error> {
+        signed_data::verify_signature(signature_alg, self.inner.spki, msg, signature)
     }
 }
 
@@ -260,7 +255,7 @@ pub struct TrustAnchor<'a> {
 
     /// The value of a DER-encoded NameConstraints, containing name
     /// constraints to apply to the trust anchor, if any.
-    pub name_constraints: Option<&'a [u8]>
+    pub name_constraints: Option<&'a [u8]>,
 }
 
 /// Trust anchors which may be used for authenticating servers.

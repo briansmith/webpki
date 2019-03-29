@@ -12,7 +12,7 @@
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-use crate::{Error, der, signed_data};
+use crate::{der, signed_data, Error};
 use untrusted;
 
 pub enum EndEntityOrCA<'a> {
@@ -35,8 +35,9 @@ pub struct Cert<'a> {
     pub subject_alt_name: Option<untrusted::Input<'a>>,
 }
 
-pub fn parse_cert<'a>(cert_der: untrusted::Input<'a>,
-                      ee_or_ca: EndEntityOrCA<'a>) -> Result<Cert<'a>, Error> {
+pub fn parse_cert<'a>(
+    cert_der: untrusted::Input<'a>, ee_or_ca: EndEntityOrCA<'a>,
+) -> Result<Cert<'a>, Error> {
     parse_cert_internal(cert_der, ee_or_ca, certificate_serial_number)
 }
 
@@ -44,13 +45,16 @@ pub fn parse_cert<'a>(cert_der: untrusted::Input<'a>,
 /// and by `cert_der_as_trust_anchor` for trust anchors encoded as
 /// certificates.
 pub fn parse_cert_internal<'a>(
-        cert_der: untrusted::Input<'a>, ee_or_ca: EndEntityOrCA<'a>,
-        serial_number: fn(input: &mut untrusted::Reader<'_>)
-                          -> Result<(), Error>)
-        -> Result<Cert<'a>, Error> {
+    cert_der: untrusted::Input<'a>, ee_or_ca: EndEntityOrCA<'a>,
+    serial_number: fn(input: &mut untrusted::Reader<'_>) -> Result<(), Error>,
+) -> Result<Cert<'a>, Error> {
     let (tbs, signed_data) = cert_der.read_all(Error::BadDER, |cert_der| {
-        der::nested(cert_der, der::Tag::Sequence, Error::BadDER,
-                    signed_data::parse_signed_data)
+        der::nested(
+            cert_der,
+            der::Tag::Sequence,
+            Error::BadDER,
+            signed_data::parse_signed_data,
+        )
     })?;
 
     tbs.read_all(Error::BadDER, |tbs| {
@@ -76,13 +80,13 @@ pub fn parse_cert_internal<'a>(
         // contain them.
 
         let mut cert = Cert {
-            ee_or_ca: ee_or_ca,
+            ee_or_ca,
 
-            signed_data: signed_data,
-            issuer: issuer,
-            validity: validity,
-            subject: subject,
-            spki: spki,
+            signed_data,
+            issuer,
+            validity,
+            subject,
+            spki,
 
             basic_constraints: None,
             eku: None,
@@ -96,24 +100,29 @@ pub fn parse_cert_internal<'a>(
         // special logic for handling critical Netscape Cert Type extensions.
         // That has been intentionally omitted.
 
-        der::nested_mut(tbs, der::Tag::ContextSpecificConstructed3,
-                        Error::BadDER, |tagged| {
-            der::nested_of_mut(tagged, der::Tag::Sequence, der::Tag::Sequence,
-                               Error::BadDER, |extension| {
-                let extn_id =
-                    der::expect_tag_and_get_value(extension, der::Tag::OID)?;
-                let critical = der::optional_boolean(extension)?;
-                let extn_value =
-                    der::expect_tag_and_get_value(extension,
-                                                  der::Tag::OctetString)?;
-                match remember_extension(&mut cert, extn_id, extn_value)? {
-                    Understood::No if critical => {
-                        Err(Error::UnsupportedCriticalExtension)
+        der::nested_mut(
+            tbs,
+            der::Tag::ContextSpecificConstructed3,
+            Error::BadDER,
+            |tagged| {
+                der::nested_of_mut(
+                    tagged,
+                    der::Tag::Sequence,
+                    der::Tag::Sequence,
+                    Error::BadDER,
+                    |extension| {
+                        let extn_id = der::expect_tag_and_get_value(extension, der::Tag::OID)?;
+                        let critical = der::optional_boolean(extension)?;
+                        let extn_value =
+                            der::expect_tag_and_get_value(extension, der::Tag::OctetString)?;
+                        match remember_extension(&mut cert, extn_id, extn_value)? {
+                            Understood::No if critical => Err(Error::UnsupportedCriticalExtension),
+                            _ => Ok(()),
+                        }
                     },
-                    _ => Ok(())
-                }
-            })
-        })?;
+                )
+            },
+        )?;
 
         Ok(cert)
     })
@@ -122,18 +131,22 @@ pub fn parse_cert_internal<'a>(
 // mozilla::pkix supports v1, v2, v3, and v4, including both the implicit
 // (correct) and explicit (incorrect) encoding of v1. We allow only v3.
 fn version3(input: &mut untrusted::Reader) -> Result<(), Error> {
-    der::nested(input, der::Tag::ContextSpecificConstructed0,
-                Error::BadDER, |input| {
-        let version = der::small_nonnegative_integer(input)?;
-        if version != 2 { // v3
-            return Err(Error::UnsupportedCertVersion);
-        }
-        Ok(())
-    })
+    der::nested(
+        input,
+        der::Tag::ContextSpecificConstructed0,
+        Error::BadDER,
+        |input| {
+            let version = der::small_nonnegative_integer(input)?;
+            if version != 2 {
+                // v3
+                return Err(Error::UnsupportedCertVersion);
+            }
+            Ok(())
+        },
+    )
 }
 
-pub fn certificate_serial_number(input: &mut untrusted::Reader)
-                                 -> Result<(), Error> {
+pub fn certificate_serial_number(input: &mut untrusted::Reader) -> Result<(), Error> {
     // https://tools.ietf.org/html/rfc5280#section-4.1.2.2:
     // * Conforming CAs MUST NOT use serialNumber values longer than 20 octets."
     // * "The serial number MUST be a positive integer [...]"
@@ -145,11 +158,14 @@ pub fn certificate_serial_number(input: &mut untrusted::Reader)
     Ok(())
 }
 
-enum Understood { Yes, No }
+enum Understood {
+    Yes,
+    No,
+}
 
-fn remember_extension<'a>(cert: &mut Cert<'a>, extn_id: untrusted::Input,
-                          value: untrusted::Input<'a>)
-                          -> Result<Understood, Error> {
+fn remember_extension<'a>(
+    cert: &mut Cert<'a>, extn_id: untrusted::Input, value: untrusted::Input<'a>,
+) -> Result<Understood, Error> {
     // We don't do anything with certificate policies so we can safely ignore
     // all policy-related stuff. We assume that the policy-related extensions
     // are not marked critical.
@@ -157,8 +173,7 @@ fn remember_extension<'a>(cert: &mut Cert<'a>, extn_id: untrusted::Input,
     // id-ce 2.5.29
     static ID_CE: [u8; 2] = oid![2, 5, 29];
 
-    if extn_id.len() != ID_CE.len() + 1 ||
-       !extn_id.as_slice_less_safe().starts_with(&ID_CE) {
+    if extn_id.len() != ID_CE.len() + 1 || !extn_id.as_slice_less_safe().starts_with(&ID_CE) {
         return Ok(Understood::No);
     }
 
@@ -168,7 +183,9 @@ fn remember_extension<'a>(cert: &mut Cert<'a>, extn_id: untrusted::Input,
         // and other common browsers do not check KeyUsage for end-entities,
         // though it would be kind of nice to ensure that a KeyUsage without
         // the keyEncipherment bit could not be used for RSA key exchange.
-        15 => { return Ok(Understood::Yes); },
+        15 => {
+            return Ok(Understood::Yes);
+        },
 
         // id-ce-subjectAltName 2.5.29.17
         17 => &mut cert.subject_alt_name,
@@ -182,7 +199,9 @@ fn remember_extension<'a>(cert: &mut Cert<'a>, extn_id: untrusted::Input,
         // id-ce-extKeyUsage 2.5.29.37
         37 => &mut cert.eku,
 
-        _ => { return Ok(Understood::No); }
+        _ => {
+            return Ok(Understood::No);
+        },
     };
 
     match *out {
@@ -190,14 +209,14 @@ fn remember_extension<'a>(cert: &mut Cert<'a>, extn_id: untrusted::Input,
             // The certificate contains more than one instance of this
             // extension.
             return Err(Error::ExtensionValueInvalid);
-        }
+        },
         None => {
             // All the extensions that we care about are wrapped in a SEQUENCE.
             let sequence_value = value.read_all(Error::BadDER, |value| {
                 der::expect_tag_and_get_value(value, der::Tag::Sequence)
             })?;
             *out = Some(sequence_value);
-        }
+        },
     }
 
     Ok(Understood::Yes)

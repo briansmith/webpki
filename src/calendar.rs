@@ -12,14 +12,12 @@
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-use super::Error;
-use super::time::Time;
+use super::{time::Time, Error};
 
-pub fn time_from_ymdhms_utc(year: u64, month: u64, day_of_month: u64,
-                            hours: u64, minutes: u64, seconds: u64)
-                            -> Result<Time, Error> {
-    let days_before_year_since_unix_epoch =
-        days_before_year_since_unix_epoch(year)?;
+pub fn time_from_ymdhms_utc(
+    year: u64, month: u64, day_of_month: u64, hours: u64, minutes: u64, seconds: u64,
+) -> Result<Time, Error> {
+    let days_before_year_since_unix_epoch = days_before_year_since_unix_epoch(year)?;
 
     const JAN: u64 = 31;
     let feb = days_in_feb(year);
@@ -33,30 +31,30 @@ pub fn time_from_ymdhms_utc(year: u64, month: u64, day_of_month: u64,
     const OCT: u64 = 31;
     const NOV: u64 = 30;
     let days_before_month_in_year = match month {
-         1 => 0,
-         2 => JAN,
-         3 => JAN + feb,
-         4 => JAN + feb + MAR,
-         5 => JAN + feb + MAR + APR,
-         6 => JAN + feb + MAR + APR + MAY,
-         7 => JAN + feb + MAR + APR + MAY + JUN,
-         8 => JAN + feb + MAR + APR + MAY + JUN + JUL,
-         9 => JAN + feb + MAR + APR + MAY + JUN + JUL + AUG,
+        1 => 0,
+        2 => JAN,
+        3 => JAN + feb,
+        4 => JAN + feb + MAR,
+        5 => JAN + feb + MAR + APR,
+        6 => JAN + feb + MAR + APR + MAY,
+        7 => JAN + feb + MAR + APR + MAY + JUN,
+        8 => JAN + feb + MAR + APR + MAY + JUN + JUL,
+        9 => JAN + feb + MAR + APR + MAY + JUN + JUL + AUG,
         10 => JAN + feb + MAR + APR + MAY + JUN + JUL + AUG + SEP,
         11 => JAN + feb + MAR + APR + MAY + JUN + JUL + AUG + SEP + OCT,
         12 => JAN + feb + MAR + APR + MAY + JUN + JUL + AUG + SEP + OCT + NOV,
-        _ => unreachable!() // `read_two_digits` already bounds-checked it.
+        _ => unreachable!(), // `read_two_digits` already bounds-checked it.
     };
 
-    let days_before = days_before_year_since_unix_epoch +
-                      days_before_month_in_year + day_of_month - 1;
+    let days_before =
+        days_before_year_since_unix_epoch + days_before_month_in_year + day_of_month - 1;
 
-    let seconds_since_unix_epoch = (days_before * 24 * 60 * 60) +
-                                   (hours            * 60 * 60) +
-                                   (minutes               * 60) +
-                                   seconds;
+    let seconds_since_unix_epoch =
+        (days_before * 24 * 60 * 60) + (hours * 60 * 60) + (minutes * 60) + seconds;
 
-    Ok(Time::from_seconds_since_unix_epoch(seconds_since_unix_epoch))
+    Ok(Time::from_seconds_since_unix_epoch(
+        seconds_since_unix_epoch,
+    ))
 }
 
 fn days_before_year_since_unix_epoch(year: u64) -> Result<u64, Error> {
@@ -75,7 +73,7 @@ fn days_before_year_ad(year: u64) -> u64 {
     ((year - 1) * 365)
         + ((year - 1) / 4)    // leap years are every 4 years,
         - ((year - 1) / 100)  // except years divisible by 100,
-        + ((year - 1) / 400)  // except years divisible by 400.
+        + ((year - 1) / 400) // except years divisible by 400.
 }
 
 pub fn days_in_month(year: u64, month: u64) -> u64 {
@@ -83,7 +81,7 @@ pub fn days_in_month(year: u64, month: u64) -> u64 {
         1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
         4 | 6 | 9 | 11 => 30,
         2 => days_in_feb(year),
-        _ => unreachable!() // `read_two_digits` already bounds-checked it.
+        _ => unreachable!(), // `read_two_digits` already bounds-checked it.
     }
 }
 
@@ -101,7 +99,7 @@ const DAYS_BEFORE_UNIX_EPOCH_AD: u64 = 719162;
 mod tests {
     #[test]
     fn test_days_before_unix_epoch() {
-        use super::{DAYS_BEFORE_UNIX_EPOCH_AD, days_before_year_ad};
+        use super::{days_before_year_ad, DAYS_BEFORE_UNIX_EPOCH_AD};
         assert_eq!(DAYS_BEFORE_UNIX_EPOCH_AD, days_before_year_ad(1970));
     }
 
@@ -133,17 +131,25 @@ mod tests {
         use super::{time_from_ymdhms_utc, Time};
 
         // year boundary
-        assert_eq!(Time::from_seconds_since_unix_epoch(1483228799),
-                   time_from_ymdhms_utc(2016, 12, 31, 23, 59, 59).unwrap());
-        assert_eq!(Time::from_seconds_since_unix_epoch(1483228800),
-                   time_from_ymdhms_utc(2017, 1, 1, 0, 0, 0).unwrap());
+        assert_eq!(
+            Time::from_seconds_since_unix_epoch(1483228799),
+            time_from_ymdhms_utc(2016, 12, 31, 23, 59, 59).unwrap()
+        );
+        assert_eq!(
+            Time::from_seconds_since_unix_epoch(1483228800),
+            time_from_ymdhms_utc(2017, 1, 1, 0, 0, 0).unwrap()
+        );
 
         // not a leap year
-        assert_eq!(Time::from_seconds_since_unix_epoch(1492449162),
-                   time_from_ymdhms_utc(2017, 4, 17, 17, 12, 42).unwrap());
+        assert_eq!(
+            Time::from_seconds_since_unix_epoch(1492449162),
+            time_from_ymdhms_utc(2017, 4, 17, 17, 12, 42).unwrap()
+        );
 
         // leap year, post-feb
-        assert_eq!(Time::from_seconds_since_unix_epoch(1460913162),
-                   time_from_ymdhms_utc(2016, 4, 17, 17, 12, 42).unwrap());
+        assert_eq!(
+            Time::from_seconds_since_unix_epoch(1460913162),
+            time_from_ymdhms_utc(2016, 4, 17, 17, 12, 42).unwrap()
+        );
     }
 }
