@@ -99,13 +99,13 @@ impl<'a> DNSNameRef<'a> {
             return Err(InvalidDNSNameError);
         }
 
-        Ok(DNSNameRef(dns_name))
+        Ok(Self(dns_name))
     }
 
     /// Constructs a `DNSNameRef` from the given input if the input is a
     /// syntactically-valid DNS name.
-    pub fn try_from_ascii_str(dns_name: &str) -> Result<DNSNameRef, InvalidDNSNameError> {
-        DNSNameRef::try_from_ascii(untrusted::Input::from(dns_name.as_bytes()))
+    pub fn try_from_ascii_str(dns_name: &'a str) -> Result<Self, InvalidDNSNameError> {
+        Self::try_from_ascii(untrusted::Input::from(dns_name.as_bytes()))
     }
 
     /// Constructs a `DNSName` from this `DNSNameRef`
