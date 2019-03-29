@@ -81,7 +81,6 @@ pub struct DNSNameRef<'a>(untrusted::Input<'a>);
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct InvalidDNSNameError;
 
-#[cfg(feature = "std")]
 impl core::fmt::Display for InvalidDNSNameError {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         write!(f, "{:?}", self)
