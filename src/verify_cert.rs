@@ -241,7 +241,7 @@ fn check_basic_constraints(
 
 #[derive(Clone, Copy)]
 pub struct KeyPurposeId {
-    oid_value: &'static [u8],
+    oid_value: untrusted::Input<'static>,
 }
 
 // id-pkix            OBJECT IDENTIFIER ::= { 1 3 6 1 5 5 7 }
@@ -249,17 +249,17 @@ pub struct KeyPurposeId {
 
 // id-kp-serverAuth   OBJECT IDENTIFIER ::= { id-kp 1 }
 pub static EKU_SERVER_AUTH: KeyPurposeId = KeyPurposeId {
-    oid_value: &[(40 * 1) + 3, 6, 1, 5, 5, 7, 3, 1],
+    oid_value: untrusted::Input::from(&[(40 * 1) + 3, 6, 1, 5, 5, 7, 3, 1]),
 };
 
 // id-kp-clientAuth   OBJECT IDENTIFIER ::= { id-kp 2 }
 pub static EKU_CLIENT_AUTH: KeyPurposeId = KeyPurposeId {
-    oid_value: &[(40 * 1) + 3, 6, 1, 5, 5, 7, 3, 2],
+    oid_value: untrusted::Input::from(&[(40 * 1) + 3, 6, 1, 5, 5, 7, 3, 2]),
 };
 
 // id-kp-OCSPSigning  OBJECT IDENTIFIER ::= { id-kp 9 }
 pub static EKU_OCSP_SIGNING: KeyPurposeId = KeyPurposeId {
-    oid_value: &[(40 * 1) + 3, 6, 1, 5, 5, 7, 3, 9],
+    oid_value: untrusted::Input::from(&[(40 * 1) + 3, 6, 1, 5, 5, 7, 3, 9]),
 };
 
 // https://tools.ietf.org/html/rfc5280#section-4.2.1.12

@@ -279,7 +279,7 @@ pub static ED25519: SignatureAlgorithm = SignatureAlgorithm {
 };
 
 struct AlgorithmIdentifier {
-    asn1_id_value: &'static [u8],
+    asn1_id_value: untrusted::Input<'static>,
 }
 
 impl AlgorithmIdentifier {
@@ -291,51 +291,51 @@ impl AlgorithmIdentifier {
 // See src/data/README.md.
 
 const ECDSA_P256: AlgorithmIdentifier = AlgorithmIdentifier {
-    asn1_id_value: include_bytes!("data/alg-ecdsa-p256.der"),
+    asn1_id_value: untrusted::Input::from(include_bytes!("data/alg-ecdsa-p256.der")),
 };
 
 const ECDSA_P384: AlgorithmIdentifier = AlgorithmIdentifier {
-    asn1_id_value: include_bytes!("data/alg-ecdsa-p384.der"),
+    asn1_id_value: untrusted::Input::from(include_bytes!("data/alg-ecdsa-p384.der")),
 };
 
 const ECDSA_SHA256: AlgorithmIdentifier = AlgorithmIdentifier {
-    asn1_id_value: include_bytes!("data/alg-ecdsa-sha256.der"),
+    asn1_id_value: untrusted::Input::from(include_bytes!("data/alg-ecdsa-sha256.der")),
 };
 
 const ECDSA_SHA384: AlgorithmIdentifier = AlgorithmIdentifier {
-    asn1_id_value: include_bytes!("data/alg-ecdsa-sha384.der"),
+    asn1_id_value: untrusted::Input::from(include_bytes!("data/alg-ecdsa-sha384.der")),
 };
 
 const RSA_ENCRYPTION: AlgorithmIdentifier = AlgorithmIdentifier {
-    asn1_id_value: include_bytes!("data/alg-rsa-encryption.der"),
+    asn1_id_value: untrusted::Input::from(include_bytes!("data/alg-rsa-encryption.der")),
 };
 
 const RSA_PKCS1_SHA256: AlgorithmIdentifier = AlgorithmIdentifier {
-    asn1_id_value: include_bytes!("data/alg-rsa-pkcs1-sha256.der"),
+    asn1_id_value: untrusted::Input::from(include_bytes!("data/alg-rsa-pkcs1-sha256.der")),
 };
 
 const RSA_PKCS1_SHA384: AlgorithmIdentifier = AlgorithmIdentifier {
-    asn1_id_value: include_bytes!("data/alg-rsa-pkcs1-sha384.der"),
+    asn1_id_value: untrusted::Input::from(include_bytes!("data/alg-rsa-pkcs1-sha384.der")),
 };
 
 const RSA_PKCS1_SHA512: AlgorithmIdentifier = AlgorithmIdentifier {
-    asn1_id_value: include_bytes!("data/alg-rsa-pkcs1-sha512.der"),
+    asn1_id_value: untrusted::Input::from(include_bytes!("data/alg-rsa-pkcs1-sha512.der")),
 };
 
 const RSA_PSS_SHA256: AlgorithmIdentifier = AlgorithmIdentifier {
-    asn1_id_value: include_bytes!("data/alg-rsa-pss-sha256.der"),
+    asn1_id_value: untrusted::Input::from(include_bytes!("data/alg-rsa-pss-sha256.der")),
 };
 
 const RSA_PSS_SHA384: AlgorithmIdentifier = AlgorithmIdentifier {
-    asn1_id_value: include_bytes!("data/alg-rsa-pss-sha384.der"),
+    asn1_id_value: untrusted::Input::from(include_bytes!("data/alg-rsa-pss-sha384.der")),
 };
 
 const RSA_PSS_SHA512: AlgorithmIdentifier = AlgorithmIdentifier {
-    asn1_id_value: include_bytes!("data/alg-rsa-pss-sha512.der"),
+    asn1_id_value: untrusted::Input::from(include_bytes!("data/alg-rsa-pss-sha512.der")),
 };
 
 const ED_25519: AlgorithmIdentifier = AlgorithmIdentifier {
-    asn1_id_value: include_bytes!("data/alg-ed25519.der"),
+    asn1_id_value: untrusted::Input::from(include_bytes!("data/alg-ed25519.der")),
 };
 
 #[cfg(test)]
