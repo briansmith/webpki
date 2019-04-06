@@ -155,12 +155,11 @@ pub fn verify_signature(
     {
         return Err(Error::UnsupportedSignatureAlgorithmForPublicKey);
     }
-    signature::verify(
+    signature::UnparsedPublicKey::new(
         signature_alg.verification_alg,
-        spki.key_value,
-        msg,
-        signature,
+        spki.key_value.as_slice_less_safe(),
     )
+    .verify(msg.as_slice_less_safe(), signature.as_slice_less_safe())
     .map_err(|_| Error::InvalidSignatureForPublicKey)
 }
 
