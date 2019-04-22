@@ -44,6 +44,7 @@ static ALL_SIGALGS: &[&webpki::SignatureAlgorithm] = &[
     &webpki::ECDSA_P384_SHA256,
     &webpki::ECDSA_P384_SHA384,
     &webpki::RSA_PKCS1_2048_8192_SHA256,
+    &webpki::RSA_PKCS1_2048_8192_SHA256_NONULL,
     &webpki::RSA_PKCS1_2048_8192_SHA384,
     &webpki::RSA_PKCS1_2048_8192_SHA512,
     &webpki::RSA_PKCS1_3072_8192_SHA384,
