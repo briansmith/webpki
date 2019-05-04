@@ -118,3 +118,66 @@ fn read_root_with_neg_serial() {
 #[cfg(feature = "std")]
 #[test]
 fn time_constructor() { let _ = webpki::Time::try_from(std::time::SystemTime::now()).unwrap(); }
+
+#[cfg(feature = "trust_anchor_util")]
+mod expiry {
+    use untrusted::Input;
+    use webpki::{trust_anchor_util, EndEntityCert, Error};
+
+    fn expect_expiry(when: u64, ee: &[u8], expect_err: Option<Error>) {
+        let ca = include_bytes!("expiry/ca.der");
+
+        let ee_input = Input::from(ee);
+        let inter_vec = vec![];
+        let anchors = [trust_anchor_util::cert_der_as_trust_anchor(Input::from(ca)).unwrap()];
+        let anchors = webpki::TLSServerTrustAnchors(&anchors);
+
+        let rough_time = webpki::Time::from_seconds_since_unix_epoch(when);
+
+        let cert = EndEntityCert::from(ee_input).unwrap();
+        let rc = cert.verify_is_valid_tls_server_cert(
+            super::ALL_SIGALGS,
+            &anchors,
+            &inter_vec,
+            rough_time,
+        );
+
+        assert_eq!(expect_err, rc.err());
+    }
+
+    #[test]
+    pub fn valid() {
+        let cert = include_bytes!("expiry/ee.der");
+        expect_expiry(1479496432, &cert[..], None);
+    }
+
+    #[test]
+    pub fn ee_not_valid_yet() {
+        let cert = include_bytes!("expiry/ee.der");
+        expect_expiry(1476731633, &cert[..], None);
+        expect_expiry(1476731632, &cert[..], Some(Error::CertNotValidYet));
+    }
+
+    #[test]
+    pub fn ee_expired() {
+        let cert = include_bytes!("expiry/ee.der");
+        expect_expiry(1479496433, &cert[..], None);
+        expect_expiry(1479496434, &cert[..], Some(Error::CertExpired));
+    }
+
+    #[test]
+    fn ca_not_valid_yet() {
+        let cert = include_bytes!("expiry/eelong.der");
+        expect_expiry(1476731623, &cert[..], None);
+        expect_expiry(1476731622, &cert[..], Some(Error::UnknownIssuer));
+    }
+
+    #[test]
+    fn ca_expired() {
+        // This certificate has an expiry that extends past the end
+        // of its CA cert.
+        let cert = include_bytes!("expiry/eelong.der");
+        expect_expiry(1508267623, &cert[..], None);
+        expect_expiry(1508267624, &cert[..], Some(Error::UnknownIssuer));
+    }
+}
