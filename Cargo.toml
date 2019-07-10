@@ -30,7 +30,6 @@ include = [
     "LICENSE",
     "README.md",
 
-    "src/",
     "src/calendar.rs",
     "src/cert.rs",
     "src/der.rs",
