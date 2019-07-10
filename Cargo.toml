@@ -64,8 +64,8 @@ trust_anchor_util = ["std"]
 std = []
 
 [dependencies]
-ring = { git = "https://github.com/briansmith/ring" }
-untrusted = { git = "https://github.com/briansmith/untrusted", tag = "ring-master"  }
+ring = "0.15.0-alpha3"
+untrusted = "0.7.0-alpha1"
 
 [dev-dependencies]
 base64 = "0.9.1"
