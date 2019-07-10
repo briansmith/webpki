@@ -391,7 +391,7 @@ enum NameIteration {
 
 fn iterate_names(
     subject: untrusted::Input, subject_alt_name: Option<untrusted::Input>,
-    result_if_never_stopped_early: Result<(), Error>, f: &Fn(GeneralName) -> NameIteration,
+    result_if_never_stopped_early: Result<(), Error>, f: &dyn Fn(GeneralName) -> NameIteration,
 ) -> Result<(), Error> {
     match subject_alt_name {
         Some(subject_alt_name) => {
@@ -738,7 +738,7 @@ fn presented_dns_id_matches_reference_dns_id_internal(
 #[inline]
 fn ascii_lower(b: u8) -> u8 {
     match b {
-        b'A'...b'Z' => b + b'a' - b'A',
+        b'A'..=b'Z' => b + b'a' - b'A',
         _ => b,
     }
 }
@@ -817,7 +817,7 @@ fn is_valid_dns_id(
                 }
             },
 
-            Ok(b'0'...b'9') => {
+            Ok(b'0'..=b'9') => {
                 if label_length == 0 {
                     label_is_all_numeric = true;
                 }
@@ -828,7 +828,7 @@ fn is_valid_dns_id(
                 }
             },
 
-            Ok(b'a'...b'z') | Ok(b'A'...b'Z') | Ok(b'_') => {
+            Ok(b'a'..=b'z') | Ok(b'A'..=b'Z') | Ok(b'_') => {
                 label_is_all_numeric = false;
                 label_ends_with_hyphen = false;
                 label_length += 1;
