@@ -1,5 +1,5 @@
 edition = "2018"
-fn_args_density = "Compressed"
+fn_args_layout = "Compressed"
 fn_single_line = true
 match_arm_blocks = false
 match_block_trailing_comma = true
