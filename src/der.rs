@@ -13,12 +13,10 @@
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 use crate::{calendar, time, Error};
-use ring;
 pub use ring::io::{
     der::{nested, Tag, CONSTRUCTED},
     Positive,
 };
-use untrusted;
 
 #[inline(always)]
 pub fn expect_tag_and_get_value<'a>(

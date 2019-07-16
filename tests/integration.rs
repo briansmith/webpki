@@ -31,9 +31,6 @@
     warnings
 )]
 
-#[cfg(feature = "trust_anchor_util")]
-extern crate untrusted;
-
 #[cfg(any(feature = "std", feature = "trust_anchor_util"))]
 extern crate webpki;
 
@@ -60,20 +57,14 @@ pub fn netflix() {
     let inter = include_bytes!("netflix/inter.der");
     let ca = include_bytes!("netflix/ca.der");
 
-    let ee_input = untrusted::Input::from(ee);
-    let inter_vec = vec![untrusted::Input::from(inter)];
-    let anchors =
-        vec![
-            webpki::trust_anchor_util::cert_der_as_trust_anchor(untrusted::Input::from(ca))
-                .unwrap(),
-        ];
+    let anchors = vec![webpki::trust_anchor_util::cert_der_as_trust_anchor(ca).unwrap()];
     let anchors = webpki::TLSServerTrustAnchors(&anchors);
 
     let time = webpki::Time::from_seconds_since_unix_epoch(1492441716);
 
-    let cert = webpki::EndEntityCert::from(ee_input).unwrap();
+    let cert = webpki::EndEntityCert::from(ee).unwrap();
     let _ = cert
-        .verify_is_valid_tls_server_cert(ALL_SIGALGS, &anchors, &inter_vec, time)
+        .verify_is_valid_tls_server_cert(ALL_SIGALGS, &anchors, &[inter], time)
         .unwrap();
 }
 
@@ -83,17 +74,12 @@ pub fn ed25519() {
     let ee = include_bytes!("ed25519/ee.der");
     let ca = include_bytes!("ed25519/ca.der");
 
-    let ee_input = untrusted::Input::from(ee);
-    let anchors =
-        vec![
-            webpki::trust_anchor_util::cert_der_as_trust_anchor(untrusted::Input::from(ca))
-                .unwrap(),
-        ];
+    let anchors = vec![webpki::trust_anchor_util::cert_der_as_trust_anchor(ca).unwrap()];
     let anchors = webpki::TLSServerTrustAnchors(&anchors);
 
     let time = webpki::Time::from_seconds_since_unix_epoch(1547363522);
 
-    let cert = webpki::EndEntityCert::from(ee_input).unwrap();
+    let cert = webpki::EndEntityCert::from(ee).unwrap();
     let _ = cert
         .verify_is_valid_tls_server_cert(ALL_SIGALGS, &anchors, &[], time)
         .unwrap();
@@ -103,7 +89,7 @@ pub fn ed25519() {
 #[test]
 fn read_root_with_zero_serial() {
     let ca = include_bytes!("misc/serial_zero.der");
-    let _ = webpki::trust_anchor_util::cert_der_as_trust_anchor(untrusted::Input::from(ca))
+    let _ = webpki::trust_anchor_util::cert_der_as_trust_anchor(ca)
         .expect("godaddy cert should parse as anchor");
 }
 
@@ -111,7 +97,7 @@ fn read_root_with_zero_serial() {
 #[test]
 fn read_root_with_neg_serial() {
     let ca = include_bytes!("misc/serial_neg.der");
-    let _ = webpki::trust_anchor_util::cert_der_as_trust_anchor(untrusted::Input::from(ca))
+    let _ = webpki::trust_anchor_util::cert_der_as_trust_anchor(ca)
         .expect("idcat cert should parse as anchor");
 }
 

@@ -14,7 +14,6 @@
 
 use crate::{der, Error};
 use ring::signature;
-use untrusted;
 
 /// X.509 certificates and related items that are signed are almost always
 /// encoded in the format "tbs||signatureAlgorithm||signature". This structure
@@ -30,7 +29,7 @@ pub struct SignedData<'a> {
     /// `signatureAlgorithm` in the case of an X.509 certificate or OCSP
     /// response. This would have to be synthesized in the case of TLS 1.2
     /// signed data, since TLS does not identify algorithms by ASN.1 OIDs.
-    pub algorithm: untrusted::Input<'a>,
+    pub(crate) algorithm: untrusted::Input<'a>,
 
     /// The value of the signature. This would be `signature` in an X.509
     /// certificate or OCSP response. This would be the value of
@@ -66,7 +65,7 @@ pub struct SignedData<'a> {
 /// The return value's first component is the contents of
 /// `tbsCertificate`/`tbsResponseData`; the second component is a `SignedData`
 /// structure that can be passed to `verify_signed_data`.
-pub fn parse_signed_data<'a>(
+pub(crate) fn parse_signed_data<'a>(
     der: &mut untrusted::Reader<'a>,
 ) -> Result<(untrusted::Input<'a>, SignedData<'a>), Error> {
     let (data, tbs) =
@@ -93,7 +92,7 @@ pub fn parse_signed_data<'a>(
 /// ordering of the algorithms in `supported_algorithms` does not really matter,
 /// but generally more common algorithms should go first, as it is scanned
 /// linearly for matches.
-pub fn verify_signed_data(
+pub(crate) fn verify_signed_data(
     supported_algorithms: &[&SignatureAlgorithm], spki_value: untrusted::Input,
     signed_data: &SignedData,
 ) -> Result<(), Error> {
@@ -144,7 +143,7 @@ pub fn verify_signed_data(
     }
 }
 
-pub fn verify_signature(
+pub(crate) fn verify_signature(
     signature_alg: &SignatureAlgorithm, spki_value: untrusted::Input, msg: untrusted::Input,
     signature: untrusted::Input,
 ) -> Result<(), Error> {
@@ -343,7 +342,6 @@ mod tests {
     use base64;
 
     use std::{self, io::BufRead, string::String, vec::Vec};
-    use untrusted;
 
     // TODO: The expected results need to be modified for SHA-1 deprecation.
 

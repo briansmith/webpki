@@ -116,9 +116,12 @@ pub struct EndEntityCert<'a> {
 impl<'a> EndEntityCert<'a> {
     /// Parse the ASN.1 DER-encoded X.509 encoding of the certificate
     /// `cert_der`.
-    pub fn from(cert_der: untrusted::Input<'a>) -> Result<Self, Error> {
+    pub fn from(cert_der: &'a [u8]) -> Result<Self, Error> {
         Ok(Self {
-            inner: cert::parse_cert(cert_der, cert::EndEntityOrCA::EndEntity)?,
+            inner: cert::parse_cert(
+                untrusted::Input::from(cert_der),
+                cert::EndEntityOrCA::EndEntity,
+            )?,
         })
     }
 
@@ -135,7 +138,7 @@ impl<'a> EndEntityCert<'a> {
     pub fn verify_is_valid_tls_server_cert(
         &self, supported_sig_algs: &[&SignatureAlgorithm],
         &TLSServerTrustAnchors(trust_anchors): &TLSServerTrustAnchors,
-        intermediate_certs: &[untrusted::Input], time: Time,
+        intermediate_certs: &[&[u8]], time: Time,
     ) -> Result<(), Error> {
         verify_cert::build_chain(
             verify_cert::EKU_SERVER_AUTH,
@@ -165,7 +168,7 @@ impl<'a> EndEntityCert<'a> {
     pub fn verify_is_valid_tls_client_cert(
         &self, supported_sig_algs: &[&SignatureAlgorithm],
         &TLSClientTrustAnchors(trust_anchors): &TLSClientTrustAnchors,
-        intermediate_certs: &[untrusted::Input], time: Time,
+        intermediate_certs: &[&[u8]], time: Time,
     ) -> Result<(), Error> {
         verify_cert::build_chain(
             verify_cert::EKU_CLIENT_AUTH,
@@ -229,10 +232,14 @@ impl<'a> EndEntityCert<'a> {
     /// one-to-one correspondence between TLS 1.3's `SignatureScheme` and
     /// `SignatureAlgorithm`.
     pub fn verify_signature(
-        &self, signature_alg: &SignatureAlgorithm, msg: untrusted::Input,
-        signature: untrusted::Input,
+        &self, signature_alg: &SignatureAlgorithm, msg: &[u8], signature: &[u8],
     ) -> Result<(), Error> {
-        signed_data::verify_signature(signature_alg, self.inner.spki, msg, signature)
+        signed_data::verify_signature(
+            signature_alg,
+            self.inner.spki,
+            untrusted::Input::from(msg),
+            untrusted::Input::from(signature),
+        )
     }
 }
 

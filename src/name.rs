@@ -17,7 +17,6 @@ use crate::{
     der, Error,
 };
 use core;
-use untrusted;
 
 /// A DNS Name suitable for use in the TLS Server Name Indication (SNI)
 /// extension and/or for use as the reference hostname for which to verify a
@@ -42,7 +41,7 @@ pub struct DNSName(String);
 #[cfg(feature = "std")]
 impl DNSName {
     /// Returns a `DNSNameRef` that refers to this `DNSName`.
-    pub fn as_ref(&self) -> DNSNameRef { DNSNameRef(untrusted::Input::from(self.0.as_bytes())) }
+    pub fn as_ref(&self) -> DNSNameRef { DNSNameRef(self.0.as_bytes()) }
 }
 
 #[cfg(feature = "std")]
@@ -70,7 +69,7 @@ impl From<DNSNameRef<'_>> for DNSName {
 ///
 /// [RFC 5280 Section 7.2]: https://tools.ietf.org/html/rfc5280#section-7.2
 #[derive(Clone, Copy)]
-pub struct DNSNameRef<'a>(untrusted::Input<'a>);
+pub struct DNSNameRef<'a>(&'a [u8]);
 
 /// An error indicating that a `DNSNameRef` could not built because the input
 /// is not a syntactically-valid DNS Name.
@@ -87,8 +86,8 @@ impl ::std::error::Error for InvalidDNSNameError {}
 impl<'a> DNSNameRef<'a> {
     /// Constructs a `DNSNameRef` from the given input if the input is a
     /// syntactically-valid DNS name.
-    pub fn try_from_ascii(dns_name: untrusted::Input<'a>) -> Result<Self, InvalidDNSNameError> {
-        if !is_valid_reference_dns_id(dns_name) {
+    pub fn try_from_ascii(dns_name: &'a [u8]) -> Result<Self, InvalidDNSNameError> {
+        if !is_valid_reference_dns_id(untrusted::Input::from(dns_name)) {
             return Err(InvalidDNSNameError);
         }
 
@@ -98,7 +97,7 @@ impl<'a> DNSNameRef<'a> {
     /// Constructs a `DNSNameRef` from the given input if the input is a
     /// syntactically-valid DNS name.
     pub fn try_from_ascii_str(dns_name: &'a str) -> Result<Self, InvalidDNSNameError> {
-        Self::try_from_ascii(untrusted::Input::from(dns_name.as_bytes()))
+        Self::try_from_ascii(dns_name.as_bytes())
     }
 
     /// Constructs a `DNSName` from this `DNSNameRef`
@@ -123,19 +122,15 @@ impl<'a> From<DNSNameRef<'a>> for &'a str {
     fn from(DNSNameRef(d): DNSNameRef<'a>) -> Self {
         // The unwrap won't fail because DNSNameRefs are guaranteed to be ASCII
         // and ASCII is a subset of UTF-8.
-        core::str::from_utf8(d.as_slice_less_safe()).unwrap()
+        core::str::from_utf8(d).unwrap()
     }
-}
-
-impl<'a> From<DNSNameRef<'a>> for untrusted::Input<'a> {
-    fn from(DNSNameRef(dns_name): DNSNameRef<'a>) -> Self { dns_name }
 }
 
 pub fn verify_cert_dns_name(
     cert: &super::EndEntityCert, DNSNameRef(dns_name): DNSNameRef,
 ) -> Result<(), Error> {
     let cert = &cert.inner;
-
+    let dns_name = untrusted::Input::from(dns_name);
     iterate_names(
         cert.subject,
         cert.subject_alt_name,
@@ -896,7 +891,6 @@ fn is_valid_dns_id(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use untrusted;
 
     const PRESENTED_MATCHES_REFERENCE: &[(&[u8], &[u8], Option<bool>)] = &[
         (b"", b"a", None),

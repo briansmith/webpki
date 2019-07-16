@@ -16,12 +16,11 @@ use crate::{
     cert::{self, Cert, EndEntityOrCA},
     der, name, signed_data, time, Error, SignatureAlgorithm, TrustAnchor,
 };
-use untrusted;
 
 pub fn build_chain(
     required_eku_if_present: KeyPurposeId, supported_sig_algs: &[&SignatureAlgorithm],
-    trust_anchors: &[TrustAnchor], intermediate_certs: &[untrusted::Input], cert: &Cert,
-    time: time::Time, sub_ca_count: usize,
+    trust_anchors: &[TrustAnchor], intermediate_certs: &[&[u8]], cert: &Cert, time: time::Time,
+    sub_ca_count: usize,
 ) -> Result<(), Error> {
     let used_as_ca = used_as_ca(&cert.ee_or_ca);
 
@@ -79,7 +78,8 @@ pub fn build_chain(
     }
 
     loop_while_non_fatal_error(intermediate_certs, |cert_der| {
-        let potential_issuer = cert::parse_cert(*cert_der, EndEntityOrCA::CA(&cert))?;
+        let potential_issuer =
+            cert::parse_cert(untrusted::Input::from(*cert_der), EndEntityOrCA::CA(&cert))?;
 
         if potential_issuer.subject != cert.issuer {
             return Err(Error::UnknownIssuer);

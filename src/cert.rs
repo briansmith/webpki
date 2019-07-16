@@ -13,7 +13,6 @@
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 use crate::{der, signed_data, Error};
-use untrusted;
 
 pub enum EndEntityOrCA<'a> {
     EndEntity,
@@ -44,7 +43,7 @@ pub fn parse_cert<'a>(
 /// Used by `parse_cert` for regular certificates (end-entity and intermediate)
 /// and by `cert_der_as_trust_anchor` for trust anchors encoded as
 /// certificates.
-pub fn parse_cert_internal<'a>(
+pub(crate) fn parse_cert_internal<'a>(
     cert_der: untrusted::Input<'a>, ee_or_ca: EndEntityOrCA<'a>,
     serial_number: fn(input: &mut untrusted::Reader<'_>) -> Result<(), Error>,
 ) -> Result<Cert<'a>, Error> {

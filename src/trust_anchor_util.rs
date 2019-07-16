@@ -19,13 +19,14 @@ use crate::{
     cert::{certificate_serial_number, parse_cert_internal, Cert, EndEntityOrCA},
     Error, TrustAnchor,
 };
-use untrusted;
 
 /// Interprets the given DER-encoded certificate as a `TrustAnchor`. The
 /// certificate is not validated. In particular, there is no check that the
 /// certificate is self-signed or even that the certificate has the cA basic
 /// constraint.
-pub fn cert_der_as_trust_anchor(cert_der: untrusted::Input) -> Result<TrustAnchor, Error> {
+pub fn cert_der_as_trust_anchor(cert_der: &[u8]) -> Result<TrustAnchor, Error> {
+    let cert_der = untrusted::Input::from(cert_der);
+
     // XXX: `EndEntityOrCA::EndEntity` is used instead of `EndEntityOrCA::CA`
     // because we don't have a reference to a child cert, which is needed for
     // `EndEntityOrCA::CA`. For this purpose, it doesn't matter.

@@ -1,6 +1,5 @@
 // Copyright 2014-2017 Brian Smith.
 
-use untrusted;
 use webpki;
 
 // (name, is_valid)
@@ -402,7 +401,7 @@ fn dns_name_ref_try_from_ascii_test() {
         .chain(IP_ADDRESS_DNS_VALIDITY.iter())
     {
         assert_eq!(
-            webpki::DNSNameRef::try_from_ascii(untrusted::Input::from(s)).is_ok(),
+            webpki::DNSNameRef::try_from_ascii(s).is_ok(),
             is_valid,
             "DNSNameRef::try_from_ascii_str failed for \"{:?}\"",
             s
