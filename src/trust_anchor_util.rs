@@ -16,7 +16,7 @@
 
 use super::der;
 use crate::{
-    cert::{certificate_serial_number, parse_cert_internal, Cert, EndEntityOrCA},
+    cert::{certificate_serial_number, parse_cert_internal, parse_validity, Cert, EndEntityOrCA},
     Error, TrustAnchor,
 };
 use untrusted;
@@ -40,7 +40,7 @@ pub fn cert_der_as_trust_anchor(cert_der: untrusted::Input) -> Result<TrustAncho
         EndEntityOrCA::EndEntity,
         possibly_invalid_certificate_serial_number,
     ) {
-        Ok(cert) => Ok(trust_anchor_from_cert(cert)),
+        Ok(cert) => trust_anchor_from_cert(cert),
         Err(Error::BadDER) => parse_cert_v1(cert_der).or(Err(Error::BadDER)),
         Err(err) => Err(err),
     }
@@ -75,12 +75,15 @@ pub fn generate_code_for_trust_anchors(name: &str, trust_anchors: &[TrustAnchor]
     decl + &value
 }
 
-fn trust_anchor_from_cert<'a>(cert: Cert<'a>) -> TrustAnchor<'a> {
-    TrustAnchor {
+fn trust_anchor_from_cert<'a>(cert: Cert<'a>) -> Result<TrustAnchor<'a>, Error> {
+    let validity = parse_validity(cert.validity)?;
+    Ok(TrustAnchor {
         subject: cert.subject.as_slice_less_safe(),
         spki: cert.spki.as_slice_less_safe(),
         name_constraints: cert.name_constraints.map(|nc| nc.as_slice_less_safe()),
-    }
+        not_before: validity.not_before.into_seconds_since_unix_epoch(),
+        not_after: validity.not_after.into_seconds_since_unix_epoch(),
+    })
 }
 
 /// Parses a v1 certificate directly into a TrustAnchor.
@@ -94,14 +97,17 @@ fn parse_cert_v1<'a>(cert_der: untrusted::Input<'a>) -> Result<TrustAnchor<'a>, 
 
                 skip(tbs, der::Tag::Sequence)?; // signature.
                 skip(tbs, der::Tag::Sequence)?; // issuer.
-                skip(tbs, der::Tag::Sequence)?; // validity.
+                let validity = der::expect_tag_and_get_value(tbs, der::Tag::Sequence)?;
                 let subject = der::expect_tag_and_get_value(tbs, der::Tag::Sequence)?;
                 let spki = der::expect_tag_and_get_value(tbs, der::Tag::Sequence)?;
+                let validity = parse_validity(validity)?;
 
                 Ok(TrustAnchor {
                     subject: subject.as_slice_less_safe(),
                     spki: spki.as_slice_less_safe(),
                     name_constraints: None,
+                    not_before: validity.not_before.into_seconds_since_unix_epoch(),
+                    not_after: validity.not_after.into_seconds_since_unix_epoch(),
                 })
             });
 

@@ -256,6 +256,14 @@ pub struct TrustAnchor<'a> {
     /// The value of a DER-encoded NameConstraints, containing name
     /// constraints to apply to the trust anchor, if any.
     pub name_constraints: Option<&'a [u8]>,
+
+    /// The root's earliest validity in seconds since the epoch. The anchor
+    /// is only considered when the validation time is after this value.
+    pub not_before: u64,
+
+    /// The root's expiry in seconds since the epoch. The anchor
+    /// is only considered when the validation time is before this value.
+    pub not_after: u64,
 }
 
 /// Trust anchors which may be used for authenticating servers.

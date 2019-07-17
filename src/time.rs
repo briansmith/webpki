@@ -59,4 +59,7 @@ impl Time {
     /// `std::time::SystemTime` is available (when `#![no_std]` isn't being
     /// used).
     pub fn from_seconds_since_unix_epoch(secs: u64) -> Time { Time(secs) }
+
+    /// Unwrap this type to a unix timestamp.
+    pub(crate) fn into_seconds_since_unix_epoch(self) -> u64 { self.0 }
 }

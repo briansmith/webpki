@@ -12,7 +12,7 @@
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-use crate::{der, signed_data, Error};
+use crate::{der, signed_data, time, Error};
 use untrusted;
 
 pub enum EndEntityOrCA<'a> {
@@ -33,6 +33,26 @@ pub struct Cert<'a> {
     pub eku: Option<untrusted::Input<'a>>,
     pub name_constraints: Option<untrusted::Input<'a>>,
     pub subject_alt_name: Option<untrusted::Input<'a>>,
+}
+
+pub struct Validity {
+    pub not_before: time::Time,
+    pub not_after: time::Time,
+}
+
+pub fn parse_validity(validity: untrusted::Input) -> Result<Validity, Error> {
+    validity.read_all(Error::BadDER, |input| {
+        let not_before = der::time_choice(input)?;
+        let not_after = der::time_choice(input)?;
+        if not_before < not_after {
+            Ok(Validity {
+                not_before,
+                not_after,
+            })
+        } else {
+            Err(Error::InvalidCertValidity)
+        }
+    })
 }
 
 pub fn parse_cert<'a>(
