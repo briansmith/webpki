@@ -26,7 +26,7 @@ webpki is strongly influenced by
 [mozilla::pkix](https://github.com/briansmith/mozillapkix). You can read a
 little about the ideas underlying both mozilla::pkix and webpki in
 [insanity::pkix: A New Certificate Path Building & Validation
-Library](https://briansmith.org/insanity-pkix.html).
+Library](https://briansmith.org/insanity-pkix).
 
 The Rust compiler statically guarantees there are no buffer overflows,
 uses-after-free, double-frees, data races, etc. in webpki. webpki takes
