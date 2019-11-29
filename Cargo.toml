@@ -50,6 +50,8 @@ include = [
     "tests/netflix/ca.der",
     "tests/netflix/ee.der",
     "tests/netflix/inter.der",
+    "tests/ed25519/ca.der",
+    "tests/ed25519/ee.der",
 
     "third-party/chromium/**/*",
 ]
