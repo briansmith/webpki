@@ -33,6 +33,9 @@ pub enum Error {
     /// The certificate is not valid for the name it is being validated for.
     CertNotValidForName,
 
+    /// The certificate is not valid for the ip it is being validated for.
+    CertNotValidForIp,
+
     /// The certificate is not valid yet; i.e. the time it is being validated
     /// for is earlier than the certificate's notBefore time.
     CertNotValidYet,

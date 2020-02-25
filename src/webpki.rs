@@ -60,7 +60,7 @@ pub mod trust_anchor_util;
 mod verify_cert;
 
 pub use error::Error;
-pub use name::{DNSNameRef, InvalidDNSNameError};
+pub use name::{DNSNameRef, InvalidDNSNameError, IPAddress, Ipv4};
 
 #[cfg(feature = "std")]
 pub use name::DNSName;
@@ -184,6 +184,11 @@ impl<'a> EndEntityCert<'a> {
     /// Verifies that the certificate is valid for the given DNS host name.
     pub fn verify_is_valid_for_dns_name(&self, dns_name: DNSNameRef) -> Result<(), Error> {
         name::verify_cert_dns_name(&self, dns_name)
+    }
+
+    /// Verifies that the certificate is valid for the given ip address
+    pub fn verify_is_valid_for_ip(&self, ip: IPAddress) -> Result<(), Error> {
+        name::verify_cert_ip_san(&self, ip)
     }
 
     /// Verifies that the certificate is valid for at least one of the given DNS
