@@ -130,6 +130,9 @@ pub fn verify_cert_dns_name(
     cert: &super::EndEntityCert, DNSNameRef(dns_name): DNSNameRef,
 ) -> Result<(), Error> {
     let cert = &cert.inner;
+    if cert.poison {
+        return Err(Error::UnsupportedCriticalExtension);
+    }
     let dns_name = untrusted::Input::from(dns_name);
     iterate_names(
         cert.subject,

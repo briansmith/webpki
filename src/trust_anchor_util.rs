@@ -23,7 +23,8 @@ use crate::{
 /// Interprets the given DER-encoded certificate as a `TrustAnchor`. The
 /// certificate is not validated. In particular, there is no check that the
 /// certificate is self-signed or even that the certificate has the cA basic
-/// constraint.
+/// constraint. We also ignore the certificate’s extensions, even if they are
+/// critical.
 pub fn cert_der_as_trust_anchor(cert_der: &[u8]) -> Result<TrustAnchor, Error> {
     let cert_der = untrusted::Input::from(cert_der);
 
@@ -40,6 +41,7 @@ pub fn cert_der_as_trust_anchor(cert_der: &[u8]) -> Result<TrustAnchor, Error> {
         cert_der,
         EndEntityOrCA::EndEntity,
         possibly_invalid_certificate_serial_number,
+        Some(&mut |_, _, _, _| crate::Understood::Yes),
     ) {
         Ok(cert) => Ok(trust_anchor_from_cert(cert)),
         Err(Error::BadDER) => parse_cert_v1(cert_der).or(Err(Error::BadDER)),

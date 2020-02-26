@@ -22,6 +22,10 @@ pub fn build_chain(
     trust_anchors: &[TrustAnchor], intermediate_certs: &[&[u8]], cert: &Cert, time: time::Time,
     sub_ca_count: usize,
 ) -> Result<(), Error> {
+    if cert.poison {
+        return Err(Error::UnsupportedCriticalExtension);
+    }
+
     let used_as_ca = used_as_ca(&cert.ee_or_ca);
 
     check_issuer_independent_properties(
@@ -78,8 +82,11 @@ pub fn build_chain(
     }
 
     loop_while_non_fatal_error(intermediate_certs, |cert_der| {
-        let potential_issuer =
-            cert::parse_cert(untrusted::Input::from(*cert_der), EndEntityOrCA::CA(&cert))?;
+        let potential_issuer = cert::parse_cert(
+            untrusted::Input::from(*cert_der),
+            EndEntityOrCA::CA(&cert),
+            None,
+        )?;
 
         if potential_issuer.subject != cert.issuer {
             return Err(Error::UnknownIssuer);

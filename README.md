@@ -19,6 +19,9 @@ server infrastructure. webpki is intended to not only be the best
 implementation of the Web PKI, but to also *precisely define* what the Web PKI
 is.
 
+webpki can also be used for TLS certificate validation in non-web applications,
+such as [libp2p](https://libp2p.io).
+
 webpki is written in [Rust](https://www.rust-lang.org/) and uses
 [*ring*](https://github.com/briansmith/ring) for signature verification.
 

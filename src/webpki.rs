@@ -72,6 +72,7 @@ pub use signed_data::{
     RSA_PSS_2048_8192_SHA384_LEGACY_KEY, RSA_PSS_2048_8192_SHA512_LEGACY_KEY,
 };
 
+pub use cert::{ExtensionHandler, Understood};
 pub use time::Time;
 
 /// An end-entity certificate.
@@ -109,18 +110,40 @@ pub use time::Time;
 /// deterministic, so if these tasks are done in multiple threads, it is
 /// probably best to just call `EndEntityCert::from` multiple times (before each
 /// operation) for the same DER-encoded ASN.1 certificate bytes.
+///
+/// `EndEntityCert.verify_signature` does not check that the certificate does
+/// not have unsupported critical extensions, but all other methods do. If you
+/// need to process certificates that have critical extensions which WebPKI does
+/// not understand, call [`EndEntityCert::from_with_extension_cb`].
 pub struct EndEntityCert<'a> {
     inner: cert::Cert<'a>,
 }
 
 impl<'a> EndEntityCert<'a> {
     /// Parse the ASN.1 DER-encoded X.509 encoding of the certificate
-    /// `cert_der`.
+    /// `cert_der`. If there is an unknown critical extension, all methods on
+    /// the returned certificate will fail *except* for [`verify_signature`].
     pub fn from(cert_der: &'a [u8]) -> Result<Self, Error> {
         Ok(Self {
             inner: cert::parse_cert(
                 untrusted::Input::from(cert_der),
                 cert::EndEntityOrCA::EndEntity,
+                None,
+            )?,
+        })
+    }
+
+    /// Same as [`from`], except that a custom extension handler is provided.
+    /// This can be used for applications that need to handle extensions
+    /// themselves.
+    pub fn from_with_extension_cb(
+        cert_der: &'a [u8], callback: ExtensionHandler<'_>,
+    ) -> Result<Self, Error> {
+        Ok(Self {
+            inner: cert::parse_cert(
+                untrusted::Input::from(cert_der),
+                cert::EndEntityOrCA::EndEntity,
+                Some(callback),
             )?,
         })
     }

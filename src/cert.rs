@@ -32,12 +32,29 @@ pub struct Cert<'a> {
     pub eku: Option<untrusted::Input<'a>>,
     pub name_constraints: Option<untrusted::Input<'a>>,
     pub subject_alt_name: Option<untrusted::Input<'a>>,
+
+    // If this is true, the certificate cannot be used for anything other than
+    // verifying signatures, since it has a critical extension we do not
+    // understand.
+    //
+    // We can’t just reject the certificate at parse-time because that would prevent WebPKI for
+    // being used outside of the Internet PKI. libp2p, for example, uses a critical extension that
+    // webpki does not (and should not) know about.
+    pub poison: bool,
 }
 
+/// The type of custom extension handling callbacks.
+///
+/// These will be called for each extension that WebPKI cannot handle itself.
+/// Return [`Understood::Yes`] if the extension is understood, or
+/// [`Understood::No`] otherwise.
+pub type ExtensionHandler<'a> =
+    &'a mut dyn FnMut(untrusted::Input, untrusted::Input, bool, untrusted::Input) -> Understood;
+
 pub fn parse_cert<'a>(
-    cert_der: untrusted::Input<'a>, ee_or_ca: EndEntityOrCA<'a>,
+    cert_der: untrusted::Input<'a>, ee_or_ca: EndEntityOrCA<'a>, handler: Option<ExtensionHandler>,
 ) -> Result<Cert<'a>, Error> {
-    parse_cert_internal(cert_der, ee_or_ca, certificate_serial_number)
+    parse_cert_internal(cert_der, ee_or_ca, certificate_serial_number, handler)
 }
 
 /// Used by `parse_cert` for regular certificates (end-entity and intermediate)
@@ -46,6 +63,7 @@ pub fn parse_cert<'a>(
 pub(crate) fn parse_cert_internal<'a>(
     cert_der: untrusted::Input<'a>, ee_or_ca: EndEntityOrCA<'a>,
     serial_number: fn(input: &mut untrusted::Reader<'_>) -> Result<(), Error>,
+    mut handler: Option<ExtensionHandler>,
 ) -> Result<Cert<'a>, Error> {
     let (tbs, signed_data) = cert_der.read_all(Error::BadDER, |cert_der| {
         der::nested(
@@ -91,6 +109,8 @@ pub(crate) fn parse_cert_internal<'a>(
             eku: None,
             name_constraints: None,
             subject_alt_name: None,
+
+            poison: false,
         };
 
         // mozilla::pkix allows the extensions to be omitted. However, since
@@ -114,10 +134,20 @@ pub(crate) fn parse_cert_internal<'a>(
                         let critical = der::optional_boolean(extension)?;
                         let extn_value =
                             der::expect_tag_and_get_value(extension, der::Tag::OctetString)?;
-                        match remember_extension(&mut cert, extn_id, extn_value)? {
-                            Understood::No if critical => Err(Error::UnsupportedCriticalExtension),
-                            _ => Ok(()),
+                        let understood = match (
+                            remember_extension(&mut cert, extn_id, extn_value)?,
+                            handler.as_deref_mut(),
+                        ) {
+                            (e @ Understood::Yes, _) => e,
+                            (Understood::No, None) => Understood::No,
+                            (Understood::No, Some(handler)) =>
+                                handler(extn_id, extn_value, critical, spki),
+                        };
+                        match understood {
+                            Understood::No => cert.poison |= critical,
+                            Understood::Yes => {},
                         }
+                        Ok(())
                     },
                 )
             },
@@ -157,8 +187,15 @@ pub fn certificate_serial_number(input: &mut untrusted::Reader) -> Result<(), Er
     Ok(())
 }
 
-enum Understood {
+/// Whether a given certificate extension was understood.
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
+pub enum Understood {
+    /// The extension was understood.
     Yes,
+    /// The extension was not understood. If the certificate is critical,
+    /// and we are validating the certificate, it will be rejected. The only
+    /// operations that do not validate the certificate are `verify_signature`
+    /// and `cert_der_as_trust_anchor`.
     No,
 }
 
