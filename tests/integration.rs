@@ -15,7 +15,6 @@
 #![deny(box_pointers)]
 #![forbid(
     anonymous_parameters,
-    legacy_directory_ownership,
     missing_copy_implementations,
     missing_debug_implementations,
     missing_docs,
@@ -66,6 +65,42 @@ pub fn netflix() {
     let _ = cert
         .verify_is_valid_tls_server_cert(ALL_SIGALGS, &anchors, &[inter], time)
         .unwrap();
+}
+
+/* Checks that we don’t barf too soon on bad extensions */
+#[test]
+#[cfg(feature = "trust_anchor_util")]
+pub fn unknown_extension() {
+    let crt = include_bytes!("misc/testing.crt");
+    let signature = include_bytes!("misc/testing.sig");
+    let data = include_bytes!("misc/gen-bad-cert.sh");
+    let ca = include_bytes!("misc/ca.crt");
+    let anchors = vec![webpki::trust_anchor_util::cert_der_as_trust_anchor(ca)
+        .expect("parsing a certificate for a trust anchor ignores extensions")];
+    let anchors = webpki::TLSServerTrustAnchors(&anchors);
+    let time = webpki::Time::from_seconds_since_unix_epoch(1582757663);
+    let cert = webpki::EndEntityCert::from(crt).unwrap();
+    let name_ref = webpki::DNSNameRef::try_from_ascii(&b"localhost"[..]).unwrap();
+    let _ = cert
+        .verify_signature(&webpki::ECDSA_P256_SHA256, data, signature)
+        .unwrap();
+    assert_eq!(
+        cert.verify_is_valid_tls_server_cert(&[&webpki::ECDSA_P256_SHA256], &anchors, &[], time)
+            .unwrap_err(),
+        webpki::Error::UnsupportedCriticalExtension
+    );
+    assert_eq!(
+        cert.verify_is_valid_for_dns_name(name_ref).unwrap_err(),
+        webpki::Error::UnsupportedCriticalExtension
+    );
+    let cert = webpki::EndEntityCert::from_with_extension_cb(crt, &mut |_, _, _, _| {
+        webpki::Understood::Yes
+    })
+    .unwrap();
+    cert.verify_is_valid_tls_server_cert(&[&webpki::ECDSA_P256_SHA256], &anchors, &[], time)
+        .unwrap();
+
+    cert.verify_is_valid_for_dns_name(name_ref).unwrap();
 }
 
 #[cfg(feature = "trust_anchor_util")]
