@@ -1,5 +1,5 @@
 #!/bin/sh --
-set -eufx
+set -euf
 case $0 in
    (/*) dir=${0%/*}/;;
    (*/*) dir=./${0%/*};;
@@ -7,101 +7,87 @@ case $0 in
 esac
 cd -- "$dir"
 tmpdir=$(mktemp -d)
-trap 'rm -rf -- "$tmpdir"' EXIT
-conf=$tmpdir/openssl.cnf
+trap '
+set +fe
+shred -- "$tmpdir"/*.key
+rm -rf -- "$tmpdir"' EXIT
+conf=$tmpdir/openssl.cnf ecparams=$tmpdir/params.txt
+cakey=$tmpdir/ca.key testkey=$tmpdir/testing.key csr=$tmpdir/testing.csr
 cat > "$conf" <<'EOF'
 [ req ]
 x509_extensions = v3_ca
-req_extensions = v3_req 
 distinguished_name = req_distinguished_name
+default_md = sha256
 encrypt_key = no
 prompt = no
 string_mask = utf8only
+utf8 = yes
 
 [ req_distinguished_name ]
 CN = dummy
 
-[ v3_req ]
-basicConstraints = CA:FALSE
-
 [ v3_ca ]
 subjectKeyIdentifier = hash
-authorityKeyIdentifier = keyid:always,issuer:always
-basicConstraints = critical,CA:true,pathlen:0
+basicConstraints = critical,CA:TRUE,pathlen:0
 keyUsage = critical,cRLSign,keyCertSign
 # webpki does’t understand this
 authorityInfoAccess = critical,OCSP;URI:https://example.invalid
 
 [ usr_cert ]
-basicConstraints = critical,CA:false
-keyUsage = critical,nonRepudiation,digitalSignature
+basicConstraints = critical,CA:FALSE
 subjectKeyIdentifier = hash
-authorityKeyIdentifier = keyid:always,issuer:always
+authorityKeyIdentifier = keyid:always
+keyUsage = critical,nonRepudiation,digitalSignature
 extendedKeyUsage = critical,serverAuth,clientAuth
-subjectAltName = @names
+subjectAltName = DNS:localhost
 # webpki does’t understand this
 authorityInfoAccess = critical,OCSP;URI:https://example.invalid
-
-[ names ]
-DNS.1 = localhost
 EOF
 
-openssl ecparam -name prime256v1 > "$tmpdir/params.txt"
+openssl ecparam -name prime256v1 > "$ecparams"
+
 openssl req \
    -x509 \
-   -newkey "ec:$tmpdir/params.txt" \
-   -sha256 \
+   -newkey ed25519 \
    -batch \
    -days 3000 \
    -outform der \
-   -nodes \
    -subj '/CN=dummy_ca' \
    -multivalue-rdn \
-   -utf8 \
    -out ca.crt \
-   -keyout "$tmpdir/ca.key" \
+   -keyout "$cakey" \
    -config "$conf"
 
 openssl req \
-   -newkey "ec:$tmpdir/params.txt" \
-   -sha256 \
+   -newkey "ec:$ecparams" \
    -batch \
-   -nodes \
-   -utf8 \
-   -out "$tmpdir/testing.csr" \
-   -keyout "$tmpdir/testing.key" \
+   -out "$csr" \
+   -keyout "$testkey" \
    -keyform der \
    -config "$conf"
 
-for i in testing ca; do
-   openssl ec \
-      -inform pem \
-      -outform der \
-      -in "$tmpdir/$i.key" \
-      -out "$i.key"
-   shred -- "$tmpdir/$i.key"
-done
-
-file "$tmpdir/testing.csr"
 openssl x509 \
    -req \
+   -sha256 \
    -outform der \
    -inform der \
-   -CAkeyform der \
-   -CAkey ca.key \
+   -CAkey "$cakey" \
    -CAform der \
-   -sha256 \
    -days 3000 \
    -CA ca.crt \
    -CAcreateserial \
+   -CAserial "$tmpdir/ca.srl" \
    -clrext \
    -extfile "$conf" \
    -extensions usr_cert \
-   -in "$tmpdir/testing.csr" \
+   -in "$csr" \
    -out testing.crt
 
 openssl sha256 \
-   -sign testing.key \
+   -sign "$testkey" \
    -out testing.sig \
-   -keyform der \
-   "$PWD/$0"
+   "${0##*/}"
+
+cd ../..
+cargo +nightly fmt
+exec cargo test

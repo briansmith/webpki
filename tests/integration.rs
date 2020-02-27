@@ -77,30 +77,76 @@ pub fn unknown_extension() {
     let ca = include_bytes!("misc/ca.crt");
     let anchors = vec![webpki::trust_anchor_util::cert_der_as_trust_anchor(ca)
         .expect("parsing a certificate for a trust anchor ignores extensions")];
-    let anchors = webpki::TLSServerTrustAnchors(&anchors);
-    let time = webpki::Time::from_seconds_since_unix_epoch(1582757663);
+    let server_anchors = webpki::TLSServerTrustAnchors(&anchors);
+    let client_anchors = webpki::TLSClientTrustAnchors(&anchors);
+    let time = webpki::Time::from_seconds_since_unix_epoch(1735689600);
     let cert = webpki::EndEntityCert::from(crt).unwrap();
     let name_ref = webpki::DNSNameRef::try_from_ascii(&b"localhost"[..]).unwrap();
     let _ = cert
         .verify_signature(&webpki::ECDSA_P256_SHA256, data, signature)
-        .unwrap();
-    assert_eq!(
-        cert.verify_is_valid_tls_server_cert(&[&webpki::ECDSA_P256_SHA256], &anchors, &[], time)
-            .unwrap_err(),
-        webpki::Error::UnsupportedCriticalExtension
-    );
+        .expect("verify_signature ignores extensions");
+    let err = cert
+        .verify_is_valid_tls_server_cert(&[&webpki::ED25519], &server_anchors, &[], time)
+        .unwrap_err();
+    assert_eq!(err, webpki::Error::UnsupportedCriticalExtension);
+    let err = cert
+        .verify_is_valid_tls_client_cert(&[&webpki::ED25519], &client_anchors, &[], time)
+        .unwrap_err();
+    assert_eq!(err, webpki::Error::UnsupportedCriticalExtension);
     assert_eq!(
         cert.verify_is_valid_for_dns_name(name_ref).unwrap_err(),
         webpki::Error::UnsupportedCriticalExtension
     );
-    let cert = webpki::EndEntityCert::from_with_extension_cb(crt, &mut |_, _, _, _| {
-        webpki::Understood::Yes
-    })
+    // test the case where the callback understands the critical extension
+    let cert = webpki::EndEntityCert::from_with_extension_cb(
+        crt,
+        &mut |oid, _, critical, _| match (oid.as_slice_less_safe(), critical) {
+            (&[85, 29, 14], false) => webpki::Understood::No,
+            (&[85, 29, 35], false) => webpki::Understood::No,
+            (&[43, 6, 1, 5, 5, 7, 1, 1], true) => webpki::Understood::Yes,
+            _ => panic!(
+                "bad oid/critical flag combo {:?}/{}",
+                oid.as_slice_less_safe(),
+                critical
+            ),
+        },
+    )
     .unwrap();
-    cert.verify_is_valid_tls_server_cert(&[&webpki::ECDSA_P256_SHA256], &anchors, &[], time)
+    cert.verify_is_valid_tls_server_cert(&[&webpki::ED25519], &server_anchors, &[], time)
         .unwrap();
-
+    cert.verify_is_valid_tls_client_cert(&[&webpki::ED25519], &client_anchors, &[], time)
+        .unwrap();
     cert.verify_is_valid_for_dns_name(name_ref).unwrap();
+    // test the case where the callback does not understand a critical extension
+    let cert = webpki::EndEntityCert::from_with_extension_cb(
+        crt,
+        &mut |oid, _, critical, _| match (oid.as_slice_less_safe(), critical) {
+            (&[85, 29, 14], false) => webpki::Understood::Yes,
+            (&[85, 29, 35], false) => webpki::Understood::Yes,
+            (&[43, 6, 1, 5, 5, 7, 1, 1], true) => webpki::Understood::No,
+            _ => panic!(
+                "bad oid/critical flag combo {:?}/{}",
+                oid.as_slice_less_safe(),
+                critical
+            ),
+        },
+    )
+    .unwrap();
+    let _ = cert
+        .verify_signature(&webpki::ECDSA_P256_SHA256, data, signature)
+        .expect("verify_signature ignores extensions");
+    let err = cert
+        .verify_is_valid_tls_server_cert(&[&webpki::ED25519], &server_anchors, &[], time)
+        .unwrap_err();
+    assert_eq!(err, webpki::Error::UnsupportedCriticalExtension);
+    let err = cert
+        .verify_is_valid_tls_client_cert(&[&webpki::ED25519], &client_anchors, &[], time)
+        .unwrap_err();
+    assert_eq!(err, webpki::Error::UnsupportedCriticalExtension);
+    assert_eq!(
+        cert.verify_is_valid_for_dns_name(name_ref).unwrap_err(),
+        webpki::Error::UnsupportedCriticalExtension
+    );
 }
 
 #[cfg(feature = "trust_anchor_util")]
