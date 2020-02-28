@@ -100,7 +100,8 @@ pub fn unknown_extension() {
     // test the case where the callback understands the critical extension
     let cert = webpki::EndEntityCert::from_with_extension_cb(
         crt,
-        &mut |oid, _, critical, _| match (oid.as_slice_less_safe(), critical) {
+        &mut |oid: untrusted::Input<'_>, _, critical, _| match (oid.as_slice_less_safe(), critical)
+        {
             ([85, 29, 14], false) => webpki::Understood::No,
             ([85, 29, 35], false) => webpki::Understood::No,
             ([43, 6, 1, 5, 5, 7, 1, 1], true) => webpki::Understood::Yes,
@@ -120,7 +121,8 @@ pub fn unknown_extension() {
     // test the case where the callback does not understand a critical extension
     let cert = webpki::EndEntityCert::from_with_extension_cb(
         crt,
-        &mut |oid, _, critical, _| match (oid.as_slice_less_safe(), critical) {
+        &mut |oid: untrusted::Input<'_>, _, critical, _| match (oid.as_slice_less_safe(), critical)
+        {
             (&[85, 29, 14], false) => webpki::Understood::Yes,
             (&[85, 29, 35], false) => webpki::Understood::Yes,
             (&[43, 6, 1, 5, 5, 7, 1, 1], true) => webpki::Understood::No,

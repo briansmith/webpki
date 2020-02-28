@@ -48,11 +48,29 @@ pub struct Cert<'a> {
 /// These will be called for each extension that WebPKI cannot handle itself.
 /// Return [`Understood::Yes`] if the extension is understood, or
 /// [`Understood::No`] otherwise.
-pub type ExtensionHandler<'a> =
-    &'a mut dyn FnMut(untrusted::Input, untrusted::Input, bool, untrusted::Input) -> Understood;
+pub trait ExtensionHandler<'a> {
+    /// Check if the extension is understood.
+    fn understood(
+        &mut self, oid: untrusted::Input<'a>, value: untrusted::Input<'a>, critical: bool,
+        spki: untrusted::Input<'a>,
+    ) -> Understood;
+}
+
+impl<'a, T> ExtensionHandler<'a> for T
+where
+    T: FnMut(untrusted::Input<'a>, untrusted::Input<'a>, bool, untrusted::Input<'a>) -> Understood,
+{
+    fn understood(
+        &mut self, oid: untrusted::Input<'a>, value: untrusted::Input<'a>, critical: bool,
+        spki: untrusted::Input<'a>,
+    ) -> Understood {
+        self(oid, value, critical, spki)
+    }
+}
 
 pub fn parse_cert<'a>(
-    cert_der: untrusted::Input<'a>, ee_or_ca: EndEntityOrCA<'a>, handler: Option<ExtensionHandler>,
+    cert_der: untrusted::Input<'a>, ee_or_ca: EndEntityOrCA<'a>,
+    handler: Option<&mut (dyn ExtensionHandler<'a> + '_)>,
 ) -> Result<Cert<'a>, Error> {
     parse_cert_internal(cert_der, ee_or_ca, certificate_serial_number, handler)
 }
@@ -63,7 +81,7 @@ pub fn parse_cert<'a>(
 pub(crate) fn parse_cert_internal<'a>(
     cert_der: untrusted::Input<'a>, ee_or_ca: EndEntityOrCA<'a>,
     serial_number: fn(input: &mut untrusted::Reader<'_>) -> Result<(), Error>,
-    mut handler: Option<ExtensionHandler>,
+    mut handler: Option<&mut (dyn ExtensionHandler<'a> + '_)>,
 ) -> Result<Cert<'a>, Error> {
     let (tbs, signed_data) = cert_der.read_all(Error::BadDER, |cert_der| {
         der::nested(
@@ -141,7 +159,7 @@ pub(crate) fn parse_cert_internal<'a>(
                             (e @ Understood::Yes, _) => e,
                             (Understood::No, None) => Understood::No,
                             (Understood::No, Some(handler)) =>
-                                handler(extn_id, extn_value, critical, spki),
+                                handler.understood(extn_id, extn_value, critical, spki),
                         };
                         match understood {
                             Understood::No => cert.poison |= critical,

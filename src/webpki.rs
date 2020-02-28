@@ -134,11 +134,11 @@ impl<'a> EndEntityCert<'a> {
         })
     }
 
-    /// Same as [`EndEntityCert::from`], except that a custom extension handler is provided.
-    /// This can be used for applications that need to handle extensions
-    /// themselves.
+    /// Same as [`EndEntityCert::from`], except that a custom extension handler
+    /// is provided. This can be used for applications that need to handle
+    /// extensions themselves.
     pub fn from_with_extension_cb(
-        cert_der: &'a [u8], callback: ExtensionHandler<'_>,
+        cert_der: &'a [u8], callback: &mut dyn ExtensionHandler<'a>,
     ) -> Result<Self, Error> {
         Ok(Self {
             inner: cert::parse_cert(
