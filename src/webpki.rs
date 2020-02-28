@@ -122,7 +122,8 @@ pub struct EndEntityCert<'a> {
 impl<'a> EndEntityCert<'a> {
     /// Parse the ASN.1 DER-encoded X.509 encoding of the certificate
     /// `cert_der`. If there is an unknown critical extension, all methods on
-    /// the returned certificate will fail *except* for [`verify_signature`].
+    /// the returned certificate will fail *except* for
+    /// [`EndEntityCert::verify_signature`].
     pub fn from(cert_der: &'a [u8]) -> Result<Self, Error> {
         Ok(Self {
             inner: cert::parse_cert(
@@ -133,7 +134,7 @@ impl<'a> EndEntityCert<'a> {
         })
     }
 
-    /// Same as [`from`], except that a custom extension handler is provided.
+    /// Same as [`EndEntityCert::from`], except that a custom extension handler is provided.
     /// This can be used for applications that need to handle extensions
     /// themselves.
     pub fn from_with_extension_cb(
