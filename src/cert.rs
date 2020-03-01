@@ -37,9 +37,10 @@ pub struct Cert<'a> {
     // verifying signatures, since it has a critical extension we do not
     // understand.
     //
-    // We can’t just reject the certificate at parse-time because that would prevent WebPKI for
-    // being used outside of the Internet PKI. libp2p, for example, uses a critical extension that
-    // webpki does not (and should not) know about.
+    // We can’t just reject the certificate at parse-time because that would
+    // prevent WebPKI for being used outside of the Internet PKI. libp2p, for
+    // example, uses a critical extension that webpki does not (and should not)
+    // know about.
     pub poison: bool,
 }
 
