@@ -1,5 +1,6 @@
 #!/bin/sh --
 set -euf
+export LC_ALL=en_US.UTF-8
 case $0 in
    (/*) dir=${0%/*}/;;
    (*/*) dir=./${0%/*};;
@@ -39,7 +40,8 @@ subjectKeyIdentifier = hash
 authorityKeyIdentifier = keyid:always
 keyUsage = critical,nonRepudiation,digitalSignature
 extendedKeyUsage = critical,serverAuth,clientAuth
-subjectAltName = DNS:localhost
+# Do not use a subject alt name, as libp2p doesn’t either.
+# subjectAltName = DNS:localhost
 # webpki does’t understand this
 authorityInfoAccess = critical,OCSP;URI:https://example.invalid
 EOF

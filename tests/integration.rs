@@ -117,7 +117,10 @@ pub fn unknown_extension() {
         .unwrap();
     cert.verify_is_valid_tls_client_cert(&[&webpki::ED25519], &client_anchors, &[], time)
         .unwrap();
-    cert.verify_is_valid_for_dns_name(name_ref).unwrap();
+    assert_eq!(
+        cert.verify_is_valid_for_dns_name(name_ref).unwrap_err(),
+        webpki::Error::CertNotValidForName
+    );
     // test the case where the callback does not understand a critical extension
     let cert = webpki::EndEntityCert::from_with_extension_cb(
         crt,
