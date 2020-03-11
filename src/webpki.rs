@@ -51,6 +51,8 @@ mod calendar;
 mod cert;
 mod error;
 mod name;
+#[cfg(feature = "std")]
+mod san;
 mod signed_data;
 mod time;
 
@@ -61,6 +63,8 @@ mod verify_cert;
 
 pub use error::Error;
 pub use name::{DNSNameRef, InvalidDNSNameError};
+#[cfg(feature = "std")]
+pub use san::SubjectAlternativeName;
 
 #[cfg(feature = "std")]
 pub use name::DNSName;

@@ -379,12 +379,12 @@ fn presented_ip_address_matches_constraint(
 }
 
 #[derive(Clone, Copy)]
-enum NameIteration {
+pub(crate) enum NameIteration {
     KeepGoing,
     Stop(Result<(), Error>),
 }
 
-fn iterate_names(
+pub(crate) fn iterate_names(
     subject: untrusted::Input, subject_alt_name: Option<untrusted::Input>,
     result_if_never_stopped_early: Result<(), Error>, f: &dyn Fn(GeneralName) -> NameIteration,
 ) -> Result<(), Error> {
@@ -422,7 +422,7 @@ fn iterate_names(
 // constraint is different than the meaning of the identically-represented
 // `GeneralName` in other contexts.
 #[derive(Clone, Copy)]
-enum GeneralName<'a> {
+pub(crate) enum GeneralName<'a> {
     DNSName(untrusted::Input<'a>),
     DirectoryName(untrusted::Input<'a>),
     IPAddress(untrusted::Input<'a>),
@@ -463,7 +463,7 @@ fn general_name<'a>(input: &mut untrusted::Reader<'a>) -> Result<GeneralName<'a>
     Ok(name)
 }
 
-fn presented_dns_id_matches_reference_dns_id(
+pub(crate) fn presented_dns_id_matches_reference_dns_id(
     presented_dns_id: untrusted::Input, reference_dns_id: untrusted::Input,
 ) -> Option<bool> {
     presented_dns_id_matches_reference_dns_id_internal(
