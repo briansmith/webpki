@@ -18,6 +18,7 @@ pub enum SubjectAlternativeName {
 }
 
 impl SubjectAlternativeName {
+    /// Binary OID of CommonName (CN) (id-at-commonName).
     const OID_CN: [u8; 3] = [85, 4, 3];
 
     fn traverse<'a>(
@@ -34,8 +35,41 @@ impl SubjectAlternativeName {
     /// Strings in Rust are unicode (UTF-8), and unicode codepoints are a
     /// superset of iso-8859-1 characters. This specific conversion is
     /// actually trivial.
-    fn latin1_to_string(s: &[u8]) -> String {
-        s.iter().map(|&c| c as char).collect()
+    fn latin1_to_string(s: &[u8]) -> String { s.iter().map(|&c| c as char).collect() }
+
+    fn ucs4_to_string(s: &[u8]) -> Result<String, Error> {
+        if s.len() % 4 == 0 {
+            let mut tmp = String::with_capacity(s.len() / 4);
+            for i in (0..s.len()).step_by(4) {
+                match std::char::from_u32(
+                    (u32::from(s[i]) << 24)
+                        | (u32::from(s[i]) << 16)
+                        | (u32::from(s[i]) << 8)
+                        | u32::from(s[i + 1]),
+                ) {
+                    Some(c) => tmp.push(c),
+                    _ => return Err(Error::BadDER),
+                }
+            }
+            Ok(tmp)
+        } else {
+            Err(Error::BadDER)
+        }
+    }
+
+    fn bmp_to_string(s: &[u8]) -> Result<String, Error> {
+        if s.len() % 2 == 0 {
+            let mut tmp = String::with_capacity(s.len() / 2);
+            for i in (0..s.len()).step_by(2) {
+                match std::char::from_u32((u32::from(s[i]) << 8) | u32::from(s[i + 1])) {
+                    Some(c) => tmp.push(c),
+                    _ => return Err(Error::BadDER),
+                }
+            }
+            Ok(tmp)
+        } else {
+            Err(Error::BadDER)
+        }
     }
 
     fn extract_common_name(der: &untrusted::Input) -> Option<String> {
@@ -51,9 +85,9 @@ impl SubjectAlternativeName {
                 // UTF8String
                 Some((12u8, value)) => String::from_utf8(value.clone()).ok(),
                 // UniversalString (UCS-4 32-bit encoded)
-                // Some((28u8, value)) => unimplemented!(),
+                Some((28u8, value)) => Self::ucs4_to_string(value).ok(),
                 // BMPString  (UCS-2 16-bit encoded)
-                //Some((30u8, value)) => unimplemented!(),
+                Some((30u8, value)) => Self::bmp_to_string(value).ok(),
                 // VideotexString resp. TeletexString ISO-8859-1 encoded
                 Some((21u8, value)) => Some(Self::latin1_to_string(value.as_slice())),
                 _ => None,
@@ -66,9 +100,8 @@ impl SubjectAlternativeName {
     fn matches_dns(dns: &str, name: &GeneralName) -> bool {
         let dns_input = untrusted::Input::from(dns.as_bytes());
         match name {
-            GeneralName::DNSName(d) => {
-                presented_dns_id_matches_reference_dns_id(d.clone(), dns_input).unwrap_or(false)
-            }
+            GeneralName::DNSName(d) =>
+                presented_dns_id_matches_reference_dns_id(d.clone(), dns_input).unwrap_or(false),
             GeneralName::DirectoryName(d) => {
                 if let Some(x) = Self::extract_common_name(d) {
                     //x == dns
@@ -80,7 +113,7 @@ impl SubjectAlternativeName {
                 } else {
                     false
                 }
-            }
+            },
             _ => false,
         }
     }
@@ -90,35 +123,19 @@ impl SubjectAlternativeName {
             GeneralName::IPAddress(d) => match ip {
                 IpAddr::V4(v4) if d.len() == 4 => {
                     let mut reader = untrusted::Reader::new(d.clone());
-                    let a = reader.read_byte()?;
-                    let b = reader.read_byte()?;
-                    let c = reader.read_byte()?;
-                    let d = reader.read_byte()?;
-                    Ok(Ipv4Addr::from([a, b, c, d]) == *v4)
-                }
+                    let mut raw_ip_address: [u8; 4] = Default::default();
+                    raw_ip_address.clone_from_slice(reader.read_bytes(4)?.as_slice_less_safe());
+                    Ok(Ipv4Addr::from(raw_ip_address) == *v4)
+                },
                 IpAddr::V6(v6) if d.len() == 16 => {
                     let mut reader = untrusted::Reader::new(d.clone());
-                    let a = reader.read_byte()?;
-                    let b = reader.read_byte()?;
-                    let c = reader.read_byte()?;
-                    let d = reader.read_byte()?;
-                    let e = reader.read_byte()?;
-                    let f = reader.read_byte()?;
-                    let g = reader.read_byte()?;
-                    let h = reader.read_byte()?;
-                    let i = reader.read_byte()?;
-                    let j = reader.read_byte()?;
-                    let k = reader.read_byte()?;
-                    let l = reader.read_byte()?;
-                    let m = reader.read_byte()?;
-                    let n = reader.read_byte()?;
-                    let o = reader.read_byte()?;
-                    let p = reader.read_byte()?;
-                    Ok(Ipv6Addr::from([a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p]) == *v6)
-                }
+                    let mut raw_ip_address: [u8; 16] = Default::default();
+                    raw_ip_address.clone_from_slice(reader.read_bytes(16)?.as_slice_less_safe());
+                    Ok(Ipv6Addr::from(raw_ip_address) == *v6)
+                },
                 _ => Ok(false),
             },
-            GeneralName::DirectoryName(d) => {
+            GeneralName::DirectoryName(d) =>
                 if let Some(x) = Self::extract_common_name(d) {
                     match IpAddr::from_str(x.as_str()) {
                         Ok(a) => Ok(a == *ip),
@@ -126,8 +143,7 @@ impl SubjectAlternativeName {
                     }
                 } else {
                     Ok(false)
-                }
-            }
+                },
             _ => Ok(false),
         }
     }
@@ -141,10 +157,12 @@ impl SubjectAlternativeName {
     }
 
     /// Check if this name is the subject of the provided certificate.
-    pub fn is_subject_of(&self, cert: &super::EndEntityCert) -> Result<(), Error> {
+    pub fn is_subject_of_legacy(
+        &self, cert: &super::EndEntityCert, check_cn: bool,
+    ) -> Result<(), Error> {
         let crt = &cert.inner;
         iterate_names(
-            crt.subject,
+            if check_cn { Some(crt.subject) } else { None },
             crt.subject_alt_name,
             Err(Error::CertNotValidForName),
             &|name| match self.matches(cert, &name) {
@@ -153,5 +171,10 @@ impl SubjectAlternativeName {
                 Err(e) => NameIteration::Stop(Err(e)),
             },
         )
+    }
+
+    /// Check if this name is the subject of the provided certificate.
+    pub fn is_subject_of(&self, cert: &super::EndEntityCert) -> Result<(), Error> {
+        self.is_subject_of_legacy(cert, false)
     }
 }
