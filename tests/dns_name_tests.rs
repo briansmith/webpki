@@ -1,5 +1,7 @@
 // Copyright 2014-2017 Brian Smith.
 
+use webpki::DnsName;
+
 // (name, is_valid)
 static DNS_NAME_VALIDITY: &[(&[u8], bool)] = &[
     (b"a", true),
@@ -399,10 +401,105 @@ fn dns_name_ref_try_from_ascii_test() {
         .chain(IP_ADDRESS_DNS_VALIDITY.iter())
     {
         assert_eq!(
-            webpki::DnsName::try_from_ascii(s).is_ok(),
+            DnsName::<&[u8]>::try_from_punycode(s).is_ok(),
             is_valid,
-            "DnsNameRef::try_from_ascii_str failed for \"{:?}\"",
+            "DnsName::try_from_punycode failed for \"{:?}\"",
             s
         );
+    }
+}
+
+const DNS_NAME_LOWERCASE_TEST_CASES: &[(&str, &str)] = &[
+    // (expected_lowercase, input)
+    ("abc", "abc"),
+    ("abc", "Abc"),
+    ("abc", "aBc"),
+    ("abc", "abC"),
+    ("abc1", "abC1"),
+    ("abc.def", "abC.Def"),
+];
+
+#[test]
+fn test_dns_name_ascii_lowercase_chars() {
+    for (expected_lowercase, input) in DNS_NAME_LOWERCASE_TEST_CASES {
+        let dns_name: DnsName<&str> = DnsName::try_from_punycode(*input).unwrap();
+        let actual_lowercase = dns_name.punycode_lowercase_bytes();
+
+        assert_eq!(expected_lowercase.len(), actual_lowercase.len());
+        assert!(expected_lowercase
+            .chars()
+            .zip(actual_lowercase)
+            .all(|(a, b)| a == b.into()));
+    }
+}
+
+// XXX: This shouldn't require the "std" feature.
+#[cfg(feature = "std")]
+#[test]
+fn test_dns_name_fmt() {
+    for (expected_lowercase, input) in DNS_NAME_LOWERCASE_TEST_CASES {
+        let dns_name: DnsName<&str> = DnsName::try_from_punycode(*input).unwrap();
+
+        // Test `Display` implementation.
+        assert_eq!(*expected_lowercase, format!("{}", dns_name));
+
+        // Test `Debug` implementation.
+        let debug_formatted = format!("{:?}", &dns_name);
+        assert_eq!(
+            String::from("DnsName(\"") + *expected_lowercase + "\")",
+            debug_formatted
+        );
+    }
+}
+
+// XXX: We need more test cases.
+#[test]
+fn test_dns_name_eq_different_len() {
+    #[rustfmt::skip]
+    const NOT_EQUAL: &[(&str, &str)] = &[
+        ("a", "aa"),
+        ("aa", "a"),
+        ("aaa", "a"),
+        ("a", "aaa")
+    ];
+
+    for (a, b) in NOT_EQUAL {
+        let a: DnsName<&str> = DnsName::try_from_punycode(*a).unwrap();
+        let b: DnsName<&str> = DnsName::try_from_punycode(*b).unwrap();
+        assert_ne!(a, b)
+    }
+}
+
+/// XXX: We need more test cases.
+#[test]
+fn test_dns_name_eq_case() {
+    for (expected_lowercase, input) in DNS_NAME_LOWERCASE_TEST_CASES {
+        let a: DnsName<&str> = DnsName::try_from_punycode(*expected_lowercase).unwrap();
+        let b: DnsName<&str> = DnsName::try_from_punycode(*input).unwrap();
+        assert_eq!(a, b);
+    }
+}
+
+/// XXX: We need more test cases.
+#[cfg(feature = "std")]
+#[test]
+fn test_dns_name_eq_various_types() {
+    for (expected_lowercase, input) in DNS_NAME_LOWERCASE_TEST_CASES {
+        let a: DnsName<&str> = DnsName::try_from_punycode(*expected_lowercase).unwrap();
+        let b: DnsName<String> = DnsName::try_from_punycode(*input).unwrap();
+        assert_eq!(a, b);
+    }
+
+    for (expected_lowercase, input) in DNS_NAME_LOWERCASE_TEST_CASES {
+        let a: DnsName<String> = DnsName::try_from_punycode(*expected_lowercase).unwrap();
+        let b: DnsName<&[u8]> = DnsName::try_from_punycode(input.as_ref()).unwrap();
+        assert_eq!(a, b);
+    }
+
+    for (expected_lowercase, input) in DNS_NAME_LOWERCASE_TEST_CASES {
+        let a: DnsName<Box<[u8]>> =
+            DnsName::try_from_punycode(expected_lowercase.as_ref()).unwrap();
+        let b: DnsName<&str> = DnsName::try_from_punycode(*input).unwrap();
+        assert_eq!(a, b);
     }
 }

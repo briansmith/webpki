@@ -164,7 +164,7 @@ impl<'a> EndEntityCert<'a> {
     }
 
     /// Verifies that the certificate is valid for the given DNS host name.
-    pub fn verify_is_valid_for_dns_name(&self, dns_name: DnsName) -> Result<(), Error> {
+    pub fn verify_is_valid_for_dns_name(&self, dns_name: DnsName<&[u8]>) -> Result<(), Error> {
         name::verify_cert_dns_name(&self, dns_name)
     }
 
@@ -178,15 +178,16 @@ impl<'a> EndEntityCert<'a> {
     /// Requires the `std` default feature; i.e. this isn't available in
     /// `#![no_std]` configurations.
     #[cfg(feature = "std")]
-    pub fn verify_is_valid_for_at_least_one_dns_name<'names, Names>(
+    pub fn verify_is_valid_for_at_least_one_dns_name<'names, B, Names>(
         &self,
         dns_names: Names,
-    ) -> Result<Vec<DnsName<'names>>, Error>
+    ) -> Result<Vec<DnsName<B>>, Error>
     where
-        Names: Iterator<Item = DnsName<'names>>,
+        B: AsRef<[u8]>,
+        Names: Iterator<Item = DnsName<B>>,
     {
-        let result: Vec<DnsName<'names>> = dns_names
-            .filter(|n| self.verify_is_valid_for_dns_name(*n).is_ok())
+        let result: Vec<_> = dns_names
+            .filter(|n| self.verify_is_valid_for_dns_name(n.borrow()).is_ok())
             .collect();
         if result.is_empty() {
             return Err(Error::CertNotValidForName);
