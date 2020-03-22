@@ -17,49 +17,6 @@ use crate::{
     der, Error,
 };
 
-/// A DNS Name suitable for use in the TLS Server Name Indication (SNI)
-/// extension and/or for use as the reference hostname for which to verify a
-/// certificate.
-///
-/// A `DnsName` is guaranteed to be syntactically valid. The validity rules are
-/// specified in [RFC 5280 Section 7.2], except that underscores are also
-/// allowed.
-///
-/// `DnsName` stores a copy of the input it was constructed from in a `String`
-/// and so it is only available when the `std` default feature is enabled.
-///
-/// `Eq`, `PartialEq`, etc. are not implemented because name comparison
-/// frequently should be done case-insensitively and/or with other caveats that
-/// depend on the specific circumstances in which the comparison is done.
-///
-/// [RFC 5280 Section 7.2]: https://tools.ietf.org/html/rfc5280#section-7.2
-#[cfg(feature = "std")]
-#[derive(Clone, Debug, Eq, PartialEq, Hash)]
-pub struct DnsName(String);
-
-#[cfg(feature = "std")]
-impl DnsName {
-    /// Returns a `DnsNameRef` that refers to this `DnsName`.
-    pub fn as_ref(&self) -> DnsNameRef {
-        DnsNameRef(self.0.as_bytes())
-    }
-}
-
-#[cfg(feature = "std")]
-impl AsRef<str> for DnsName {
-    fn as_ref(&self) -> &str {
-        self.0.as_ref()
-    }
-}
-
-// Deprecated
-#[cfg(feature = "std")]
-impl From<DnsNameRef<'_>> for DnsName {
-    fn from(dns_name: DnsNameRef) -> Self {
-        dns_name.to_owned()
-    }
-}
-
 /// A reference to a DNS Name suitable for use in the TLS Server Name Indication
 /// (SNI) extension and/or for use as the reference hostname for which to verify
 /// a certificate.
@@ -105,15 +62,6 @@ impl<'a> DnsNameRef<'a> {
     /// syntactically-valid DNS name.
     pub fn try_from_ascii_str(dns_name: &'a str) -> Result<Self, InvalidDnsNameError> {
         Self::try_from_ascii(dns_name.as_bytes())
-    }
-
-    /// Constructs a `DnsName` from this `DnsNameRef`
-    #[cfg(feature = "std")]
-    pub fn to_owned(&self) -> DnsName {
-        // DnsNameRef is already guaranteed to be valid ASCII, which is a
-        // subset of UTF-8.
-        let s: &str = self.clone().into();
-        DnsName(s.to_ascii_lowercase())
     }
 }
 
