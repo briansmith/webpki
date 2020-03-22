@@ -399,7 +399,7 @@ fn dns_name_ref_try_from_ascii_test() {
         .chain(IP_ADDRESS_DNS_VALIDITY.iter())
     {
         assert_eq!(
-            webpki::DnsNameRef::try_from_ascii(s).is_ok(),
+            webpki::DnsName::try_from_ascii(s).is_ok(),
             is_valid,
             "DnsNameRef::try_from_ascii_str failed for \"{:?}\"",
             s

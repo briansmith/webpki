@@ -21,7 +21,7 @@ use crate::{
 /// (SNI) extension and/or for use as the reference hostname for which to verify
 /// a certificate.
 ///
-/// A `DnsNameRef` is guaranteed to be syntactically valid. The validity rules
+/// A `DnsName` is guaranteed to be syntactically valid. The validity rules
 /// are specified in [RFC 5280 Section 7.2], except that underscores are also
 /// allowed.
 ///
@@ -31,9 +31,9 @@ use crate::{
 ///
 /// [RFC 5280 Section 7.2]: https://tools.ietf.org/html/rfc5280#section-7.2
 #[derive(Clone, Copy)]
-pub struct DnsNameRef<'a>(&'a [u8]);
+pub struct DnsName<'a>(&'a [u8]);
 
-/// An error indicating that a `DnsNameRef` could not built because the input
+/// An error indicating that a `DnsName` could not built because the input
 /// is not a syntactically-valid DNS Name.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct InvalidDnsNameError;
@@ -47,8 +47,8 @@ impl core::fmt::Display for InvalidDnsNameError {
 #[cfg(feature = "std")]
 impl ::std::error::Error for InvalidDnsNameError {}
 
-impl<'a> DnsNameRef<'a> {
-    /// Constructs a `DnsNameRef` from the given input if the input is a
+impl<'a> DnsName<'a> {
+    /// Constructs a `DnsName` from the given input if the input is a
     /// syntactically-valid DNS name.
     pub fn try_from_ascii(dns_name: &'a [u8]) -> Result<Self, InvalidDnsNameError> {
         if !is_valid_reference_dns_id(untrusted::Input::from(dns_name)) {
@@ -58,7 +58,7 @@ impl<'a> DnsNameRef<'a> {
         Ok(Self(dns_name))
     }
 
-    /// Constructs a `DnsNameRef` from the given input if the input is a
+    /// Constructs a `DnsName` from the given input if the input is a
     /// syntactically-valid DNS name.
     pub fn try_from_ascii_str(dns_name: &'a str) -> Result<Self, InvalidDnsNameError> {
         Self::try_from_ascii(dns_name.as_bytes())
@@ -66,16 +66,16 @@ impl<'a> DnsNameRef<'a> {
 }
 
 #[cfg(feature = "std")]
-impl core::fmt::Debug for DnsNameRef<'_> {
+impl core::fmt::Debug for DnsName<'_> {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> Result<(), core::fmt::Error> {
         let lowercase = self.clone().to_owned();
-        f.debug_tuple("DnsNameRef").field(&lowercase.0).finish()
+        f.debug_tuple("DnsName").field(&lowercase.0).finish()
     }
 }
 
-impl<'a> From<DnsNameRef<'a>> for &'a str {
-    fn from(DnsNameRef(d): DnsNameRef<'a>) -> Self {
-        // The unwrap won't fail because DnsNameRefs are guaranteed to be ASCII
+impl<'a> From<DnsName<'a>> for &'a str {
+    fn from(DnsName(d): DnsName<'a>) -> Self {
+        // The unwrap won't fail because DnsNames are guaranteed to be ASCII
         // and ASCII is a subset of UTF-8.
         core::str::from_utf8(d).unwrap()
     }
@@ -83,7 +83,7 @@ impl<'a> From<DnsNameRef<'a>> for &'a str {
 
 pub fn verify_cert_dns_name(
     cert: &super::EndEntityCert,
-    DnsNameRef(dns_name): DnsNameRef,
+    DnsName(dns_name): DnsName,
 ) -> Result<(), Error> {
     let cert = &cert.inner;
     let dns_name = untrusted::Input::from(dns_name);

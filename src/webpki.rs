@@ -41,7 +41,7 @@ pub mod trust_anchor_util;
 mod verify_cert;
 
 pub use error::Error;
-pub use name::{DnsNameRef, InvalidDnsNameError};
+pub use name::{DnsName, InvalidDnsNameError};
 
 pub use signed_data::{
     SignatureAlgorithm, ECDSA_P256_SHA256, ECDSA_P256_SHA384, ECDSA_P384_SHA256, ECDSA_P384_SHA384,
@@ -164,7 +164,7 @@ impl<'a> EndEntityCert<'a> {
     }
 
     /// Verifies that the certificate is valid for the given DNS host name.
-    pub fn verify_is_valid_for_dns_name(&self, dns_name: DnsNameRef) -> Result<(), Error> {
+    pub fn verify_is_valid_for_dns_name(&self, dns_name: DnsName) -> Result<(), Error> {
         name::verify_cert_dns_name(&self, dns_name)
     }
 
@@ -181,11 +181,11 @@ impl<'a> EndEntityCert<'a> {
     pub fn verify_is_valid_for_at_least_one_dns_name<'names, Names>(
         &self,
         dns_names: Names,
-    ) -> Result<Vec<DnsNameRef<'names>>, Error>
+    ) -> Result<Vec<DnsName<'names>>, Error>
     where
-        Names: Iterator<Item = DnsNameRef<'names>>,
+        Names: Iterator<Item = DnsName<'names>>,
     {
-        let result: Vec<DnsNameRef<'names>> = dns_names
+        let result: Vec<DnsName<'names>> = dns_names
             .filter(|n| self.verify_is_valid_for_dns_name(*n).is_ok())
             .collect();
         if result.is_empty() {
