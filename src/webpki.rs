@@ -41,7 +41,10 @@ pub mod trust_anchor_util;
 mod verify_cert;
 
 pub use error::Error;
-pub use name::{DnsName, InvalidDnsNameError};
+pub use name::{DnsName, DnsNameRef, InvalidDnsNameError};
+
+#[cfg(feature = "std")]
+pub use name::DnsNameBox;
 
 pub use signed_data::{
     SignatureAlgorithm, ECDSA_P256_SHA256, ECDSA_P256_SHA384, ECDSA_P384_SHA256, ECDSA_P384_SHA384,
