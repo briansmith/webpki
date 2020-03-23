@@ -56,32 +56,70 @@ impl core::fmt::Display for InvalidDnsNameError {
 #[cfg(feature = "std")]
 impl ::std::error::Error for InvalidDnsNameError {}
 
+pub trait DnsNameInput: AsRef<[u8]> + Sized {
+    type Storage: AsRef<[u8]>;
+    fn into_storage(self) -> Self::Storage;
+}
+
+#[cfg(feature = "std")]
+impl DnsNameInput for String {
+    type Storage = Box<[u8]>;
+    fn into_storage(self) -> Self::Storage {
+        self.into_boxed_str().into()
+    }
+}
+
+#[cfg(feature = "std")]
+impl DnsNameInput for Box<[u8]> {
+    type Storage = Box<[u8]>;
+    fn into_storage(self) -> Self::Storage {
+        self
+    }
+}
+
+#[cfg(feature = "std")]
+impl DnsNameInput for Vec<u8> {
+    type Storage = Box<[u8]>;
+    fn into_storage(self) -> Self::Storage {
+        self.into()
+    }
+}
+
+impl<'a> DnsNameInput for &'a str {
+    type Storage = &'a [u8];
+    fn into_storage(self) -> Self::Storage {
+        self.as_ref()
+    }
+}
+
+impl<'a> DnsNameInput for &'a [u8] {
+    type Storage = &'a [u8];
+    fn into_storage(self) -> Self::Storage {
+        self.as_ref()
+    }
+}
+
 impl<B> DnsName<B>
 where
     B: AsRef<[u8]>,
 {
-    /// TODO: docs
-    pub fn try_from_punycode_str<'a>(dns_name: &'a str) -> Result<Self, InvalidDnsNameError>
-    where
-        B: From<&'a [u8]>,
-    {
-        Self::try_from_punycode(dns_name.as_ref())
-    }
-
     /// Constructs a `DnsName` from the given input if the input is a
     /// syntactically-valid DNS name.
-    pub fn try_from_punycode<A>(dns_name: A) -> Result<Self, InvalidDnsNameError>
-    where
-        A: AsRef<[u8]>,
-        A: Into<B>,
-    {
-        if !is_valid_reference_dns_id(untrusted::Input::from(dns_name.as_ref())) {
+    pub fn try_from_punycode(
+        input: impl DnsNameInput<Storage = B>,
+    ) -> Result<Self, InvalidDnsNameError> {
+        if !is_valid_reference_dns_id(untrusted::Input::from(input.as_ref())) {
             return Err(InvalidDnsNameError);
         }
 
-        Ok(Self(dns_name.into()))
+        Ok(Self(input.into_storage()))
     }
+}
 
+impl<B> DnsName<B>
+where
+    B: AsRef<[u8]>,
+{
     /// Borrows any `DnsName` as a `DnsName<&[u8]>`.
     ///
     /// Use `DnsName<&[u8]>` when you don't *need* to be generic over the
@@ -93,7 +131,7 @@ where
 
     /// TODO:
     #[cfg(feature = "std")]
-    pub fn to_owned(&self) -> DnsName<Box<[u8]>> {
+    pub fn into_owned(self) -> DnsName<Box<[u8]>> {
         DnsName(Box::from(self.0.as_ref()))
     }
 
