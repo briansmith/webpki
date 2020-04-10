@@ -263,6 +263,10 @@ pub struct TrustAnchor<'a> {
     /// The value of a DER-encoded NameConstraints, containing name
     /// constraints to apply to the trust anchor, if any.
     pub name_constraints: Option<&'a [u8]>,
+
+    /// True if the trust anchor describes an end entity certificate (i.e.
+    /// a self-signed certificate) rather than a CA certificate.
+    pub is_end_entity: bool,
 }
 
 /// Trust anchors which may be used for authenticating servers.

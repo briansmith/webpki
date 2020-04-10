@@ -20,11 +20,24 @@ use crate::{
     Error, TrustAnchor,
 };
 
-/// Interprets the given DER-encoded certificate as a `TrustAnchor`. The
+/// Interprets the given DER-encoded CA certificate as a `TrustAnchor`. The
 /// certificate is not validated. In particular, there is no check that the
 /// certificate is self-signed or even that the certificate has the cA basic
 /// constraint.
 pub fn cert_der_as_trust_anchor(cert_der: &[u8]) -> Result<TrustAnchor, Error> {
+    cert_der_as_trust_anchor_internal(cert_der, false)
+
+}
+
+/// Interprets the given DER-encoded end-entity certificate as a
+/// `TrustAnchor`. The certificate is not validated. In particular, there is
+/// no check that the certificate is self-signed.
+pub fn cert_der_as_end_entity_trust_anchor(cert_der: &[u8]) -> Result<TrustAnchor, Error> {
+    cert_der_as_trust_anchor_internal(cert_der, true)
+}
+
+
+fn cert_der_as_trust_anchor_internal(cert_der: &[u8], is_end_entity: bool) -> Result<TrustAnchor, Error> {
     let cert_der = untrusted::Input::from(cert_der);
 
     // XXX: `EndEntityOrCA::EndEntity` is used instead of `EndEntityOrCA::CA`
@@ -41,8 +54,8 @@ pub fn cert_der_as_trust_anchor(cert_der: &[u8]) -> Result<TrustAnchor, Error> {
         EndEntityOrCA::EndEntity,
         possibly_invalid_certificate_serial_number,
     ) {
-        Ok(cert) => Ok(trust_anchor_from_cert(cert)),
-        Err(Error::BadDER) => parse_cert_v1(cert_der).or(Err(Error::BadDER)),
+        Ok(cert) => Ok(trust_anchor_from_cert(cert, is_end_entity)),
+        Err(Error::BadDER) => parse_cert_v1(cert_der, is_end_entity).or(Err(Error::BadDER)),
         Err(err) => Err(err),
     }
 }
@@ -76,16 +89,17 @@ pub fn generate_code_for_trust_anchors(name: &str, trust_anchors: &[TrustAnchor]
     decl + &value
 }
 
-fn trust_anchor_from_cert<'a>(cert: Cert<'a>) -> TrustAnchor<'a> {
+fn trust_anchor_from_cert<'a>(cert: Cert<'a>, is_end_entity: bool) -> TrustAnchor<'a> {
     TrustAnchor {
         subject: cert.subject.as_slice_less_safe(),
         spki: cert.spki.value().as_slice_less_safe(),
         name_constraints: cert.name_constraints.map(|nc| nc.as_slice_less_safe()),
+        is_end_entity,
     }
 }
 
 /// Parses a v1 certificate directly into a TrustAnchor.
-fn parse_cert_v1<'a>(cert_der: untrusted::Input<'a>) -> Result<TrustAnchor<'a>, Error> {
+fn parse_cert_v1<'a>(cert_der: untrusted::Input<'a>, is_end_entity: bool) -> Result<TrustAnchor<'a>, Error> {
     // X.509 Certificate: https://tools.ietf.org/html/rfc5280#section-4.1.
     cert_der.read_all(Error::BadDER, |cert_der| {
         der::nested(cert_der, der::Tag::Sequence, Error::BadDER, |cert_der| {
@@ -103,6 +117,7 @@ fn parse_cert_v1<'a>(cert_der: untrusted::Input<'a>) -> Result<TrustAnchor<'a>, 
                     subject: subject.as_slice_less_safe(),
                     spki: spki.as_slice_less_safe(),
                     name_constraints: None,
+                    is_end_entity,
                 })
             });
 

@@ -86,6 +86,38 @@ pub fn ed25519() {
 
 #[cfg(feature = "trust_anchor_util")]
 #[test]
+pub fn self_signed() {
+    let der = include_bytes!("self-signed/ee.der");
+
+    let anchors = vec![webpki::trust_anchor_util::cert_der_as_end_entity_trust_anchor(der).unwrap()];
+    let anchors = webpki::TLSServerTrustAnchors(&anchors);
+
+    let time = webpki::Time::from_seconds_since_unix_epoch(1586497569);
+
+    let cert = webpki::EndEntityCert::from(der).unwrap();
+    let _ = cert
+        .verify_is_valid_tls_server_cert(ALL_SIGALGS, &anchors, &[], time)
+        .unwrap();
+}
+
+#[cfg(feature = "trust_anchor_util")]
+#[test]
+pub fn ca_as_end_entity() {
+    let der = include_bytes!("self-signed/ee.der");
+
+    let anchors = vec![webpki::trust_anchor_util::cert_der_as_trust_anchor(der).unwrap()];
+    let anchors = webpki::TLSServerTrustAnchors(&anchors);
+
+    let time = webpki::Time::from_seconds_since_unix_epoch(1586497569);
+
+    let cert = webpki::EndEntityCert::from(der).unwrap();
+    let _ = cert
+        .verify_is_valid_tls_server_cert(ALL_SIGALGS, &anchors, &[], time)
+        .expect_err("CA certificate should be rejected as end-entity");
+}
+
+#[cfg(feature = "trust_anchor_util")]
+#[test]
 fn read_root_with_zero_serial() {
     let ca = include_bytes!("misc/serial_zero.der");
     let _ = webpki::trust_anchor_util::cert_der_as_trust_anchor(ca)

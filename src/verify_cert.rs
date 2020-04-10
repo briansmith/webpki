@@ -24,13 +24,17 @@ pub fn build_chain(
 ) -> Result<(), Error> {
     let used_as_ca = used_as_ca(&cert.ee_or_ca);
 
-    check_issuer_independent_properties(
+    let ca_used_as_end_entity = match check_issuer_independent_properties(
         cert,
         time,
         used_as_ca,
         sub_ca_count,
         required_eku_if_present,
-    )?;
+    ) {
+        Ok(_) => false,
+        Err(Error::CAUsedAsEndEntity) => true,
+        Err(e) => return Err(e),
+    };
 
     // TODO: HPKP checks.
 
@@ -66,6 +70,10 @@ pub fn build_chain(
         // TODO: check_distrust(trust_anchor_subject, trust_anchor_spki)?;
 
         check_signatures(supported_sig_algs, cert, trust_anchor_spki)?;
+
+        if ca_used_as_end_entity && !trust_anchor.is_end_entity {
+            return Err(Error::CAUsedAsEndEntity);
+        }
 
         Ok(())
     }) {
