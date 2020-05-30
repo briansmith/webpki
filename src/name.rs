@@ -42,6 +42,9 @@ pub struct DNSName(String);
 impl DNSName {
     /// Returns a `DNSNameRef` that refers to this `DNSName`.
     pub fn as_ref(&self) -> DNSNameRef { DNSNameRef(self.0.as_bytes()) }
+
+    /// Returns this `DNSName` as `&str`
+    pub fn as_str(&self) -> &str { self.0.as_ref() }
 }
 
 #[cfg(feature = "std")]
