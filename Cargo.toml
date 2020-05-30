@@ -22,7 +22,7 @@ license-file = "LICENSE"
 name = "webpki"
 readme = "README.md"
 repository = "https://github.com/briansmith/webpki"
-version = "0.21.2"
+version = "0.21.3"
 
 include = [
     "Cargo.toml",
@@ -66,8 +66,8 @@ trust_anchor_util = ["std"]
 std = []
 
 [dependencies]
-ring = { version = "0.16.10", default-features = false, features = ["alloc"] }
-untrusted = "0.7.0"
+ring = { version = "0.16.14", default-features = false, features = ["alloc"] }
+untrusted = "0.7.1"
 
 [dev-dependencies]
 base64 = "0.9.1"
