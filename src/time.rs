@@ -23,10 +23,22 @@
 pub struct Time(u64);
 
 impl Time {
-    /// Create a `webpki::Time` from a `std::time::SystemTime`.
+    /// Create a `webpki::Time` from a unix timestamp.
     ///
-    /// This will be replaced with a real `TryFrom<std::time::SystemTime>`
-    /// implementation when `TryFrom` is added to Rust Stable.
+    /// It is usually better to use the less error-prone
+    /// `webpki::Time::try_from(time: std::time::SystemTime)` instead when
+    /// `std::time::SystemTime` is available (when `#![no_std]` isn't being
+    /// used).
+    pub fn from_seconds_since_unix_epoch(secs: u64) -> Time {
+        Time(secs)
+    }
+}
+
+#[cfg(feature = "std")]
+impl core::convert::TryFrom<std::time::SystemTime> for Time {
+    type Error = ring::error::Unspecified;
+
+    /// Create a `webpki::Time` from a `std::time::SystemTime`.
     ///
     /// # Example:
     ///
@@ -36,28 +48,18 @@ impl Time {
     /// # extern crate ring;
     /// # extern crate webpki;
     /// #
-    /// #[cfg(feature = "std")]
+    /// #![cfg(feature = "std")]
+    /// use std::{convert::TryFrom, time::SystemTime};
+    ///
     /// # fn foo() -> Result<(), ring::error::Unspecified> {
-    /// let time = webpki::Time::try_from(std::time::SystemTime::now())?;
+    /// let time = webpki::Time::try_from(SystemTime::now())?;
     /// # Ok(())
     /// # }
     /// ```
-    ///
-    /// Requires the `std` feature.
-    #[cfg(feature = "std")]
-    pub fn try_from(time: std::time::SystemTime) -> Result<Time, ring::error::Unspecified> {
-        time.duration_since(std::time::UNIX_EPOCH)
+    fn try_from(value: std::time::SystemTime) -> Result<Self, Self::Error> {
+        value
+            .duration_since(std::time::UNIX_EPOCH)
             .map(|d| Time::from_seconds_since_unix_epoch(d.as_secs()))
             .map_err(|_| ring::error::Unspecified)
-    }
-
-    /// Create a `webpki::Time` from a unix timestamp.
-    ///
-    /// It is usually better to use the less error-prone
-    /// `webpki::Time::try_from(time: &std::time::SystemTime)` instead when
-    /// `std::time::SystemTime` is available (when `#![no_std]` isn't being
-    /// used).
-    pub fn from_seconds_since_unix_epoch(secs: u64) -> Time {
-        Time(secs)
     }
 }
