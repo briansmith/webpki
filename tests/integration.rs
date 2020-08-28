@@ -12,6 +12,7 @@
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
+use core::convert::TryFrom;
 extern crate webpki;
 
 static ALL_SIGALGS: &[&webpki::SignatureAlgorithm] = &[
@@ -35,7 +36,7 @@ static ALL_SIGALGS: &[&webpki::SignatureAlgorithm] = &[
 #[cfg(feature = "alloc")]
 #[test]
 pub fn netflix() {
-    let ee = include_bytes!("netflix/ee.der");
+    let ee: &[u8] = include_bytes!("netflix/ee.der");
     let inter = include_bytes!("netflix/inter.der");
     let ca = include_bytes!("netflix/ca.der");
 
@@ -45,7 +46,7 @@ pub fn netflix() {
     #[allow(clippy::unreadable_literal)] // TODO: Make this clear.
     let time = webpki::Time::from_seconds_since_unix_epoch(1492441716);
 
-    let cert = webpki::EndEntityCert::from(ee).unwrap();
+    let cert = webpki::EndEntityCert::try_from(ee).unwrap();
     assert_eq!(
         Ok(()),
         cert.verify_is_valid_tls_server_cert(ALL_SIGALGS, &anchors, &[inter], time)
@@ -54,7 +55,7 @@ pub fn netflix() {
 
 #[test]
 pub fn ed25519() {
-    let ee = include_bytes!("ed25519/ee.der");
+    let ee: &[u8] = include_bytes!("ed25519/ee.der");
     let ca = include_bytes!("ed25519/ca.der");
 
     let anchors = vec![webpki::trust_anchor_util::cert_der_as_trust_anchor(ca).unwrap()];
@@ -63,7 +64,7 @@ pub fn ed25519() {
     #[allow(clippy::unreadable_literal)] // TODO: Make this clear.
     let time = webpki::Time::from_seconds_since_unix_epoch(1547363522);
 
-    let cert = webpki::EndEntityCert::from(ee).unwrap();
+    let cert = webpki::EndEntityCert::try_from(ee).unwrap();
     assert_eq!(
         Ok(()),
         cert.verify_is_valid_tls_server_cert(ALL_SIGALGS, &anchors, &[], time)

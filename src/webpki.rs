@@ -108,10 +108,12 @@ pub struct EndEntityCert<'a> {
     inner: cert::Cert<'a>,
 }
 
-impl<'a> EndEntityCert<'a> {
+impl<'a> core::convert::TryFrom<&'a [u8]> for EndEntityCert<'a> {
+    type Error = Error;
+
     /// Parse the ASN.1 DER-encoded X.509 encoding of the certificate
     /// `cert_der`.
-    pub fn from(cert_der: &'a [u8]) -> Result<Self, Error> {
+    fn try_from(cert_der: &'a [u8]) -> Result<Self, Self::Error> {
         Ok(Self {
             inner: cert::parse_cert(
                 untrusted::Input::from(cert_der),
@@ -119,7 +121,9 @@ impl<'a> EndEntityCert<'a> {
             )?,
         })
     }
+}
 
+impl<'a> EndEntityCert<'a> {
     /// Verifies that the end-entity certificate is valid for use by a TLS
     /// server.
     ///
