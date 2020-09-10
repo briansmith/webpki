@@ -72,8 +72,12 @@ pub fn build_chain(
         Ok(()) => {
             return Ok(());
         },
-        Err(..) => {
-            // If the error is not fatal, then keep going.
+        error @ Err(..) => {
+            // If the error is not fatal, then keep going unless there are not intermediate certs
+            // then we want this more descriptive error.
+            if intermediate_certs.is_empty() {
+                return error;
+            }
         },
     }
 
@@ -321,15 +325,17 @@ where
     V: IntoIterator,
     F: Fn(V::Item) -> Result<(), Error>,
 {
+    let mut error = Error::UnknownIssuer;
     for v in values {
         match f(v) {
             Ok(()) => {
                 return Ok(());
-            },
-            Err(..) => {
-                // If the error is not fatal, then keep going.
-            },
+            }
+            Err(e) => {
+                // If the error is not fatal, then keep going recording the last error.
+                error = e;
+            }
         }
     }
-    Err(Error::UnknownIssuer)
+    Err(error)
 }
