@@ -246,7 +246,9 @@ pub static RSA_PKCS1_3072_8192_SHA384: SignatureAlgorithm = SignatureAlgorithm {
 };
 
 /// RSA PSS signatures using SHA-256 for keys of 2048-8192 bits and of
-/// type rsaEncryption; see https://tools.ietf.org/html/rfc4055#section-1.2
+/// type rsaEncryption; see [RFC 4055 Section 1.2].
+///
+/// [RFC 4055 Section 1.2]: https://tools.ietf.org/html/rfc4055#section-1.2
 pub static RSA_PSS_2048_8192_SHA256_LEGACY_KEY: SignatureAlgorithm = SignatureAlgorithm {
     public_key_alg_id: RSA_ENCRYPTION,
     signature_alg_id: RSA_PSS_SHA256,
@@ -254,7 +256,9 @@ pub static RSA_PSS_2048_8192_SHA256_LEGACY_KEY: SignatureAlgorithm = SignatureAl
 };
 
 /// RSA PSS signatures using SHA-384 for keys of 2048-8192 bits and of
-/// type rsaEncryption; see https://tools.ietf.org/html/rfc4055#section-1.2
+/// type rsaEncryption; see [RFC 4055 Section 1.2].
+///
+/// [RFC 4055 Section 1.2]: https://tools.ietf.org/html/rfc4055#section-1.2
 pub static RSA_PSS_2048_8192_SHA384_LEGACY_KEY: SignatureAlgorithm = SignatureAlgorithm {
     public_key_alg_id: RSA_ENCRYPTION,
     signature_alg_id: RSA_PSS_SHA384,
@@ -262,7 +266,9 @@ pub static RSA_PSS_2048_8192_SHA384_LEGACY_KEY: SignatureAlgorithm = SignatureAl
 };
 
 /// RSA PSS signatures using SHA-512 for keys of 2048-8192 bits and of
-/// type rsaEncryption; see https://tools.ietf.org/html/rfc4055#section-1.2
+/// type rsaEncryption; see [RFC 4055 Section 1.2].
+///
+/// [RFC 4055 Section 1.2]: https://tools.ietf.org/html/rfc4055#section-1.2
 pub static RSA_PSS_2048_8192_SHA512_LEGACY_KEY: SignatureAlgorithm = SignatureAlgorithm {
     public_key_alg_id: RSA_ENCRYPTION,
     signature_alg_id: RSA_PSS_SHA512,

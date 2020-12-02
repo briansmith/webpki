@@ -43,8 +43,7 @@ jobs:
         rust_channel:
           - stable
           - beta
-          # TODO: Fix nightly compatibility
-          # - nightly
+          - nightly
 
         include:
           - target: x86_64-unknown-linux-gnu
