@@ -24,6 +24,7 @@ function install_packages {
   sudo apt-get -yq --no-install-suggests --no-install-recommends install "$@"
 }
 
+use_clang=
 case $target in
 --target*android*)
   mkdir -p "${ANDROID_SDK_ROOT}/licenses"
@@ -37,10 +38,17 @@ esac
 
 case $target in
 --target=aarch64-unknown-linux-gnu)
+  # Clang is needed for code coverage.
+  use_clang=1
   install_packages \
     qemu-user \
     gcc-aarch64-linux-gnu \
     libc6-dev-arm64-cross
+  ;;
+--target=aarch64-unknown-linux-musl|--target=armv7-unknown-linux-musleabihf)
+  use_clang=1
+  install_packages \
+    qemu-user
   ;;
 --target=arm-unknown-linux-gnueabihf)
   install_packages \
@@ -48,21 +56,22 @@ case $target in
     gcc-arm-linux-gnueabihf \
     libc6-dev-armhf-cross
   ;;
---target=i686-unknown-linux-gnu|--target=i686-unknown-linux-musl)
-  # TODO: musl i686 shouldn't be using gcc-multilib or libc6-dev-i386.
+--target=i686-unknown-linux-gnu)
+  use_clang=1
   install_packages \
     gcc-multilib \
     libc6-dev-i386
   ;;
+--target=i686-unknown-linux-musl|--target=x86_64-unknown-linux-musl)
+  use_clang=1
+  ;;
 --target=wasm32-unknown-unknown)
-  cargo install wasm-bindgen-cli --vers "0.2.68" --bin wasm-bindgen-test-runner
+  # The version of wasm-bindgen-cli must match the wasm-bindgen version.
+  wasm_bindgen_version=$(cargo metadata --format-version 1 | jq -r '.packages | map(select( .name == "wasm-bindgen")) | map(.version) | .[0]')
+  cargo install wasm-bindgen-cli --vers "$wasm_bindgen_version" --bin wasm-bindgen-test-runner
   case ${features-} in
     *wasm32_c*)
-      # "wasm_c" has only been tested with clang-10 and llvm-ar-10. The build
-      # will fail when using some older versions.
-      install_packages \
-        clang-10 \
-        llvm-10
+      use_clang=1
       ;;
     *)
       ;;
@@ -71,3 +80,16 @@ case $target in
 --target=*)
   ;;
 esac
+
+if [ -n "$use_clang" ]; then
+  llvm_version=10
+  if [ -n "${RING_COVERAGE-}" ]; then
+    # https://github.com/rust-lang/rust/pull/79365 upgraded the coverage file
+    # format to one that only LLVM 11+ can use
+    llvm_version=11
+    sudo apt-key add mk/llvm-snapshot.gpg.key
+    sudo add-apt-repository "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-$llvm_version main"
+    sudo apt-get update
+  fi
+  install_packages clang-$llvm_version llvm-$llvm_version
+fi
