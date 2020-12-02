@@ -14,8 +14,6 @@
 
 //! webpki: Web PKI X.509 Certificate Validation.
 //!
-//! <code>git clone https://github.com/briansmith/webpki</code>
-//!
 //! See `EndEntityCert`'s documentation for a description of the certificate
 //! processing steps necessary for a TLS connection.
 
