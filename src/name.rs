@@ -363,16 +363,24 @@ fn presented_ip_address_matches_constraint(
     let mut name = untrusted::Reader::new(name);
     let mut constraint_address = untrusted::Reader::new(constraint_address);
     let mut constraint_mask = untrusted::Reader::new(constraint_mask);
+    let (mut mask_index, mut mask) = (0, [0u8; 8]);
     loop {
         let name_byte = name.read_byte().unwrap();
         let constraint_address_byte = constraint_address.read_byte().unwrap();
         let constraint_mask_byte = constraint_mask.read_byte().unwrap();
+        mask[mask_index] = constraint_mask_byte;
+        mask_index += 1;
         if ((name_byte ^ constraint_address_byte) & constraint_mask_byte) != 0 {
             return Ok(false);
         }
         if name.at_end() {
             break;
         }
+    }
+
+    let mask = u64::from_be_bytes(mask);
+    if mask.trailing_zeros() != 64 - mask.count_ones() {
+        return Ok(false);
     }
 
     return Ok(true);
