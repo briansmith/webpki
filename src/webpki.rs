@@ -19,24 +19,6 @@
 
 #![doc(html_root_url = "https://briansmith.org/rustdoc/")]
 #![cfg_attr(not(feature = "std"), no_std)]
-#![allow(missing_debug_implementations)]
-// `#[derive(...)]` uses `#[allow(unused_qualifications)]` internally.
-#![deny(unused_qualifications)]
-#![forbid(
-    anonymous_parameters,
-    box_pointers,
-    missing_copy_implementations,
-    missing_docs,
-    trivial_casts,
-    trivial_numeric_casts,
-    unsafe_code,
-    unstable_features,
-    unused_extern_crates,
-    unused_import_braces,
-    unused_results,
-    variant_size_differences,
-    warnings
-)]
 
 #![allow(clippy::single_match)]
 
