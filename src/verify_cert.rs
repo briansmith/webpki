@@ -94,10 +94,10 @@ pub fn build_chain(
                 return Err(Error::UnknownIssuer);
             }
             match &prev.ee_or_ca {
-                &EndEntityOrCA::EndEntity => {
+                EndEntityOrCA::EndEntity => {
                     break;
                 },
-                &EndEntityOrCA::CA(child_cert) => {
+                EndEntityOrCA::CA(child_cert) => {
                     prev = child_cert;
                 },
             }
@@ -136,11 +136,11 @@ fn check_signatures(
         // TODO: check revocation
 
         match &cert.ee_or_ca {
-            &EndEntityOrCA::CA(child_cert) => {
+            EndEntityOrCA::CA(child_cert) => {
                 spki_value = cert.spki.value();
                 cert = child_cert;
             },
-            &EndEntityOrCA::EndEntity => {
+            EndEntityOrCA::EndEntity => {
                 break;
             },
         }
@@ -203,8 +203,8 @@ enum UsedAsCA {
 
 fn used_as_ca(ee_or_ca: &EndEntityOrCA) -> UsedAsCA {
     match ee_or_ca {
-        &EndEntityOrCA::EndEntity => UsedAsCA::No,
-        &EndEntityOrCA::CA(..) => UsedAsCA::Yes,
+        EndEntityOrCA::EndEntity => UsedAsCA::No,
+        EndEntityOrCA::CA(..) => UsedAsCA::Yes,
     }
 }
 
