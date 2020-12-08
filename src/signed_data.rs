@@ -345,7 +345,6 @@ const ED_25519: AlgorithmIdentifier = AlgorithmIdentifier {
 #[cfg(test)]
 mod tests {
     use crate::{der, signed_data, Error};
-    use base64;
 
     use std::{self, io::BufRead, string::String, vec::Vec};
 

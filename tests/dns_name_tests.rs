@@ -1,7 +1,5 @@
 // Copyright 2014-2017 Brian Smith.
 
-use webpki;
-
 // (name, is_valid)
 static DNS_NAME_VALIDITY: &[(&[u8], bool)] = &[
     (b"a", true),
