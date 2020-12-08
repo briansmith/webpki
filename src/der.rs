@@ -141,7 +141,7 @@ pub fn time_choice<'a>(input: &mut untrusted::Reader<'a>) -> Result<time::Time, 
         if b < b'0' || b > b'9' {
             return Err(Error::BadDERTime);
         }
-        Ok((b - b'0') as u64)
+        Ok(u64::from(b - b'0'))
     }
 
     fn read_two_digits(inner: &mut untrusted::Reader, min: u64, max: u64) -> Result<u64, Error> {
