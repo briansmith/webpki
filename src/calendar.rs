@@ -93,6 +93,7 @@ fn days_in_feb(year: u64) -> u64 {
     }
 }
 
+#[allow(clippy::unreadable_literal)] // TODO: Make this clear.
 const DAYS_BEFORE_UNIX_EPOCH_AD: u64 = 719162;
 
 #[cfg(test)]
@@ -126,6 +127,7 @@ mod tests {
         assert_eq!(days_in_month(2100, 2), 28);
     }
 
+    #[allow(clippy::unreadable_literal)] // TODO: Make this clear.
     #[test]
     fn test_time_from_ymdhms_utc() {
         use super::{time_from_ymdhms_utc, Time};

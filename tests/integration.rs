@@ -59,6 +59,7 @@ pub fn netflix() {
     let anchors = vec![webpki::trust_anchor_util::cert_der_as_trust_anchor(ca).unwrap()];
     let anchors = webpki::TLSServerTrustAnchors(&anchors);
 
+    #[allow(clippy::unreadable_literal)] // TODO: Make this clear.
     let time = webpki::Time::from_seconds_since_unix_epoch(1492441716);
 
     let cert = webpki::EndEntityCert::from(ee).unwrap();
@@ -76,6 +77,7 @@ pub fn ed25519() {
     let anchors = vec![webpki::trust_anchor_util::cert_der_as_trust_anchor(ca).unwrap()];
     let anchors = webpki::TLSServerTrustAnchors(&anchors);
 
+    #[allow(clippy::unreadable_literal)] // TODO: Make this clear.
     let time = webpki::Time::from_seconds_since_unix_epoch(1547363522);
 
     let cert = webpki::EndEntityCert::from(ee).unwrap();
