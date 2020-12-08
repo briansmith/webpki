@@ -16,7 +16,6 @@ use crate::{
     cert::{Cert, EndEntityOrCA},
     der, Error,
 };
-use core;
 
 /// A DNS Name suitable for use in the TLS Server Name Indication (SNI)
 /// extension and/or for use as the reference hostname for which to verify a
