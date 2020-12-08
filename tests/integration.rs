@@ -63,9 +63,10 @@ pub fn netflix() {
     let time = webpki::Time::from_seconds_since_unix_epoch(1492441716);
 
     let cert = webpki::EndEntityCert::from(ee).unwrap();
-    let _ = cert
-        .verify_is_valid_tls_server_cert(ALL_SIGALGS, &anchors, &[inter], time)
-        .unwrap();
+    assert_eq!(
+        Ok(()),
+        cert.verify_is_valid_tls_server_cert(ALL_SIGALGS, &anchors, &[inter], time)
+    );
 }
 
 #[cfg(feature = "trust_anchor_util")]
@@ -81,9 +82,10 @@ pub fn ed25519() {
     let time = webpki::Time::from_seconds_since_unix_epoch(1547363522);
 
     let cert = webpki::EndEntityCert::from(ee).unwrap();
-    let _ = cert
-        .verify_is_valid_tls_server_cert(ALL_SIGALGS, &anchors, &[], time)
-        .unwrap();
+    assert_eq!(
+        Ok(()),
+        cert.verify_is_valid_tls_server_cert(ALL_SIGALGS, &anchors, &[], time)
+    );
 }
 
 #[cfg(feature = "trust_anchor_util")]
