@@ -124,11 +124,11 @@ pub fn positive_integer<'a>(input: &'a mut untrusted::Reader) -> Result<Positive
     ring::io::der::positive_integer(input).map_err(|_| Error::BadDER)
 }
 
-pub fn small_nonnegative_integer<'a>(input: &'a mut untrusted::Reader) -> Result<u8, Error> {
+pub fn small_nonnegative_integer(input: &mut untrusted::Reader) -> Result<u8, Error> {
     ring::io::der::small_nonnegative_integer(input).map_err(|_| Error::BadDER)
 }
 
-pub fn time_choice<'a>(input: &mut untrusted::Reader<'a>) -> Result<time::Time, Error> {
+pub fn time_choice(input: &mut untrusted::Reader) -> Result<time::Time, Error> {
     let is_utc_time = input.peek(Tag::UTCTime as u8);
     let expected_tag = if is_utc_time {
         Tag::UTCTime

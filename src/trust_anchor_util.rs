@@ -47,8 +47,8 @@ pub fn cert_der_as_trust_anchor(cert_der: &[u8]) -> Result<TrustAnchor, Error> {
     }
 }
 
-fn possibly_invalid_certificate_serial_number<'a>(
-    input: &mut untrusted::Reader<'a>,
+fn possibly_invalid_certificate_serial_number(
+    input: &mut untrusted::Reader,
 ) -> Result<(), Error> {
     // https://tools.ietf.org/html/rfc5280#section-4.1.2.2:
     // * Conforming CAs MUST NOT use serialNumber values longer than 20 octets."
@@ -76,7 +76,7 @@ pub fn generate_code_for_trust_anchors(name: &str, trust_anchors: &[TrustAnchor]
     decl + &value
 }
 
-fn trust_anchor_from_cert<'a>(cert: Cert<'a>) -> TrustAnchor<'a> {
+fn trust_anchor_from_cert(cert: Cert) -> TrustAnchor {
     TrustAnchor {
         subject: cert.subject.as_slice_less_safe(),
         spki: cert.spki.value().as_slice_less_safe(),
@@ -85,7 +85,7 @@ fn trust_anchor_from_cert<'a>(cert: Cert<'a>) -> TrustAnchor<'a> {
 }
 
 /// Parses a v1 certificate directly into a TrustAnchor.
-fn parse_cert_v1<'a>(cert_der: untrusted::Input<'a>) -> Result<TrustAnchor<'a>, Error> {
+fn parse_cert_v1(cert_der: untrusted::Input) -> Result<TrustAnchor, Error> {
     // X.509 Certificate: https://tools.ietf.org/html/rfc5280#section-4.1.
     cert_der.read_all(Error::BadDER, |cert_der| {
         der::nested(cert_der, der::Tag::Sequence, Error::BadDER, |cert_der| {
