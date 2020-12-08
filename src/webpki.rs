@@ -38,6 +38,8 @@
     warnings
 )]
 
+#![allow(clippy::single_match)]
+
 #[cfg(all(test, not(feature = "std")))]
 #[macro_use]
 extern crate std;

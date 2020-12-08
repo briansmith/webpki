@@ -435,6 +435,7 @@ enum GeneralName<'a> {
 
 fn general_name<'a>(input: &mut untrusted::Reader<'a>) -> Result<GeneralName<'a>, Error> {
     use ring::io::der::{CONSTRUCTED, CONTEXT_SPECIFIC};
+    #[allow(clippy::identity_op)]
     const OTHER_NAME_TAG: u8 = CONTEXT_SPECIFIC | CONSTRUCTED | 0;
     const RFC822_NAME_TAG: u8 = CONTEXT_SPECIFIC | 1;
     const DNS_NAME_TAG: u8 = CONTEXT_SPECIFIC | 2;
