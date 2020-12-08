@@ -375,7 +375,7 @@ fn presented_ip_address_matches_constraint(
         }
     }
 
-    return Ok(true);
+    Ok(true)
 }
 
 #[derive(Clone, Copy)]
@@ -727,7 +727,7 @@ fn presented_dns_id_matches_reference_dns_id_internal(
     assert!(presented.at_end());
     assert!(reference.at_end());
 
-    return Some(true);
+    Some(true)
 }
 
 #[inline]
