@@ -623,7 +623,7 @@ fn presented_dns_id_matches_reference_dns_id_internal(
         IDRole::ReferenceID => (),
 
         IDRole::NameConstraint if presented_dns_id.len() > reference_dns_id.len() => {
-            if reference_dns_id.len() == 0 {
+            if reference_dns_id.is_empty() {
                 // An empty constraint matches everything.
                 return Some(true);
             }
