@@ -125,6 +125,43 @@ impl<'a> From<DNSNameRef<'a>> for &'a str {
     }
 }
 
+/// An ip address
+#[derive(Clone, Copy)]
+pub enum IPAddress {
+    /// An ipv4 address
+    V4(Ipv4),
+}
+
+impl From<Ipv4> for IPAddress {
+    fn from(ipv4: Ipv4) -> IPAddress {
+        IPAddress::V4(ipv4)
+    }
+}
+
+/// An Ipv4 address
+#[derive(Clone, Copy)]
+pub struct Ipv4 {
+    bytes: [u8;4],
+}
+
+impl Ipv4 {
+    /// Create a new Ipv4 address from a byte array
+    pub fn new(a: u8, b: u8, c: u8, d: u8) -> Ipv4 {
+        Ipv4 { bytes: [a, b, c, d] }
+    }
+
+    fn matches(&self, ip: untrusted::Input) -> bool {
+        let mut reader = untrusted::Reader::new(ip);
+        for i in 0..4 {
+            if reader.read_byte() != Ok(self.bytes[i]) {
+                return false
+            }
+        }
+        // TODO: Check at end
+        return true;
+    }
+}
+
 pub fn verify_cert_dns_name(
     cert: &super::EndEntityCert, DNSNameRef(dns_name): DNSNameRef,
 ) -> Result<(), Error> {
@@ -152,6 +189,33 @@ pub fn verify_cert_dns_name(
         },
     )
 }
+
+pub fn verify_cert_ip_san(
+    cert: &super::EndEntityCert, ip: IPAddress,
+) -> Result<(), Error> {
+    let cert = &cert.inner;
+    iterate_names(
+        cert.subject,
+        cert.subject_alt_name,
+        Err(Error::CertNotValidForIp),
+        &|name| {
+            match name {
+                GeneralName::IPAddress(ip_addr) => {
+                    match &ip {
+                        IPAddress::V4(ipv4) => {
+                            if ipv4.matches(ip_addr) {
+                                return NameIteration::Stop(Ok(()))
+                            }
+                        }
+                    }
+                }
+                _ => (),
+            }
+            NameIteration::KeepGoing
+        },
+    )
+}
+
 
 // https://tools.ietf.org/html/rfc5280#section-4.2.1.10
 pub fn check_name_constraints(
