@@ -131,7 +131,8 @@ pub fn verify_cert_dns_name(
     let cert = &cert.inner;
     let dns_name = untrusted::Input::from(dns_name);
     iterate_names(
-        cert.subject,
+        // For backward compatibility we always pass the subject.
+        Some(cert.subject),
         cert.subject_alt_name,
         Err(Error::CertNotValidForName),
         &|name| {
@@ -181,9 +182,18 @@ pub fn check_name_constraints(
 
     let mut child = subordinate_certs;
     loop {
-        iterate_names(child.subject, child.subject_alt_name, Ok(()), &|name| {
-            check_presented_id_conforms_to_constraints(name, permitted_subtrees, excluded_subtrees)
-        })?;
+        iterate_names(
+            Some(child.subject),
+            child.subject_alt_name,
+            Ok(()),
+            &|name| {
+                check_presented_id_conforms_to_constraints(
+                    name,
+                    permitted_subtrees,
+                    excluded_subtrees,
+                )
+            },
+        )?;
 
         child = match child.ee_or_ca {
             EndEntityOrCA::CA(child_cert) => child_cert,
@@ -378,13 +388,19 @@ fn presented_ip_address_matches_constraint(
 }
 
 #[derive(Clone, Copy)]
-enum NameIteration {
+pub(crate) enum NameIteration {
     KeepGoing,
     Stop(Result<(), Error>),
 }
 
-fn iterate_names(
-    subject: untrusted::Input, subject_alt_name: Option<untrusted::Input>,
+/// Nowadays, the subject is ignored and only SANs are considered when
+/// validating a certificate's "subject".
+///
+/// - https://groups.google.com/a/chromium.org/d/msg/security-dev/IGT2fLJrAeo/csf_1Rh1AwAJ
+/// - https://bugs.chromium.org/p/chromium/issues/detail?id=308330
+/// - https://bugzilla.mozilla.org/show_bug.cgi?id=1245280
+pub(crate) fn iterate_names(
+    subject: Option<untrusted::Input>, subject_alt_name: Option<untrusted::Input>,
     result_if_never_stopped_early: Result<(), Error>, f: &dyn Fn(GeneralName) -> NameIteration,
 ) -> Result<(), Error> {
     match subject_alt_name {
@@ -408,10 +424,12 @@ fn iterate_names(
         },
         None => (),
     }
-
-    match f(GeneralName::DirectoryName(subject)) {
-        NameIteration::Stop(result) => result,
-        NameIteration::KeepGoing => result_if_never_stopped_early,
+    match subject {
+        Some(subject) => match f(GeneralName::DirectoryName(subject)) {
+            NameIteration::Stop(result) => result,
+            NameIteration::KeepGoing => result_if_never_stopped_early,
+        },
+        _ => result_if_never_stopped_early,
     }
 }
 
@@ -421,7 +439,7 @@ fn iterate_names(
 // constraint is different than the meaning of the identically-represented
 // `GeneralName` in other contexts.
 #[derive(Clone, Copy)]
-enum GeneralName<'a> {
+pub(crate) enum GeneralName<'a> {
     DNSName(untrusted::Input<'a>),
     DirectoryName(untrusted::Input<'a>),
     IPAddress(untrusted::Input<'a>),
@@ -463,7 +481,7 @@ fn general_name<'a>(input: &mut untrusted::Reader<'a>) -> Result<GeneralName<'a>
     Ok(name)
 }
 
-fn presented_dns_id_matches_reference_dns_id(
+pub(crate) fn presented_dns_id_matches_reference_dns_id(
     presented_dns_id: untrusted::Input, reference_dns_id: untrusted::Input,
 ) -> Option<bool> {
     presented_dns_id_matches_reference_dns_id_internal(
