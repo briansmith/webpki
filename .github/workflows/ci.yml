@@ -276,52 +276,6 @@ jobs:
         run: |
           cargo test -vv --target=${{ matrix.target }} ${{ matrix.cargo_options }} ${{ matrix.features }} ${{ matrix.mode }}
 
-  # The wasm32-unknown-unknown targets have a different set of feature sets and
-  # an additional `webdriver` dimension.
-  test-wasm32:
-    # Don't run duplicate `push` jobs for the repo owner's PRs.
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
-
-    runs-on: ${{ matrix.host_os }}
-
-    strategy:
-      matrix:
-        features:
-          - # Default
-        host_os:
-          - ubuntu-18.04
-        mode:
-          - # debug
-          - --release
-        rust_channel:
-          - stable
-          - beta
-          - nightly
-        target:
-          - wasm32-unknown-unknown
-        webdriver:
-          - GECKODRIVER=geckodriver
-          - CHROMEDRIVER=chromedriver
-
-    steps:
-      - if: ${{ contains(matrix.host_os, 'ubuntu') }}
-        run: sudo apt-get update -y
-
-      - uses: actions/checkout@v2
-
-      - run: cargo generate-lockfile
-
-      - run: mk/install-build-tools.sh --target=${{ matrix.target }} ${{ matrix.features }}
-
-      - uses: actions-rs/toolchain@v1
-        with:
-          override: true
-          target: ${{ matrix.target }}
-          toolchain: ${{ matrix.rust_channel }}
-
-      - run: |
-          ${{ matrix.webdriver }} mk/cargo.sh test -vv --target=${{ matrix.target }} ${{ matrix.features }} ${{ matrix.mode }}
-
   coverage:
     # Don't run duplicate `push` jobs for the repo owner's PRs.
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
