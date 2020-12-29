@@ -40,18 +40,24 @@ pub struct DNSName(String);
 #[cfg(feature = "std")]
 impl DNSName {
     /// Returns a `DNSNameRef` that refers to this `DNSName`.
-    pub fn as_ref(&self) -> DNSNameRef { DNSNameRef(self.0.as_bytes()) }
+    pub fn as_ref(&self) -> DNSNameRef {
+        DNSNameRef(self.0.as_bytes())
+    }
 }
 
 #[cfg(feature = "std")]
 impl AsRef<str> for DNSName {
-    fn as_ref(&self) -> &str { self.0.as_ref() }
+    fn as_ref(&self) -> &str {
+        self.0.as_ref()
+    }
 }
 
 // Deprecated
 #[cfg(feature = "std")]
 impl From<DNSNameRef<'_>> for DNSName {
-    fn from(dns_name: DNSNameRef) -> Self { dns_name.to_owned() }
+    fn from(dns_name: DNSNameRef) -> Self {
+        dns_name.to_owned()
+    }
 }
 
 /// A reference to a DNS Name suitable for use in the TLS Server Name Indication
@@ -76,7 +82,9 @@ pub struct DNSNameRef<'a>(&'a [u8]);
 pub struct InvalidDNSNameError;
 
 impl core::fmt::Display for InvalidDNSNameError {
-    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result { write!(f, "{:?}", self) }
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }
 
 #[cfg(feature = "std")]
@@ -126,7 +134,8 @@ impl<'a> From<DNSNameRef<'a>> for &'a str {
 }
 
 pub fn verify_cert_dns_name(
-    cert: &super::EndEntityCert, DNSNameRef(dns_name): DNSNameRef,
+    cert: &super::EndEntityCert,
+    DNSNameRef(dns_name): DNSNameRef,
 ) -> Result<(), Error> {
     let cert = &cert.inner;
     let dns_name = untrusted::Input::from(dns_name);
@@ -136,16 +145,17 @@ pub fn verify_cert_dns_name(
         Err(Error::CertNotValidForName),
         &|name| {
             match name {
-                GeneralName::DNSName(presented_id) =>
+                GeneralName::DNSName(presented_id) => {
                     match presented_dns_id_matches_reference_dns_id(presented_id, dns_name) {
                         Some(true) => {
                             return NameIteration::Stop(Ok(()));
-                        },
+                        }
                         Some(false) => (),
                         None => {
                             return NameIteration::Stop(Err(Error::BadDER));
-                        },
-                    },
+                        }
+                    }
+                }
                 _ => (),
             }
             NameIteration::KeepGoing
@@ -155,17 +165,19 @@ pub fn verify_cert_dns_name(
 
 // https://tools.ietf.org/html/rfc5280#section-4.2.1.10
 pub fn check_name_constraints(
-    input: Option<&mut untrusted::Reader>, subordinate_certs: &Cert,
+    input: Option<&mut untrusted::Reader>,
+    subordinate_certs: &Cert,
 ) -> Result<(), Error> {
     let input = match input {
         Some(input) => input,
         None => {
             return Ok(());
-        },
+        }
     };
 
     fn parse_subtrees<'b>(
-        inner: &mut untrusted::Reader<'b>, subtrees_tag: der::Tag,
+        inner: &mut untrusted::Reader<'b>,
+        subtrees_tag: der::Tag,
     ) -> Result<Option<untrusted::Input<'b>>, Error> {
         if !inner.peek(subtrees_tag as u8) {
             return Ok(None);
@@ -189,7 +201,7 @@ pub fn check_name_constraints(
             EndEntityOrCA::CA(child_cert) => child_cert,
             EndEntityOrCA::EndEntity => {
                 break;
-            },
+            }
         };
     }
 
@@ -197,7 +209,8 @@ pub fn check_name_constraints(
 }
 
 fn check_presented_id_conforms_to_constraints(
-    name: GeneralName, permitted_subtrees: Option<untrusted::Input>,
+    name: GeneralName,
+    permitted_subtrees: Option<untrusted::Input>,
     excluded_subtrees: Option<untrusted::Input>,
 ) -> NameIteration {
     match check_presented_id_conforms_to_constraints_in_subtree(
@@ -207,7 +220,7 @@ fn check_presented_id_conforms_to_constraints(
     ) {
         stop @ NameIteration::Stop(..) => {
             return stop;
-        },
+        }
         NameIteration::KeepGoing => (),
     };
 
@@ -225,13 +238,15 @@ enum Subtrees {
 }
 
 fn check_presented_id_conforms_to_constraints_in_subtree(
-    name: GeneralName, subtrees: Subtrees, constraints: Option<untrusted::Input>,
+    name: GeneralName,
+    subtrees: Subtrees,
+    constraints: Option<untrusted::Input>,
 ) -> NameIteration {
     let mut constraints = match constraints {
         Some(constraints) => untrusted::Reader::new(constraints),
         None => {
             return NameIteration::KeepGoing;
-        },
+        }
     };
 
     let mut has_permitted_subtrees_match = false;
@@ -256,18 +271,21 @@ fn check_presented_id_conforms_to_constraints_in_subtree(
             Ok(base) => base,
             Err(err) => {
                 return NameIteration::Stop(Err(err));
-            },
+            }
         };
 
         let matches = match (name, base) {
-            (GeneralName::DNSName(name), GeneralName::DNSName(base)) =>
-                presented_dns_id_matches_dns_id_constraint(name, base).ok_or(Error::BadDER),
+            (GeneralName::DNSName(name), GeneralName::DNSName(base)) => {
+                presented_dns_id_matches_dns_id_constraint(name, base).ok_or(Error::BadDER)
+            }
 
-            (GeneralName::DirectoryName(name), GeneralName::DirectoryName(base)) =>
-                presented_directory_name_matches_constraint(name, base, subtrees),
+            (GeneralName::DirectoryName(name), GeneralName::DirectoryName(base)) => {
+                presented_directory_name_matches_constraint(name, base, subtrees)
+            }
 
-            (GeneralName::IPAddress(name), GeneralName::IPAddress(base)) =>
-                presented_ip_address_matches_constraint(name, base),
+            (GeneralName::IPAddress(name), GeneralName::IPAddress(base)) => {
+                presented_ip_address_matches_constraint(name, base)
+            }
 
             // RFC 4280 says "If a name constraints extension that is marked as
             // critical imposes constraints on a particular name form, and an
@@ -279,7 +297,9 @@ fn check_presented_id_conforms_to_constraints_in_subtree(
             // considering whether the name constraint it critical.
             (GeneralName::Unsupported(name_tag), GeneralName::Unsupported(base_tag))
                 if name_tag == base_tag =>
-                Err(Error::NameConstraintViolation),
+            {
+                Err(Error::NameConstraintViolation)
+            }
 
             _ => Ok(false),
         };
@@ -287,21 +307,21 @@ fn check_presented_id_conforms_to_constraints_in_subtree(
         match (subtrees, matches) {
             (Subtrees::PermittedSubtrees, Ok(true)) => {
                 has_permitted_subtrees_match = true;
-            },
+            }
 
             (Subtrees::PermittedSubtrees, Ok(false)) => {
                 has_permitted_subtrees_mismatch = true;
-            },
+            }
 
             (Subtrees::ExcludedSubtrees, Ok(true)) => {
                 return NameIteration::Stop(Err(Error::NameConstraintViolation));
-            },
+            }
 
             (Subtrees::ExcludedSubtrees, Ok(false)) => (),
 
             (_, Err(err)) => {
                 return NameIteration::Stop(Err(err));
-            },
+            }
         }
 
         if constraints.at_end() {
@@ -321,7 +341,9 @@ fn check_presented_id_conforms_to_constraints_in_subtree(
 
 // TODO: document this.
 fn presented_directory_name_matches_constraint(
-    name: untrusted::Input, constraint: untrusted::Input, subtrees: Subtrees,
+    name: untrusted::Input,
+    constraint: untrusted::Input,
+    subtrees: Subtrees,
 ) -> Result<bool, Error> {
     match subtrees {
         Subtrees::PermittedSubtrees => Ok(name == constraint),
@@ -339,7 +361,8 @@ fn presented_directory_name_matches_constraint(
 //     octets C0 00 02 00 FF FF FF 00, representing the CIDR notation
 //     192.0.2.0/24 (mask 255.255.255.0).
 fn presented_ip_address_matches_constraint(
-    name: untrusted::Input, constraint: untrusted::Input,
+    name: untrusted::Input,
+    constraint: untrusted::Input,
 ) -> Result<bool, Error> {
     if name.len() != 4 && name.len() != 16 {
         return Err(Error::BadDER);
@@ -384,8 +407,10 @@ enum NameIteration {
 }
 
 fn iterate_names(
-    subject: untrusted::Input, subject_alt_name: Option<untrusted::Input>,
-    result_if_never_stopped_early: Result<(), Error>, f: &dyn Fn(GeneralName) -> NameIteration,
+    subject: untrusted::Input,
+    subject_alt_name: Option<untrusted::Input>,
+    result_if_never_stopped_early: Result<(), Error>,
+    f: &dyn Fn(GeneralName) -> NameIteration,
 ) -> Result<(), Error> {
     match subject_alt_name {
         Some(subject_alt_name) => {
@@ -401,11 +426,11 @@ fn iterate_names(
                 match f(name) {
                     NameIteration::Stop(result) => {
                         return result;
-                    },
+                    }
                     NameIteration::KeepGoing => (),
                 }
             }
-        },
+        }
         None => (),
     }
 
@@ -464,7 +489,8 @@ fn general_name<'a>(input: &mut untrusted::Reader<'a>) -> Result<GeneralName<'a>
 }
 
 fn presented_dns_id_matches_reference_dns_id(
-    presented_dns_id: untrusted::Input, reference_dns_id: untrusted::Input,
+    presented_dns_id: untrusted::Input,
+    reference_dns_id: untrusted::Input,
 ) -> Option<bool> {
     presented_dns_id_matches_reference_dns_id_internal(
         presented_dns_id,
@@ -474,7 +500,8 @@ fn presented_dns_id_matches_reference_dns_id(
 }
 
 fn presented_dns_id_matches_dns_id_constraint(
-    presented_dns_id: untrusted::Input, reference_dns_id: untrusted::Input,
+    presented_dns_id: untrusted::Input,
+    reference_dns_id: untrusted::Input,
 ) -> Option<bool> {
     presented_dns_id_matches_reference_dns_id_internal(
         presented_dns_id,
@@ -604,7 +631,8 @@ fn presented_dns_id_matches_dns_id_constraint(
 //     incorporated into the spec:
 //     https://www.ietf.org/mail-archive/web/pkix/current/msg21192.html
 fn presented_dns_id_matches_reference_dns_id_internal(
-    presented_dns_id: untrusted::Input, reference_dns_id_role: IDRole,
+    presented_dns_id: untrusted::Input,
+    reference_dns_id_role: IDRole,
     reference_dns_id: untrusted::Input,
 ) -> Option<bool> {
     if !is_valid_dns_id(presented_dns_id, IDRole::PresentedID, AllowWildcards::Yes) {
@@ -668,7 +696,7 @@ fn presented_dns_id_matches_reference_dns_id_internal(
                     return Some(false);
                 }
             }
-        },
+        }
 
         IDRole::NameConstraint => (),
 
@@ -696,7 +724,7 @@ fn presented_dns_id_matches_reference_dns_id_internal(
             (Ok(p), Ok(r)) if ascii_lower(p) == ascii_lower(r) => p,
             _ => {
                 return Some(false);
-            },
+            }
         };
 
         if presented.at_end() {
@@ -716,7 +744,7 @@ fn presented_dns_id_matches_reference_dns_id_internal(
                 Ok(b'.') => (),
                 _ => {
                     return Some(false);
-                },
+                }
             };
         }
         if !reference.at_end() {
@@ -766,7 +794,9 @@ fn is_valid_reference_dns_id(hostname: untrusted::Input) -> bool {
 // https://bugzilla.mozilla.org/show_bug.cgi?id=1136616: As an exception to the
 // requirement above, underscores are also allowed in names for compatibility.
 fn is_valid_dns_id(
-    hostname: untrusted::Input, id_role: IDRole, allow_wildcards: AllowWildcards,
+    hostname: untrusted::Input,
+    id_role: IDRole,
+    allow_wildcards: AllowWildcards,
 ) -> bool {
     // https://blogs.msdn.microsoft.com/oldnewthing/20120412-00/?p=7873/
     if hostname.len() > 253 {
@@ -810,7 +840,7 @@ fn is_valid_dns_id(
                 if label_length > MAX_LABEL_LENGTH {
                     return false;
                 }
-            },
+            }
 
             Ok(b'0'..=b'9') => {
                 if label_length == 0 {
@@ -821,7 +851,7 @@ fn is_valid_dns_id(
                 if label_length > MAX_LABEL_LENGTH {
                     return false;
                 }
-            },
+            }
 
             Ok(b'a'..=b'z') | Ok(b'A'..=b'Z') | Ok(b'_') => {
                 label_is_all_numeric = false;
@@ -830,7 +860,7 @@ fn is_valid_dns_id(
                 if label_length > MAX_LABEL_LENGTH {
                     return false;
                 }
-            },
+            }
 
             Ok(b'.') => {
                 dot_count += 1;
@@ -841,11 +871,11 @@ fn is_valid_dns_id(
                     return false; // Labels must not end with a hyphen.
                 }
                 label_length = 0;
-            },
+            }
 
             _ => {
                 return false;
-            },
+            }
         }
         is_first_byte = false;
 

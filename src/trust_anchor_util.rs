@@ -47,9 +47,7 @@ pub fn cert_der_as_trust_anchor(cert_der: &[u8]) -> Result<TrustAnchor, Error> {
     }
 }
 
-fn possibly_invalid_certificate_serial_number(
-    input: &mut untrusted::Reader,
-) -> Result<(), Error> {
+fn possibly_invalid_certificate_serial_number(input: &mut untrusted::Reader) -> Result<(), Error> {
     // https://tools.ietf.org/html/rfc5280#section-4.1.2.2:
     // * Conforming CAs MUST NOT use serialNumber values longer than 20 octets."
     // * "The serial number MUST be a positive integer [...]"

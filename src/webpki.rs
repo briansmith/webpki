@@ -19,7 +19,6 @@
 
 #![doc(html_root_url = "https://briansmith.org/rustdoc/")]
 #![cfg_attr(not(feature = "std"), no_std)]
-
 #![allow(clippy::single_match)]
 
 #[cfg(all(test, not(feature = "std")))]
@@ -118,9 +117,11 @@ impl<'a> EndEntityCert<'a> {
     /// `time` is the time for which the validation is effective (usually the
     /// current time).
     pub fn verify_is_valid_tls_server_cert(
-        &self, supported_sig_algs: &[&SignatureAlgorithm],
+        &self,
+        supported_sig_algs: &[&SignatureAlgorithm],
         &TLSServerTrustAnchors(trust_anchors): &TLSServerTrustAnchors,
-        intermediate_certs: &[&[u8]], time: Time,
+        intermediate_certs: &[&[u8]],
+        time: Time,
     ) -> Result<(), Error> {
         verify_cert::build_chain(
             verify_cert::EKU_SERVER_AUTH,
@@ -148,9 +149,11 @@ impl<'a> EndEntityCert<'a> {
     /// the time for which the validation is effective (usually the current
     /// time).
     pub fn verify_is_valid_tls_client_cert(
-        &self, supported_sig_algs: &[&SignatureAlgorithm],
+        &self,
+        supported_sig_algs: &[&SignatureAlgorithm],
         &TLSClientTrustAnchors(trust_anchors): &TLSClientTrustAnchors,
-        intermediate_certs: &[&[u8]], time: Time,
+        intermediate_certs: &[&[u8]],
+        time: Time,
     ) -> Result<(), Error> {
         verify_cert::build_chain(
             verify_cert::EKU_CLIENT_AUTH,
@@ -179,7 +182,8 @@ impl<'a> EndEntityCert<'a> {
     /// `#![no_std]` configurations.
     #[cfg(feature = "std")]
     pub fn verify_is_valid_for_at_least_one_dns_name<'names, Names>(
-        &self, dns_names: Names,
+        &self,
+        dns_names: Names,
     ) -> Result<Vec<DNSNameRef<'names>>, Error>
     where
         Names: Iterator<Item = DNSNameRef<'names>>,
@@ -214,7 +218,10 @@ impl<'a> EndEntityCert<'a> {
     /// one-to-one correspondence between TLS 1.3's `SignatureScheme` and
     /// `SignatureAlgorithm`.
     pub fn verify_signature(
-        &self, signature_alg: &SignatureAlgorithm, msg: &[u8], signature: &[u8],
+        &self,
+        signature_alg: &SignatureAlgorithm,
+        msg: &[u8],
+        signature: &[u8],
     ) -> Result<(), Error> {
         signed_data::verify_signature(
             signature_alg,

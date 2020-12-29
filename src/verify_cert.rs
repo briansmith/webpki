@@ -18,8 +18,12 @@ use crate::{
 };
 
 pub fn build_chain(
-    required_eku_if_present: KeyPurposeId, supported_sig_algs: &[&SignatureAlgorithm],
-    trust_anchors: &[TrustAnchor], intermediate_certs: &[&[u8]], cert: &Cert, time: time::Time,
+    required_eku_if_present: KeyPurposeId,
+    supported_sig_algs: &[&SignatureAlgorithm],
+    trust_anchors: &[TrustAnchor],
+    intermediate_certs: &[&[u8]],
+    cert: &Cert,
+    time: time::Time,
     sub_ca_count: usize,
 ) -> Result<(), Error> {
     let used_as_ca = used_as_ca(&cert.ee_or_ca);
@@ -41,10 +45,10 @@ pub fn build_chain(
             if sub_ca_count >= MAX_SUB_CA_COUNT {
                 return Err(Error::UnknownIssuer);
             }
-        },
+        }
         UsedAsCA::No => {
             assert_eq!(0, sub_ca_count);
-        },
+        }
     }
 
     // TODO: revocation.
@@ -71,10 +75,10 @@ pub fn build_chain(
     }) {
         Ok(()) => {
             return Ok(());
-        },
+        }
         Err(..) => {
             // If the error is not fatal, then keep going.
-        },
+        }
     }
 
     loop_while_non_fatal_error(intermediate_certs, |cert_der| {
@@ -96,10 +100,10 @@ pub fn build_chain(
             match &prev.ee_or_ca {
                 EndEntityOrCA::EndEntity => {
                     break;
-                },
+                }
                 EndEntityOrCA::CA(child_cert) => {
                     prev = child_cert;
-                },
+                }
             }
         }
 
@@ -125,7 +129,8 @@ pub fn build_chain(
 }
 
 fn check_signatures(
-    supported_sig_algs: &[&SignatureAlgorithm], cert_chain: &Cert,
+    supported_sig_algs: &[&SignatureAlgorithm],
+    cert_chain: &Cert,
     trust_anchor_key: untrusted::Input,
 ) -> Result<(), Error> {
     let mut spki_value = trust_anchor_key;
@@ -139,10 +144,10 @@ fn check_signatures(
             EndEntityOrCA::CA(child_cert) => {
                 spki_value = cert.spki.value();
                 cert = child_cert;
-            },
+            }
             EndEntityOrCA::EndEntity => {
                 break;
-            },
+            }
         }
     }
 
@@ -150,7 +155,10 @@ fn check_signatures(
 }
 
 fn check_issuer_independent_properties(
-    cert: &Cert, time: time::Time, used_as_ca: UsedAsCA, sub_ca_count: usize,
+    cert: &Cert,
+    time: time::Time,
+    used_as_ca: UsedAsCA,
+    sub_ca_count: usize,
     required_eku_if_present: KeyPurposeId,
 ) -> Result<(), Error> {
     // TODO: check_distrust(trust_anchor_subject, trust_anchor_spki)?;
@@ -210,7 +218,9 @@ fn used_as_ca(ee_or_ca: &EndEntityOrCA) -> UsedAsCA {
 
 // https://tools.ietf.org/html/rfc5280#section-4.2.1.9
 fn check_basic_constraints(
-    input: Option<&mut untrusted::Reader>, used_as_ca: UsedAsCA, sub_ca_count: usize,
+    input: Option<&mut untrusted::Reader>,
+    used_as_ca: UsedAsCA,
+    sub_ca_count: usize,
 ) -> Result<(), Error> {
     let (is_ca, path_len_constraint) = match input {
         Some(input) => {
@@ -228,15 +238,16 @@ fn check_basic_constraints(
             };
 
             (is_ca, path_len_constraint)
-        },
+        }
         None => (false, None),
     };
 
     match (used_as_ca, is_ca, path_len_constraint) {
         (UsedAsCA::No, true, _) => Err(Error::CAUsedAsEndEntity),
         (UsedAsCA::Yes, false, _) => Err(Error::EndEntityUsedAsCA),
-        (UsedAsCA::Yes, true, Some(len)) if sub_ca_count > len =>
-            Err(Error::PathLenConstraintViolated),
+        (UsedAsCA::Yes, true, Some(len)) if sub_ca_count > len => {
+            Err(Error::PathLenConstraintViolated)
+        }
         _ => Ok(()),
     }
 }
@@ -284,7 +295,8 @@ pub static EKU_OCSP_SIGNING: KeyPurposeId = KeyPurposeId {
 //   certificates (only). Comodo has issued certificates that require this
 //   behavior that don't expire until June 2020. See https://bugzilla.mozilla.org/show_bug.cgi?id=982292.
 fn check_eku(
-    input: Option<&mut untrusted::Reader>, required_eku_if_present: KeyPurposeId,
+    input: Option<&mut untrusted::Reader>,
+    required_eku_if_present: KeyPurposeId,
 ) -> Result<(), Error> {
     match input {
         Some(input) => {
@@ -299,7 +311,7 @@ fn check_eku(
                 }
             }
             Ok(())
-        },
+        }
         None => {
             // http://tools.ietf.org/html/rfc6960#section-4.2.2.2:
             // "OCSP signing delegation SHALL be designated by the inclusion of
@@ -315,7 +327,7 @@ fn check_eku(
             }
 
             Ok(())
-        },
+        }
     }
 }
 
@@ -328,10 +340,10 @@ where
         match f(v) {
             Ok(()) => {
                 return Ok(());
-            },
+            }
             Err(..) => {
                 // If the error is not fatal, then keep going.
-            },
+            }
         }
     }
     Err(Error::UnknownIssuer)

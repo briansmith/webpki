@@ -58,7 +58,7 @@ pub struct SignedData<'a> {
 ///     certs [0] EXPLICIT SEQUENCE OF Certificate OPTIONAL
 /// }
 /// ```
-/// 
+///
 /// Note that this function does NOT parse the outermost `SEQUENCE` or the
 /// `certs` value.
 ///
@@ -93,7 +93,8 @@ pub(crate) fn parse_signed_data<'a>(
 /// but generally more common algorithms should go first, as it is scanned
 /// linearly for matches.
 pub(crate) fn verify_signed_data(
-    supported_algorithms: &[&SignatureAlgorithm], spki_value: untrusted::Input,
+    supported_algorithms: &[&SignatureAlgorithm],
+    spki_value: untrusted::Input,
     signed_data: &SignedData,
 ) -> Result<(), Error> {
     // We need to verify the signature in `signed_data` using the public key
@@ -129,10 +130,10 @@ pub(crate) fn verify_signed_data(
             Err(Error::UnsupportedSignatureAlgorithmForPublicKey) => {
                 found_signature_alg_match = true;
                 continue;
-            },
+            }
             result => {
                 return result;
-            },
+            }
         }
     }
 
@@ -144,7 +145,9 @@ pub(crate) fn verify_signed_data(
 }
 
 pub(crate) fn verify_signature(
-    signature_alg: &SignatureAlgorithm, spki_value: untrusted::Input, msg: untrusted::Input,
+    signature_alg: &SignatureAlgorithm,
+    spki_value: untrusted::Input,
+    msg: untrusted::Input,
     signature: untrusted::Input,
 ) -> Result<(), Error> {
     let spki = parse_spki_value(spki_value)?;
@@ -353,7 +356,9 @@ mod tests {
     macro_rules! test_verify_signed_data {
         ($fn_name:ident, $file_name:expr, $expected_result:expr) => {
             #[test]
-            fn $fn_name() { test_verify_signed_data($file_name, $expected_result); }
+            fn $fn_name() {
+                test_verify_signed_data($file_name, $expected_result);
+            }
         };
     }
 
@@ -406,7 +411,9 @@ mod tests {
     macro_rules! test_verify_signed_data_signature_outer {
         ($fn_name:ident, $file_name:expr, $expected_result:expr) => {
             #[test]
-            fn $fn_name() { test_verify_signed_data_signature_outer($file_name, $expected_result); }
+            fn $fn_name() {
+                test_verify_signed_data_signature_outer($file_name, $expected_result);
+            }
         };
     }
 
@@ -425,7 +432,9 @@ mod tests {
     macro_rules! test_parse_spki_bad_outer {
         ($fn_name:ident, $file_name:expr, $error:expr) => {
             #[test]
-            fn $fn_name() { test_parse_spki_bad_outer($file_name, $error) }
+            fn $fn_name() {
+                test_parse_spki_bad_outer($file_name, $error)
+            }
         };
     }
 
