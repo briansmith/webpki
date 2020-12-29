@@ -35,7 +35,8 @@ pub struct Cert<'a> {
 }
 
 pub fn parse_cert<'a>(
-    cert_der: untrusted::Input<'a>, ee_or_ca: EndEntityOrCA<'a>,
+    cert_der: untrusted::Input<'a>,
+    ee_or_ca: EndEntityOrCA<'a>,
 ) -> Result<Cert<'a>, Error> {
     parse_cert_internal(cert_der, ee_or_ca, certificate_serial_number)
 }
@@ -44,7 +45,8 @@ pub fn parse_cert<'a>(
 /// and by `cert_der_as_trust_anchor` for trust anchors encoded as
 /// certificates.
 pub(crate) fn parse_cert_internal<'a>(
-    cert_der: untrusted::Input<'a>, ee_or_ca: EndEntityOrCA<'a>,
+    cert_der: untrusted::Input<'a>,
+    ee_or_ca: EndEntityOrCA<'a>,
     serial_number: fn(input: &mut untrusted::Reader<'_>) -> Result<(), Error>,
 ) -> Result<Cert<'a>, Error> {
     let (tbs, signed_data) = cert_der.read_all(Error::BadDER, |cert_der| {
@@ -163,7 +165,9 @@ enum Understood {
 }
 
 fn remember_extension<'a>(
-    cert: &mut Cert<'a>, extn_id: untrusted::Input, value: untrusted::Input<'a>,
+    cert: &mut Cert<'a>,
+    extn_id: untrusted::Input,
+    value: untrusted::Input<'a>,
 ) -> Result<Understood, Error> {
     // We don't do anything with certificate policies so we can safely ignore
     // all policy-related stuff. We assume that the policy-related extensions
@@ -184,7 +188,7 @@ fn remember_extension<'a>(
         // the keyEncipherment bit could not be used for RSA key exchange.
         15 => {
             return Ok(Understood::Yes);
-        },
+        }
 
         // id-ce-subjectAltName 2.5.29.17
         17 => &mut cert.subject_alt_name,
@@ -200,7 +204,7 @@ fn remember_extension<'a>(
 
         _ => {
             return Ok(Understood::No);
-        },
+        }
     };
 
     match *out {
@@ -208,14 +212,14 @@ fn remember_extension<'a>(
             // The certificate contains more than one instance of this
             // extension.
             return Err(Error::ExtensionValueInvalid);
-        },
+        }
         None => {
             // All the extensions that we care about are wrapped in a SEQUENCE.
             let sequence_value = value.read_all(Error::BadDER, |value| {
                 der::expect_tag_and_get_value(value, der::Tag::Sequence)
             })?;
             *out = Some(sequence_value);
-        },
+        }
     }
 
     Ok(Understood::Yes)

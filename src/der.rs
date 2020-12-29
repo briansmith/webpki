@@ -20,7 +20,8 @@ pub use ring::io::{
 
 #[inline(always)]
 pub fn expect_tag_and_get_value<'a>(
-    input: &mut untrusted::Reader<'a>, tag: Tag,
+    input: &mut untrusted::Reader<'a>,
+    tag: Tag,
 ) -> Result<untrusted::Input<'a>, Error> {
     ring::io::der::expect_tag_and_get_value(input, tag).map_err(|_| Error::BadDER)
 }
@@ -32,9 +33,13 @@ pub struct Value<'a> {
 
 impl<'a> Value<'a> {
     #[allow(dead_code)] // TODO: remove this.
-    pub fn tlv(&self) -> untrusted::Input<'a> { self.tlv }
+    pub fn tlv(&self) -> untrusted::Input<'a> {
+        self.tlv
+    }
 
-    pub fn value(&self) -> untrusted::Input<'a> { self.value }
+    pub fn value(&self) -> untrusted::Input<'a> {
+        self.value
+    }
 }
 
 pub fn expect_tag<'a>(input: &mut untrusted::Reader<'a>, tag: Tag) -> Result<Value<'a>, Error> {
@@ -65,7 +70,10 @@ pub fn read_tag_and_get_value<'a>(
 // size.
 #[inline(always)]
 pub fn nested_mut<'a, F, R, E: Copy>(
-    input: &mut untrusted::Reader<'a>, tag: Tag, error: E, decoder: F,
+    input: &mut untrusted::Reader<'a>,
+    tag: Tag,
+    error: E,
+    decoder: F,
 ) -> Result<R, E>
 where
     F: FnMut(&mut untrusted::Reader<'a>) -> Result<R, E>,
@@ -77,7 +85,11 @@ where
 // TODO: investigate taking decoder as a reference to reduce generated code
 // size.
 pub fn nested_of_mut<'a, F, E: Copy>(
-    input: &mut untrusted::Reader<'a>, outer_tag: Tag, inner_tag: Tag, error: E, mut decoder: F,
+    input: &mut untrusted::Reader<'a>,
+    outer_tag: Tag,
+    inner_tag: Tag,
+    error: E,
+    mut decoder: F,
 ) -> Result<(), E>
 where
     F: FnMut(&mut untrusted::Reader<'a>) -> Result<(), E>,

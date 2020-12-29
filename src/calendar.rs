@@ -15,7 +15,12 @@
 use super::{time::Time, Error};
 
 pub fn time_from_ymdhms_utc(
-    year: u64, month: u64, day_of_month: u64, hours: u64, minutes: u64, seconds: u64,
+    year: u64,
+    month: u64,
+    day_of_month: u64,
+    hours: u64,
+    minutes: u64,
+    seconds: u64,
 ) -> Result<Time, Error> {
     let days_before_year_since_unix_epoch = days_before_year_since_unix_epoch(year)?;
 
