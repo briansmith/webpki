@@ -21,11 +21,11 @@ use crate::{
 /// extension and/or for use as the reference hostname for which to verify a
 /// certificate.
 ///
-/// A `DNSName` is guaranteed to be syntactically valid. The validity rules are
+/// A `DnsName` is guaranteed to be syntactically valid. The validity rules are
 /// specified in [RFC 5280 Section 7.2], except that underscores are also
 /// allowed.
 ///
-/// `DNSName` stores a copy of the input it was constructed from in a `String`
+/// `DnsName` stores a copy of the input it was constructed from in a `String`
 /// and so it is only available when the `std` default feature is enabled.
 ///
 /// `Eq`, `PartialEq`, etc. are not implemented because name comparison
@@ -35,18 +35,18 @@ use crate::{
 /// [RFC 5280 Section 7.2]: https://tools.ietf.org/html/rfc5280#section-7.2
 #[cfg(feature = "std")]
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
-pub struct DNSName(String);
+pub struct DnsName(String);
 
 #[cfg(feature = "std")]
-impl DNSName {
-    /// Returns a `DNSNameRef` that refers to this `DNSName`.
-    pub fn as_ref(&self) -> DNSNameRef {
-        DNSNameRef(self.0.as_bytes())
+impl DnsName {
+    /// Returns a `DnsNameRef` that refers to this `DnsName`.
+    pub fn as_ref(&self) -> DnsNameRef {
+        DnsNameRef(self.0.as_bytes())
     }
 }
 
 #[cfg(feature = "std")]
-impl AsRef<str> for DNSName {
+impl AsRef<str> for DnsName {
     fn as_ref(&self) -> &str {
         self.0.as_ref()
     }
@@ -54,8 +54,8 @@ impl AsRef<str> for DNSName {
 
 // Deprecated
 #[cfg(feature = "std")]
-impl From<DNSNameRef<'_>> for DNSName {
-    fn from(dns_name: DNSNameRef) -> Self {
+impl From<DnsNameRef<'_>> for DnsName {
+    fn from(dns_name: DnsNameRef) -> Self {
         dns_name.to_owned()
     }
 }
@@ -64,7 +64,7 @@ impl From<DNSNameRef<'_>> for DNSName {
 /// (SNI) extension and/or for use as the reference hostname for which to verify
 /// a certificate.
 ///
-/// A `DNSNameRef` is guaranteed to be syntactically valid. The validity rules
+/// A `DnsNameRef` is guaranteed to be syntactically valid. The validity rules
 /// are specified in [RFC 5280 Section 7.2], except that underscores are also
 /// allowed.
 ///
@@ -74,60 +74,60 @@ impl From<DNSNameRef<'_>> for DNSName {
 ///
 /// [RFC 5280 Section 7.2]: https://tools.ietf.org/html/rfc5280#section-7.2
 #[derive(Clone, Copy)]
-pub struct DNSNameRef<'a>(&'a [u8]);
+pub struct DnsNameRef<'a>(&'a [u8]);
 
-/// An error indicating that a `DNSNameRef` could not built because the input
+/// An error indicating that a `DnsNameRef` could not built because the input
 /// is not a syntactically-valid DNS Name.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct InvalidDNSNameError;
+pub struct InvalidDnsNameError;
 
-impl core::fmt::Display for InvalidDNSNameError {
+impl core::fmt::Display for InvalidDnsNameError {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         write!(f, "{:?}", self)
     }
 }
 
 #[cfg(feature = "std")]
-impl ::std::error::Error for InvalidDNSNameError {}
+impl ::std::error::Error for InvalidDnsNameError {}
 
-impl<'a> DNSNameRef<'a> {
-    /// Constructs a `DNSNameRef` from the given input if the input is a
+impl<'a> DnsNameRef<'a> {
+    /// Constructs a `DnsNameRef` from the given input if the input is a
     /// syntactically-valid DNS name.
-    pub fn try_from_ascii(dns_name: &'a [u8]) -> Result<Self, InvalidDNSNameError> {
+    pub fn try_from_ascii(dns_name: &'a [u8]) -> Result<Self, InvalidDnsNameError> {
         if !is_valid_reference_dns_id(untrusted::Input::from(dns_name)) {
-            return Err(InvalidDNSNameError);
+            return Err(InvalidDnsNameError);
         }
 
         Ok(Self(dns_name))
     }
 
-    /// Constructs a `DNSNameRef` from the given input if the input is a
+    /// Constructs a `DnsNameRef` from the given input if the input is a
     /// syntactically-valid DNS name.
-    pub fn try_from_ascii_str(dns_name: &'a str) -> Result<Self, InvalidDNSNameError> {
+    pub fn try_from_ascii_str(dns_name: &'a str) -> Result<Self, InvalidDnsNameError> {
         Self::try_from_ascii(dns_name.as_bytes())
     }
 
-    /// Constructs a `DNSName` from this `DNSNameRef`
+    /// Constructs a `DnsName` from this `DnsNameRef`
     #[cfg(feature = "std")]
-    pub fn to_owned(&self) -> DNSName {
-        // DNSNameRef is already guaranteed to be valid ASCII, which is a
+    pub fn to_owned(&self) -> DnsName {
+        // DnsNameRef is already guaranteed to be valid ASCII, which is a
         // subset of UTF-8.
         let s: &str = self.clone().into();
-        DNSName(s.to_ascii_lowercase())
+        DnsName(s.to_ascii_lowercase())
     }
 }
 
 #[cfg(feature = "std")]
-impl core::fmt::Debug for DNSNameRef<'_> {
+impl core::fmt::Debug for DnsNameRef<'_> {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> Result<(), core::fmt::Error> {
         let lowercase = self.clone().to_owned();
-        f.debug_tuple("DNSNameRef").field(&lowercase.0).finish()
+        f.debug_tuple("DnsNameRef").field(&lowercase.0).finish()
     }
 }
 
-impl<'a> From<DNSNameRef<'a>> for &'a str {
-    fn from(DNSNameRef(d): DNSNameRef<'a>) -> Self {
-        // The unwrap won't fail because DNSNameRefs are guaranteed to be ASCII
+impl<'a> From<DnsNameRef<'a>> for &'a str {
+    fn from(DnsNameRef(d): DnsNameRef<'a>) -> Self {
+        // The unwrap won't fail because DnsNameRefs are guaranteed to be ASCII
         // and ASCII is a subset of UTF-8.
         core::str::from_utf8(d).unwrap()
     }
@@ -135,7 +135,7 @@ impl<'a> From<DNSNameRef<'a>> for &'a str {
 
 pub fn verify_cert_dns_name(
     cert: &super::EndEntityCert,
-    DNSNameRef(dns_name): DNSNameRef,
+    DnsNameRef(dns_name): DnsNameRef,
 ) -> Result<(), Error> {
     let cert = &cert.inner;
     let dns_name = untrusted::Input::from(dns_name);
@@ -145,7 +145,7 @@ pub fn verify_cert_dns_name(
         Err(Error::CertNotValidForName),
         &|name| {
             match name {
-                GeneralName::DNSName(presented_id) => {
+                GeneralName::DnsName(presented_id) => {
                     match presented_dns_id_matches_reference_dns_id(presented_id, dns_name) {
                         Some(true) => {
                             return NameIteration::Stop(Ok(()));
@@ -275,7 +275,7 @@ fn check_presented_id_conforms_to_constraints_in_subtree(
         };
 
         let matches = match (name, base) {
-            (GeneralName::DNSName(name), GeneralName::DNSName(base)) => {
+            (GeneralName::DnsName(name), GeneralName::DnsName(base)) => {
                 presented_dns_id_matches_dns_id_constraint(name, base).ok_or(Error::BadDER)
             }
 
@@ -447,7 +447,7 @@ fn iterate_names(
 // `GeneralName` in other contexts.
 #[derive(Clone, Copy)]
 enum GeneralName<'a> {
-    DNSName(untrusted::Input<'a>),
+    DnsName(untrusted::Input<'a>),
     DirectoryName(untrusted::Input<'a>),
     IPAddress(untrusted::Input<'a>),
 
@@ -472,7 +472,7 @@ fn general_name<'a>(input: &mut untrusted::Reader<'a>) -> Result<GeneralName<'a>
 
     let (tag, value) = der::read_tag_and_get_value(input)?;
     let name = match tag {
-        DNS_NAME_TAG => GeneralName::DNSName(value),
+        DNS_NAME_TAG => GeneralName::DnsName(value),
         DIRECTORY_NAME_TAG => GeneralName::DirectoryName(value),
         IP_ADDRESS_TAG => GeneralName::IPAddress(value),
 
@@ -538,7 +538,7 @@ fn presented_dns_id_matches_dns_id_constraint(
 //
 // Name constraints ///////////////////////////////////////////////////////////
 //
-// This is all RFC 5280 has to say about DNSName constraints:
+// This is all RFC 5280 has to say about dNSName constraints:
 //
 //     DNS name restrictions are expressed as host.example.com.  Any DNS
 //     name that can be constructed by simply adding zero or more labels to
@@ -581,7 +581,7 @@ fn presented_dns_id_matches_dns_id_constraint(
 //        implementations that support it, a leading "." is legal and means
 //        the same thing as when the "." is omitted, EXCEPT that a
 //        presented identifier equal (case insensitive) to the name
-//        constraint is not matched; i.e. presented DNSName identifiers
+//        constraint is not matched; i.e. presented dNSName identifiers
 //        must be subdomains. Some CAs in Mozilla's CA program (e.g. HARICA)
 //        have name constraints with the leading "." in their root
 //        certificates. The name constraints imposed on DCISS by Mozilla also
@@ -610,12 +610,12 @@ fn presented_dns_id_matches_dns_id_constraint(
 //     A: Absolute names are not supported as presented IDs or name
 //        constraints. Only reference IDs may be absolute.
 //
-//     Q: Is "" a valid DNSName constraint? If so, what does it mean?
-//     A: Yes. Any valid presented DNSName can be formed "by simply adding zero
+//     Q: Is "" a valid dNSName constraint? If so, what does it mean?
+//     A: Yes. Any valid presented dNSName can be formed "by simply adding zero
 //        or more labels to the left-hand side" of "". In particular, an
-//        excludedSubtrees DNSName constraint of "" forbids all DNSNames.
+//        excludedSubtrees dNSName constraint of "" forbids all dNSNames.
 //
-//     Q: Is "." a valid DNSName constraint? If so, what does it mean?
+//     Q: Is "." a valid dNSName constraint? If so, what does it mean?
 //     A: No, because absolute names are not allowed (see above).
 //
 // [0] RFC 6265 (Cookies) Domain Matching rules:
