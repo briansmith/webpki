@@ -16,67 +16,33 @@ use crate::{
     cert::{Cert, EndEntityOrCA},
     der, Error,
 };
-
-/// A DNS Name suitable for use in the TLS Server Name Indication (SNI)
-/// extension and/or for use as the reference hostname for which to verify a
-/// certificate.
-///
-/// A `DnsName` is guaranteed to be syntactically valid. The validity rules are
-/// specified in [RFC 5280 Section 7.2], except that underscores are also
-/// allowed.
-///
-/// `DnsName` stores a copy of the input it was constructed from in a `String`
-/// and so it is only available when the `std` default feature is enabled.
-///
-/// `Eq`, `PartialEq`, etc. are not implemented because name comparison
-/// frequently should be done case-insensitively and/or with other caveats that
-/// depend on the specific circumstances in which the comparison is done.
-///
-/// [RFC 5280 Section 7.2]: https://tools.ietf.org/html/rfc5280#section-7.2
-#[cfg(feature = "std")]
-#[derive(Clone, Debug, Eq, PartialEq, Hash)]
-pub struct DnsName(String);
-
-#[cfg(feature = "std")]
-impl DnsName {
-    /// Returns a `DnsNameRef` that refers to this `DnsName`.
-    pub fn as_ref(&self) -> DnsNameRef {
-        DnsNameRef(self.0.as_bytes())
-    }
-}
-
-#[cfg(feature = "std")]
-impl AsRef<str> for DnsName {
-    fn as_ref(&self) -> &str {
-        self.0.as_ref()
-    }
-}
-
-// Deprecated
-#[cfg(feature = "std")]
-impl From<DnsNameRef<'_>> for DnsName {
-    fn from(dns_name: DnsNameRef) -> Self {
-        dns_name.to_owned()
-    }
-}
+use core::fmt::Write as _;
 
 /// A reference to a DNS Name suitable for use in the TLS Server Name Indication
 /// (SNI) extension and/or for use as the reference hostname for which to verify
 /// a certificate.
 ///
-/// A `DnsNameRef` is guaranteed to be syntactically valid. The validity rules
+/// A `DnsName` is guaranteed to be syntactically valid. The validity rules
 /// are specified in [RFC 5280 Section 7.2], except that underscores are also
 /// allowed.
 ///
-/// `Eq`, `PartialEq`, etc. are not implemented because name comparison
-/// frequently should be done case-insensitively and/or with other caveats that
-/// depend on the specific circumstances in which the comparison is done.
-///
 /// [RFC 5280 Section 7.2]: https://tools.ietf.org/html/rfc5280#section-7.2
-#[derive(Clone, Copy)]
-pub struct DnsNameRef<'a>(&'a [u8]);
+pub struct DnsName<B>(B)
+where
+    B: AsRef<[u8]>;
 
-/// An error indicating that a `DnsNameRef` could not built because the input
+/// A borrowed `DnsName`.
+///
+/// This is an alias for `DnsName<&'a [u8]>`.
+pub type DnsNameRef<'a> = DnsName<&'a [u8]>;
+
+/// An owned `DnsName`
+///
+/// This is an alias for `DnsName<Box<[u8]>>`.
+#[cfg(feature = "std")]
+pub type DnsNameBox = DnsName<Box<[u8]>>;
+
+/// An error indicating that a `DnsName` could not built because the input
 /// is not a syntactically-valid DNS Name.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct InvalidDnsNameError;
@@ -90,52 +56,176 @@ impl core::fmt::Display for InvalidDnsNameError {
 #[cfg(feature = "std")]
 impl ::std::error::Error for InvalidDnsNameError {}
 
-impl<'a> DnsNameRef<'a> {
-    /// Constructs a `DnsNameRef` from the given input if the input is a
-    /// syntactically-valid DNS name.
-    pub fn try_from_ascii(dns_name: &'a [u8]) -> Result<Self, InvalidDnsNameError> {
-        if !is_valid_reference_dns_id(untrusted::Input::from(dns_name)) {
-            return Err(InvalidDnsNameError);
-        }
+pub trait DnsNameInput: AsRef<[u8]> + Sized {
+    type Storage: AsRef<[u8]>;
+    fn into_storage(self) -> Self::Storage;
+}
 
-        Ok(Self(dns_name))
-    }
-
-    /// Constructs a `DnsNameRef` from the given input if the input is a
-    /// syntactically-valid DNS name.
-    pub fn try_from_ascii_str(dns_name: &'a str) -> Result<Self, InvalidDnsNameError> {
-        Self::try_from_ascii(dns_name.as_bytes())
-    }
-
-    /// Constructs a `DnsName` from this `DnsNameRef`
-    #[cfg(feature = "std")]
-    pub fn to_owned(&self) -> DnsName {
-        // DnsNameRef is already guaranteed to be valid ASCII, which is a
-        // subset of UTF-8.
-        let s: &str = self.clone().into();
-        DnsName(s.to_ascii_lowercase())
+#[cfg(feature = "std")]
+impl DnsNameInput for String {
+    type Storage = Box<[u8]>;
+    fn into_storage(self) -> Self::Storage {
+        self.into_boxed_str().into()
     }
 }
 
 #[cfg(feature = "std")]
-impl core::fmt::Debug for DnsNameRef<'_> {
-    fn fmt(&self, f: &mut core::fmt::Formatter) -> Result<(), core::fmt::Error> {
-        let lowercase = self.clone().to_owned();
-        f.debug_tuple("DnsNameRef").field(&lowercase.0).finish()
+impl DnsNameInput for Box<[u8]> {
+    type Storage = Box<[u8]>;
+    fn into_storage(self) -> Self::Storage {
+        self
     }
 }
 
-impl<'a> From<DnsNameRef<'a>> for &'a str {
-    fn from(DnsNameRef(d): DnsNameRef<'a>) -> Self {
-        // The unwrap won't fail because DnsNameRefs are guaranteed to be ASCII
+#[cfg(feature = "std")]
+impl DnsNameInput for Vec<u8> {
+    type Storage = Box<[u8]>;
+    fn into_storage(self) -> Self::Storage {
+        self.into()
+    }
+}
+
+impl<'a> DnsNameInput for &'a str {
+    type Storage = &'a [u8];
+    fn into_storage(self) -> Self::Storage {
+        self.as_ref()
+    }
+}
+
+impl<'a> DnsNameInput for &'a [u8] {
+    type Storage = &'a [u8];
+    fn into_storage(self) -> Self::Storage {
+        self.as_ref()
+    }
+}
+
+impl<B> DnsName<B>
+where
+    B: AsRef<[u8]>,
+{
+    /// Constructs a `DnsName` from the given input if the input is a
+    /// syntactically-valid DNS name.
+    pub fn try_from_punycode(
+        input: impl DnsNameInput<Storage = B>,
+    ) -> Result<Self, InvalidDnsNameError> {
+        if !is_valid_reference_dns_id(untrusted::Input::from(input.as_ref())) {
+            return Err(InvalidDnsNameError);
+        }
+
+        Ok(Self(input.into_storage()))
+    }
+}
+
+impl<B> DnsName<B>
+where
+    B: AsRef<[u8]>,
+{
+    /// Borrows any `DnsName` as a `DnsName<&[u8]>`.
+    ///
+    /// Use `DnsName<&[u8]>` when you don't *need* to be generic over the
+    /// underlying representation to reduce monomorphization overhead.
+    #[inline]
+    pub fn borrow(&self) -> DnsName<&[u8]> {
+        DnsName(self.0.as_ref())
+    }
+
+    /// TODO:
+    #[cfg(feature = "std")]
+    pub fn into_owned(self) -> DnsName<Box<[u8]>> {
+        DnsName(Box::from(self.0.as_ref()))
+    }
+
+    /// Returns an iterator of the punycode characters of the DNS name, as
+    /// bytes.
+    ///
+    /// The iterator implements many specialized iterator traits, such as
+    /// `ExactSizeIterator` and `DoubleEndedIterator`.
+    ///
+    /// ```
+    /// # #[cfg(feature = "std")]
+    /// use std::{iter::FromIterator, string::String};
+    ///
+    /// # #[cfg(feature = "std")]
+    /// fn string_from_dns_name<B>(dns_name: webpki::DnsName<B>) -> String where B: AsRef<[u8]> {
+    ///     String::from_iter(dns_name.punycode_lowercase_bytes().map(char::from))
+    /// }
+    /// ```
+    #[inline]
+    pub fn punycode_lowercase_bytes<'b>(
+        &self,
+    ) -> core::iter::Map<core::slice::Iter<u8>, fn(&u8) -> u8>
+    where
+        B: 'b,
+    {
+        // The unwrap won't fail because DnsNames are guaranteed to be ASCII
         // and ASCII is a subset of UTF-8.
-        core::str::from_utf8(d).unwrap()
+        self.0.as_ref().iter().map(u8::to_ascii_lowercase)
     }
 }
 
-pub fn verify_cert_dns_name(
+impl<B> Clone for DnsName<B>
+where
+    B: AsRef<[u8]>,
+    B: Clone,
+{
+    fn clone(&self) -> Self {
+        Self(self.0.clone())
+    }
+}
+
+impl<B> Copy for DnsName<B> where B: AsRef<[u8]> + Copy {}
+
+impl<B> core::fmt::Debug for DnsName<B>
+where
+    B: AsRef<[u8]>,
+{
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        f.write_str("DnsName(\"")?;
+        // None of the characters in a `DnsName` need to be escaped.
+        self.punycode_lowercase_bytes()
+            .try_for_each(|b| f.write_char(b.into()))?;
+        f.write_str("\")")
+    }
+}
+
+impl<B> core::fmt::Display for DnsName<B>
+where
+    B: AsRef<[u8]>,
+{
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        self.punycode_lowercase_bytes()
+            .try_for_each(|b| f.write_char(b.into()))
+    }
+}
+
+impl<B> core::hash::Hash for DnsName<B>
+where
+    B: AsRef<[u8]>,
+{
+    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
+        // This is modeled after the implementation of `Hash` for `[T]`.
+        let lowercase = self.punycode_lowercase_bytes();
+        state.write_usize(lowercase.len());
+        lowercase.for_each(|b| state.write_u8(b));
+    }
+}
+
+impl<B1, B2> PartialEq<DnsName<B1>> for DnsName<B2>
+where
+    B1: AsRef<[u8]>,
+    B2: AsRef<[u8]>,
+{
+    #[inline]
+    fn eq(&self, other: &DnsName<B1>) -> bool {
+        self.0.as_ref().eq_ignore_ascii_case(other.0.as_ref())
+    }
+}
+
+impl<B> Eq for DnsName<B> where B: AsRef<[u8]> {}
+
+pub(crate) fn verify_cert_dns_name(
     cert: &super::EndEntityCert,
-    DnsNameRef(dns_name): DnsNameRef,
+    DnsName(dns_name): DnsName<&[u8]>,
 ) -> Result<(), Error> {
     let cert = &cert.inner;
     let dns_name = untrusted::Input::from(dns_name);
