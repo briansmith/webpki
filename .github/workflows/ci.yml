@@ -128,6 +128,7 @@ jobs:
       matrix:
         features:
           - # Default
+          - --all-features
 
         target:
           # There is no platform-specific code in webpki. Choose a handful of
