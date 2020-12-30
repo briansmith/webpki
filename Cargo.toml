@@ -61,7 +61,6 @@ name = "webpki"
 path = "src/webpki.rs"
 
 [features]
-default = ["std", "trust_anchor_util"]
 trust_anchor_util = ["std"]
 std = []
 
