@@ -76,25 +76,3 @@ Please report bugs either as pull requests or as issues in [the issue
 tracker](https://github.com/briansmith/webpki/issues). webpki has a
 **full disclosure** vulnerability policy. **Please do NOT attempt to report
 any security vulnerability in this code privately to anybody.**
-
-
-
-Online Automated Testing
-========================
-
-Travis CI is used for Linux and Mac OS X. Appveyor is used for Windows.
-
-<table>
-<tr><th>OS</th><th>Arch.</th><th>Status</th>
-<tr><td>Linux</td>
-    <td>x86, x64</td>
-    <td rowspan=2><a href=https://travis-ci.org/briansmith/webpki>Build Status</a></td>
-</tr>
-<tr><td>Mac OS X x64</td>
-    <td>x86, x64</td>
-</tr>
-<tr><td>Windows (-msvc)</td>
-    <td>x86, x64</td>
-    <td><a href=https://ci.appveyor.com/project/briansmith/webpki/branch/master>Build Status</a></td>
-</tr>
-</table>
