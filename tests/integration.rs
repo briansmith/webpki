@@ -19,15 +19,20 @@ static ALL_SIGALGS: &[&webpki::SignatureAlgorithm] = &[
     &webpki::ECDSA_P256_SHA384,
     &webpki::ECDSA_P384_SHA256,
     &webpki::ECDSA_P384_SHA384,
-    &webpki::RSA_PKCS1_2048_8192_SHA256,
-    &webpki::RSA_PKCS1_2048_8192_SHA384,
-    &webpki::RSA_PKCS1_2048_8192_SHA512,
-    &webpki::RSA_PKCS1_3072_8192_SHA384,
     &webpki::ED25519,
+    #[cfg(feature = "alloc")]
+    &webpki::RSA_PKCS1_2048_8192_SHA256,
+    #[cfg(feature = "alloc")]
+    &webpki::RSA_PKCS1_2048_8192_SHA384,
+    #[cfg(feature = "alloc")]
+    &webpki::RSA_PKCS1_2048_8192_SHA512,
+    #[cfg(feature = "alloc")]
+    &webpki::RSA_PKCS1_3072_8192_SHA384,
 ];
 
 /* Checks we can verify netflix's cert chain.  This is notable
  * because they're rooted at a Verisign v1 root. */
+#[cfg(feature = "alloc")]
 #[test]
 pub fn netflix() {
     let ee = include_bytes!("netflix/ee.der");

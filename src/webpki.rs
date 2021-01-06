@@ -21,7 +21,7 @@
 //!
 //! | Feature | Description |
 //! | ------- | ----------- |
-//! | `alloc` | Enable features that require use of the heap. |
+//! | `alloc` | Enable features that require use of the heap. Currently all RSA signature algorithms require this feature. |
 //! | `std` | Enable features that require libstd. Implies `alloc`. |
 
 #![doc(html_root_url = "https://briansmith.org/rustdoc/")]
@@ -57,7 +57,12 @@ pub use name::DnsName;
 
 pub use signed_data::{
     SignatureAlgorithm, ECDSA_P256_SHA256, ECDSA_P256_SHA384, ECDSA_P384_SHA256, ECDSA_P384_SHA384,
-    ED25519, RSA_PKCS1_2048_8192_SHA256, RSA_PKCS1_2048_8192_SHA384, RSA_PKCS1_2048_8192_SHA512,
+    ED25519,
+};
+
+#[cfg(feature = "alloc")]
+pub use signed_data::{
+    RSA_PKCS1_2048_8192_SHA256, RSA_PKCS1_2048_8192_SHA384, RSA_PKCS1_2048_8192_SHA512,
     RSA_PKCS1_3072_8192_SHA384, RSA_PSS_2048_8192_SHA256_LEGACY_KEY,
     RSA_PSS_2048_8192_SHA384_LEGACY_KEY, RSA_PSS_2048_8192_SHA512_LEGACY_KEY,
 };
