@@ -30,7 +30,6 @@ static ALL_SIGALGS: &[&webpki::SignatureAlgorithm] = &[
 
 /* Checks we can verify netflix's cert chain.  This is notable
  * because they're rooted at a Verisign v1 root. */
-#[allow(box_pointers)]
 #[cfg(feature = "trust_anchor_util")]
 #[test]
 pub fn netflix() {
