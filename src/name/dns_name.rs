@@ -12,6 +12,9 @@
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
+#[cfg(feature = "alloc")]
+use alloc::string::String;
+
 /// A DNS Name suitable for use in the TLS Server Name Indication (SNI)
 /// extension and/or for use as the reference hostname for which to verify a
 /// certificate.
@@ -28,11 +31,14 @@
 /// depend on the specific circumstances in which the comparison is done.
 ///
 /// [RFC 5280 Section 7.2]: https://tools.ietf.org/html/rfc5280#section-7.2
-#[cfg(feature = "std")]
+///
+/// Requires the `alloc` feature.
+#[cfg(feature = "alloc")]
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct DnsName(String);
 
-#[cfg(feature = "std")]
+/// Requires the `alloc` feature.
+#[cfg(feature = "alloc")]
 impl DnsName {
     /// Returns a `DnsNameRef` that refers to this `DnsName`.
     pub fn as_ref(&self) -> DnsNameRef {
@@ -40,15 +46,17 @@ impl DnsName {
     }
 }
 
-#[cfg(feature = "std")]
+/// Requires the `alloc` feature.
+#[cfg(feature = "alloc")]
 impl AsRef<str> for DnsName {
     fn as_ref(&self) -> &str {
         self.0.as_ref()
     }
 }
 
+/// Requires the `alloc` feature.
 // Deprecated
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 impl From<DnsNameRef<'_>> for DnsName {
     fn from(dns_name: DnsNameRef) -> Self {
         dns_name.to_owned()
@@ -89,6 +97,7 @@ impl core::fmt::Display for InvalidDnsNameError {
     }
 }
 
+/// Requires the `std` feature.
 #[cfg(feature = "std")]
 impl ::std::error::Error for InvalidDnsNameError {}
 
@@ -110,7 +119,9 @@ impl<'a> DnsNameRef<'a> {
     }
 
     /// Constructs a `DnsName` from this `DnsNameRef`
-    #[cfg(feature = "std")]
+    ///
+    /// Requires the `alloc` feature.
+    #[cfg(feature = "alloc")]
     pub fn to_owned(&self) -> DnsName {
         // DnsNameRef is already guaranteed to be valid ASCII, which is a
         // subset of UTF-8.
@@ -119,7 +130,8 @@ impl<'a> DnsNameRef<'a> {
     }
 }
 
-#[cfg(feature = "std")]
+/// Requires the `alloc` feature.
+#[cfg(feature = "alloc")]
 impl core::fmt::Debug for DnsNameRef<'_> {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> Result<(), core::fmt::Error> {
         let lowercase = self.clone().to_owned();
@@ -768,8 +780,6 @@ mod tests {
     #[test]
     fn presented_matches_reference_test() {
         for &(presented, reference, expected_result) in PRESENTED_MATCHES_REFERENCE {
-            use std::string::String;
-
             let actual_result = presented_id_matches_reference_id(
                 untrusted::Input::from(presented),
                 untrusted::Input::from(reference),
@@ -777,9 +787,9 @@ mod tests {
             assert_eq!(
                 actual_result,
                 expected_result,
-                "presented_dns_id_matches_reference_dns_id(\"{}\", IDRole::ReferenceID, \"{}\")",
-                String::from_utf8_lossy(presented),
-                String::from_utf8_lossy(reference)
+                "presented_dns_id_matches_reference_dns_id(\"{:?}\", IDRole::ReferenceID, \"{:?}\")",
+                presented,
+                reference
             );
         }
     }

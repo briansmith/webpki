@@ -14,9 +14,6 @@
 
 //! Conversions into the library's time type.
 
-#[cfg(feature = "std")]
-use {ring, std};
-
 /// The time type.
 ///
 /// Internally this is merely a UNIX timestamp: a count of non-leap
@@ -45,6 +42,8 @@ impl Time {
     /// # Ok(())
     /// # }
     /// ```
+    ///
+    /// Requires the `std` feature.
     #[cfg(feature = "std")]
     pub fn try_from(time: std::time::SystemTime) -> Result<Time, ring::error::Unspecified> {
         time.duration_since(std::time::UNIX_EPOCH)

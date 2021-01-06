@@ -16,13 +16,23 @@
 //!
 //! See `EndEntityCert`'s documentation for a description of the certificate
 //! processing steps necessary for a TLS connection.
+//!
+//! # Features
+//!
+//! | Feature | Description |
+//! | ------- | ----------- |
+//! | `alloc` | Enable features that require use of the heap. |
+//! | `std` | Enable features that require libstd. Implies `alloc`. |
 
 #![doc(html_root_url = "https://briansmith.org/rustdoc/")]
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::single_match)]
 
-#[cfg(all(test, not(feature = "std")))]
+#[cfg(any(test, feature = "alloc"))]
 #[macro_use]
+extern crate alloc;
+
+#[cfg(test)]
 extern crate std;
 
 #[macro_use]
@@ -35,7 +45,6 @@ mod name;
 mod signed_data;
 mod time;
 
-#[cfg(feature = "trust_anchor_util")]
 pub mod trust_anchor_util;
 
 mod verify_cert;

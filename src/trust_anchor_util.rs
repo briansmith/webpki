@@ -14,6 +14,9 @@
 
 //! Utilities for efficiently embedding trust anchors in programs.
 
+#[cfg(feature = "alloc")]
+use alloc::string::String;
+
 use super::der;
 use crate::{
     cert::{certificate_serial_number, parse_cert_internal, Cert, EndEntityOrCA},
@@ -60,6 +63,9 @@ fn possibly_invalid_certificate_serial_number(input: &mut untrusted::Reader) -> 
 /// Generates code for hard-coding the given trust anchors into a program. This
 /// is designed to be used in a build script. `name` is the name of the public
 /// static variable that will contain the TrustAnchor array.
+///
+/// Requires the `alloc` feature.
+#[cfg(feature = "alloc")]
 pub fn generate_code_for_trust_anchors(name: &str, trust_anchors: &[TrustAnchor]) -> String {
     let decl = format!(
         "static {}: [TrustAnchor<'static>; {}] = ",

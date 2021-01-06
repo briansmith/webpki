@@ -93,5 +93,6 @@ impl fmt::Display for Error {
     }
 }
 
+/// Requires the `std` feature.
 #[cfg(feature = "std")]
 impl ::std::error::Error for Error {}
