@@ -64,11 +64,11 @@ name = "webpki"
 path = "src/webpki.rs"
 
 [features]
-alloc = []
+alloc = ["ring/alloc"]
 std = ["alloc"]
 
 [dependencies]
-ring = { version = "0.16.19", default-features = false, features = ["alloc"] }
+ring = { version = "0.16.19", default-features = false }
 untrusted = "0.7.1"
 
 [dev-dependencies]

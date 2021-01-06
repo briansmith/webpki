@@ -221,6 +221,9 @@ pub static ECDSA_P384_SHA384: SignatureAlgorithm = SignatureAlgorithm {
 };
 
 /// RSA PKCS#1 1.5 signatures using SHA-256 for keys of 2048-8192 bits.
+///
+/// Requires the `alloc` feature.
+#[cfg(feature = "alloc")]
 pub static RSA_PKCS1_2048_8192_SHA256: SignatureAlgorithm = SignatureAlgorithm {
     public_key_alg_id: RSA_ENCRYPTION,
     signature_alg_id: RSA_PKCS1_SHA256,
@@ -228,6 +231,9 @@ pub static RSA_PKCS1_2048_8192_SHA256: SignatureAlgorithm = SignatureAlgorithm {
 };
 
 /// RSA PKCS#1 1.5 signatures using SHA-384 for keys of 2048-8192 bits.
+///
+/// Requires the `alloc` feature.
+#[cfg(feature = "alloc")]
 pub static RSA_PKCS1_2048_8192_SHA384: SignatureAlgorithm = SignatureAlgorithm {
     public_key_alg_id: RSA_ENCRYPTION,
     signature_alg_id: RSA_PKCS1_SHA384,
@@ -235,6 +241,9 @@ pub static RSA_PKCS1_2048_8192_SHA384: SignatureAlgorithm = SignatureAlgorithm {
 };
 
 /// RSA PKCS#1 1.5 signatures using SHA-512 for keys of 2048-8192 bits.
+///
+/// Requires the `alloc` feature.
+#[cfg(feature = "alloc")]
 pub static RSA_PKCS1_2048_8192_SHA512: SignatureAlgorithm = SignatureAlgorithm {
     public_key_alg_id: RSA_ENCRYPTION,
     signature_alg_id: RSA_PKCS1_SHA512,
@@ -242,6 +251,9 @@ pub static RSA_PKCS1_2048_8192_SHA512: SignatureAlgorithm = SignatureAlgorithm {
 };
 
 /// RSA PKCS#1 1.5 signatures using SHA-384 for keys of 3072-8192 bits.
+///
+/// Requires the `alloc` feature.
+#[cfg(feature = "alloc")]
 pub static RSA_PKCS1_3072_8192_SHA384: SignatureAlgorithm = SignatureAlgorithm {
     public_key_alg_id: RSA_ENCRYPTION,
     signature_alg_id: RSA_PKCS1_SHA384,
@@ -252,6 +264,9 @@ pub static RSA_PKCS1_3072_8192_SHA384: SignatureAlgorithm = SignatureAlgorithm {
 /// type rsaEncryption; see [RFC 4055 Section 1.2].
 ///
 /// [RFC 4055 Section 1.2]: https://tools.ietf.org/html/rfc4055#section-1.2
+///
+/// Requires the `alloc` feature.
+#[cfg(feature = "alloc")]
 pub static RSA_PSS_2048_8192_SHA256_LEGACY_KEY: SignatureAlgorithm = SignatureAlgorithm {
     public_key_alg_id: RSA_ENCRYPTION,
     signature_alg_id: RSA_PSS_SHA256,
@@ -262,6 +277,9 @@ pub static RSA_PSS_2048_8192_SHA256_LEGACY_KEY: SignatureAlgorithm = SignatureAl
 /// type rsaEncryption; see [RFC 4055 Section 1.2].
 ///
 /// [RFC 4055 Section 1.2]: https://tools.ietf.org/html/rfc4055#section-1.2
+///
+/// Requires the `alloc` feature.
+#[cfg(feature = "alloc")]
 pub static RSA_PSS_2048_8192_SHA384_LEGACY_KEY: SignatureAlgorithm = SignatureAlgorithm {
     public_key_alg_id: RSA_ENCRYPTION,
     signature_alg_id: RSA_PSS_SHA384,
@@ -272,6 +290,9 @@ pub static RSA_PSS_2048_8192_SHA384_LEGACY_KEY: SignatureAlgorithm = SignatureAl
 /// type rsaEncryption; see [RFC 4055 Section 1.2].
 ///
 /// [RFC 4055 Section 1.2]: https://tools.ietf.org/html/rfc4055#section-1.2
+///
+/// Requires the `alloc` feature.
+#[cfg(feature = "alloc")]
 pub static RSA_PSS_2048_8192_SHA512_LEGACY_KEY: SignatureAlgorithm = SignatureAlgorithm {
     public_key_alg_id: RSA_ENCRYPTION,
     signature_alg_id: RSA_PSS_SHA512,
@@ -313,30 +334,37 @@ const ECDSA_SHA384: AlgorithmIdentifier = AlgorithmIdentifier {
     asn1_id_value: untrusted::Input::from(include_bytes!("data/alg-ecdsa-sha384.der")),
 };
 
+#[cfg(feature = "alloc")]
 const RSA_ENCRYPTION: AlgorithmIdentifier = AlgorithmIdentifier {
     asn1_id_value: untrusted::Input::from(include_bytes!("data/alg-rsa-encryption.der")),
 };
 
+#[cfg(feature = "alloc")]
 const RSA_PKCS1_SHA256: AlgorithmIdentifier = AlgorithmIdentifier {
     asn1_id_value: untrusted::Input::from(include_bytes!("data/alg-rsa-pkcs1-sha256.der")),
 };
 
+#[cfg(feature = "alloc")]
 const RSA_PKCS1_SHA384: AlgorithmIdentifier = AlgorithmIdentifier {
     asn1_id_value: untrusted::Input::from(include_bytes!("data/alg-rsa-pkcs1-sha384.der")),
 };
 
+#[cfg(feature = "alloc")]
 const RSA_PKCS1_SHA512: AlgorithmIdentifier = AlgorithmIdentifier {
     asn1_id_value: untrusted::Input::from(include_bytes!("data/alg-rsa-pkcs1-sha512.der")),
 };
 
+#[cfg(feature = "alloc")]
 const RSA_PSS_SHA256: AlgorithmIdentifier = AlgorithmIdentifier {
     asn1_id_value: untrusted::Input::from(include_bytes!("data/alg-rsa-pss-sha256.der")),
 };
 
+#[cfg(feature = "alloc")]
 const RSA_PSS_SHA384: AlgorithmIdentifier = AlgorithmIdentifier {
     asn1_id_value: untrusted::Input::from(include_bytes!("data/alg-rsa-pss-sha384.der")),
 };
 
+#[cfg(feature = "alloc")]
 const RSA_PSS_SHA512: AlgorithmIdentifier = AlgorithmIdentifier {
     asn1_id_value: untrusted::Input::from(include_bytes!("data/alg-rsa-pss-sha512.der")),
 };
@@ -449,6 +477,24 @@ mod tests {
         );
     }
 
+    const UNSUPPORTED_SIGNATURE_ALGORITHM_FOR_RSA_KEY: Error = if cfg!(feature = "alloc") {
+        Error::UnsupportedSignatureAlgorithmForPublicKey
+    } else {
+        Error::UnsupportedSignatureAlgorithm
+    };
+
+    const INVALID_SIGNATURE_FOR_RSA_KEY: Error = if cfg!(feature = "alloc") {
+        Error::InvalidSignatureForPublicKey
+    } else {
+        Error::UnsupportedSignatureAlgorithm
+    };
+
+    const OK_IF_RSA_AVAILABLE: Result<(), Error> = if cfg!(feature = "alloc") {
+        Ok(())
+    } else {
+        Err(Error::UnsupportedSignatureAlgorithm)
+    };
+
     // XXX: Some of the BadDER tests should have better error codes, maybe?
 
     // XXX: We should have a variant of this test with a SHA-256 digest that gives
@@ -480,7 +526,7 @@ mod tests {
     test_verify_signed_data!(
         test_ecdsa_prime256v1_sha512_using_rsa_algorithm,
         "ecdsa-prime256v1-sha512-using-rsa-algorithm.pem",
-        Err(Error::UnsupportedSignatureAlgorithmForPublicKey)
+        Err(UNSUPPORTED_SIGNATURE_ALGORITHM_FOR_RSA_KEY)
     );
     // XXX: We should have a variant of this test with a SHA-256 digest that gives
     // `Error::InvalidSignatureForPublicKey`.
@@ -534,7 +580,7 @@ mod tests {
     test_verify_signed_data!(
         test_rsa_pkcs1_sha1_wrong_algorithm,
         "rsa-pkcs1-sha1-wrong-algorithm.pem",
-        Err(Error::InvalidSignatureForPublicKey)
+        Err(INVALID_SIGNATURE_FOR_RSA_KEY)
     );
     test_verify_signed_data!(
         test_rsa_pkcs1_sha1,
@@ -548,7 +594,7 @@ mod tests {
     test_verify_signed_data!(
         test_rsa_pkcs1_sha256,
         "rsa-pkcs1-sha256.pem",
-        Err(Error::InvalidSignatureForPublicKey)
+        Err(INVALID_SIGNATURE_FOR_RSA_KEY)
     );
     test_parse_spki_bad_outer!(
         test_rsa_pkcs1_sha256_key_encoded_ber,
@@ -558,7 +604,7 @@ mod tests {
     test_verify_signed_data!(
         test_rsa_pkcs1_sha256_spki_non_null_params,
         "rsa-pkcs1-sha256-spki-non-null-params.pem",
-        Err(Error::UnsupportedSignatureAlgorithmForPublicKey)
+        Err(UNSUPPORTED_SIGNATURE_ALGORITHM_FOR_RSA_KEY)
     );
     test_verify_signed_data!(
         test_rsa_pkcs1_sha256_using_ecdsa_algorithm,
@@ -568,7 +614,7 @@ mod tests {
     test_verify_signed_data!(
         test_rsa_pkcs1_sha256_using_id_ea_rsa,
         "rsa-pkcs1-sha256-using-id-ea-rsa.pem",
-        Err(Error::UnsupportedSignatureAlgorithmForPublicKey)
+        Err(UNSUPPORTED_SIGNATURE_ALGORITHM_FOR_RSA_KEY)
     );
 
     // Chromium's PSS test are for parameter combinations we don't support.
@@ -617,43 +663,43 @@ mod tests {
     test_verify_signed_data!(
         test_rsa_pss_sha256_salt32,
         "ours/rsa-pss-sha256-salt32.pem",
-        Ok(())
+        OK_IF_RSA_AVAILABLE
     );
     test_verify_signed_data!(
         test_rsa_pss_sha384_salt48,
         "ours/rsa-pss-sha384-salt48.pem",
-        Ok(())
+        OK_IF_RSA_AVAILABLE
     );
     test_verify_signed_data!(
         test_rsa_pss_sha512_salt64,
         "ours/rsa-pss-sha512-salt64.pem",
-        Ok(())
+        OK_IF_RSA_AVAILABLE
     );
     test_verify_signed_data!(
         test_rsa_pss_sha256_salt32_corrupted_data,
         "ours/rsa-pss-sha256-salt32-corrupted-data.pem",
-        Err(Error::InvalidSignatureForPublicKey)
+        Err(INVALID_SIGNATURE_FOR_RSA_KEY)
     );
     test_verify_signed_data!(
         test_rsa_pss_sha384_salt48_corrupted_data,
         "ours/rsa-pss-sha384-salt48-corrupted-data.pem",
-        Err(Error::InvalidSignatureForPublicKey)
+        Err(INVALID_SIGNATURE_FOR_RSA_KEY)
     );
     test_verify_signed_data!(
         test_rsa_pss_sha512_salt64_corrupted_data,
         "ours/rsa-pss-sha512-salt64-corrupted-data.pem",
-        Err(Error::InvalidSignatureForPublicKey)
+        Err(INVALID_SIGNATURE_FOR_RSA_KEY)
     );
 
     test_verify_signed_data!(
         test_rsa_using_ec_key,
         "rsa-using-ec-key.pem",
-        Err(Error::UnsupportedSignatureAlgorithmForPublicKey)
+        Err(UNSUPPORTED_SIGNATURE_ALGORITHM_FOR_RSA_KEY)
     );
     test_verify_signed_data!(
         test_rsa2048_pkcs1_sha512,
         "rsa2048-pkcs1-sha512.pem",
-        Ok(())
+        OK_IF_RSA_AVAILABLE
     );
 
     struct TestSignedData {
@@ -710,16 +756,23 @@ mod tests {
 
     static SUPPORTED_ALGORITHMS_IN_TESTS: &[&signed_data::SignatureAlgorithm] = &[
         // Reasonable algorithms.
-        &signed_data::RSA_PKCS1_2048_8192_SHA256,
         &signed_data::ECDSA_P256_SHA256,
         &signed_data::ECDSA_P384_SHA384,
-        &signed_data::RSA_PKCS1_2048_8192_SHA384,
-        &signed_data::RSA_PKCS1_2048_8192_SHA512,
-        &signed_data::RSA_PKCS1_3072_8192_SHA384,
-        &signed_data::RSA_PSS_2048_8192_SHA256_LEGACY_KEY,
-        &signed_data::RSA_PSS_2048_8192_SHA384_LEGACY_KEY,
-        &signed_data::RSA_PSS_2048_8192_SHA512_LEGACY_KEY,
         &signed_data::ED25519,
+        #[cfg(feature = "alloc")]
+        &signed_data::RSA_PKCS1_2048_8192_SHA256,
+        #[cfg(feature = "alloc")]
+        &signed_data::RSA_PKCS1_2048_8192_SHA384,
+        #[cfg(feature = "alloc")]
+        &signed_data::RSA_PKCS1_2048_8192_SHA512,
+        #[cfg(feature = "alloc")]
+        &signed_data::RSA_PKCS1_3072_8192_SHA384,
+        #[cfg(feature = "alloc")]
+        &signed_data::RSA_PSS_2048_8192_SHA256_LEGACY_KEY,
+        #[cfg(feature = "alloc")]
+        &signed_data::RSA_PSS_2048_8192_SHA384_LEGACY_KEY,
+        #[cfg(feature = "alloc")]
+        &signed_data::RSA_PSS_2048_8192_SHA512_LEGACY_KEY,
         // Algorithms deprecated because they are annoying (P-521) or because
         // they are nonsensical combinations.
         &signed_data::ECDSA_P256_SHA384, // Truncates digest.
