@@ -15,7 +15,8 @@
 mod dns_name;
 pub use dns_name::{DnsNameRef, InvalidDnsNameError};
 
-#[cfg(feature = "std")]
+/// Requires the `alloc` feature.
+#[cfg(feature = "alloc")]
 pub use dns_name::DnsName;
 
 mod ip_address;

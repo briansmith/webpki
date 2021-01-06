@@ -56,13 +56,16 @@ include = [
     "third-party/chromium/**/*",
 ]
 
+[package.metadata.docs.rs]
+all-features = true
+
 [lib]
 name = "webpki"
 path = "src/webpki.rs"
 
 [features]
-trust_anchor_util = ["std"]
-std = []
+alloc = []
+std = ["alloc"]
 
 [dependencies]
 ring = { version = "0.16.19", default-features = false, features = ["alloc"] }

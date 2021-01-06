@@ -348,8 +348,8 @@ const ED_25519: AlgorithmIdentifier = AlgorithmIdentifier {
 #[cfg(test)]
 mod tests {
     use crate::{der, signed_data, Error};
-
-    use std::{self, io::BufRead, string::String, vec::Vec};
+    use alloc::{string::String, vec::Vec};
+    use std::io::BufRead as _;
 
     // TODO: The expected results need to be modified for SHA-1 deprecation.
 
