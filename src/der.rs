@@ -149,11 +149,12 @@ pub fn time_choice(input: &mut untrusted::Reader) -> Result<time::Time, Error> {
     };
 
     fn read_digit(inner: &mut untrusted::Reader) -> Result<u64, Error> {
+        const DIGIT: core::ops::RangeInclusive<u8> = b'0'..=b'9';
         let b = inner.read_byte().map_err(|_| Error::BadDERTime)?;
-        if b < b'0' || b > b'9' {
-            return Err(Error::BadDERTime);
+        if DIGIT.contains(&b) {
+            return Ok(u64::from(b - DIGIT.start()));
         }
-        Ok(u64::from(b - b'0'))
+        Err(Error::BadDERTime)
     }
 
     fn read_two_digits(inner: &mut untrusted::Reader, min: u64, max: u64) -> Result<u64, Error> {
