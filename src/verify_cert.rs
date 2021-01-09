@@ -28,13 +28,17 @@ pub fn build_chain(
 ) -> Result<(), Error> {
     let used_as_ca = used_as_ca(&cert.ee_or_ca);
 
-    check_issuer_independent_properties(
+    let must_be_self_signed = match check_issuer_independent_properties(
         cert,
         time,
         used_as_ca,
         sub_ca_count,
         required_eku_if_present,
-    )?;
+    ) {
+        Ok(()) => false,
+        Err(Error::CAUsedAsEndEntity) => true,
+        Err(e) => return Err(e),
+    };
 
     // TODO: HPKP checks.
 
@@ -71,6 +75,10 @@ pub fn build_chain(
 
         check_signatures(supported_sig_algs, cert, trust_anchor_spki)?;
 
+        if must_be_self_signed && trust_anchor_subject != cert.subject {
+            return Err(Error::CAUsedAsEndEntity);
+        }
+
         Ok(())
     }) {
         Ok(()) => {
@@ -79,6 +87,10 @@ pub fn build_chain(
         Err(..) => {
             // If the error is not fatal, then keep going.
         }
+    }
+
+    if must_be_self_signed {
+        return Err(Error::CAUsedAsEndEntity);
     }
 
     loop_while_non_fatal_error(intermediate_certs, |cert_der| {

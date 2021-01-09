@@ -45,6 +45,7 @@ include = [
 
     "tests/dns_name_tests.rs",
     "tests/integration.rs",
+    "tests/misc/selfsigned.der",
     "tests/misc/serial_neg.der",
     "tests/misc/serial_zero.der",
     "tests/netflix/ca.der",
