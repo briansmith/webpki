@@ -36,7 +36,7 @@ impl Time {
 
 #[cfg(feature = "std")]
 impl core::convert::TryFrom<std::time::SystemTime> for Time {
-    type Error = ring::error::Unspecified;
+    type Error = std::time::SystemTimeError;
 
     /// Create a `webpki::Time` from a `std::time::SystemTime`.
     ///
@@ -49,9 +49,9 @@ impl core::convert::TryFrom<std::time::SystemTime> for Time {
     /// # extern crate webpki;
     /// #
     /// #![cfg(feature = "std")]
-    /// use std::{convert::TryFrom, time::SystemTime};
+    /// use std::{convert::TryFrom, time::{SystemTime, SystemTimeError}};
     ///
-    /// # fn foo() -> Result<(), ring::error::Unspecified> {
+    /// # fn foo() -> Result<(), SystemTimeError> {
     /// let time = webpki::Time::try_from(SystemTime::now())?;
     /// # Ok(())
     /// # }
@@ -60,6 +60,5 @@ impl core::convert::TryFrom<std::time::SystemTime> for Time {
         value
             .duration_since(std::time::UNIX_EPOCH)
             .map(|d| Time::from_seconds_since_unix_epoch(d.as_secs()))
-            .map_err(|_| ring::error::Unspecified)
     }
 }
