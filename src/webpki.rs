@@ -32,6 +32,10 @@
 #[macro_use]
 extern crate alloc;
 
+#[cfg(feature = "alloc")]
+use alloc::vec::Vec;
+
+// TODO: Remove this; see https://github.com/briansmith/webpki/issues/167.
 #[cfg(test)]
 extern crate std;
 
@@ -52,7 +56,7 @@ mod verify_cert;
 pub use error::Error;
 pub use name::{DnsNameRef, InvalidDnsNameError};
 
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 pub use name::DnsName;
 
 pub use signed_data::{
@@ -196,9 +200,9 @@ impl<'a> EndEntityCert<'a> {
     /// fails with `Error::CertNotValidForName`. Otherwise the DNS names for
     /// which the certificate is valid are returned.
     ///
-    /// Requires the `std` default feature; i.e. this isn't available in
+    /// Requires the `alloc` default feature; i.e. this isn't available in
     /// `#![no_std]` configurations.
-    #[cfg(feature = "std")]
+    #[cfg(feature = "alloc")]
     pub fn verify_is_valid_for_at_least_one_dns_name<'names, Names>(
         &self,
         dns_names: Names,
