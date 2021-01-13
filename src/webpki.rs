@@ -35,10 +35,6 @@ extern crate alloc;
 #[cfg(feature = "alloc")]
 use alloc::vec::Vec;
 
-// TODO: Remove this; see https://github.com/briansmith/webpki/issues/167.
-#[cfg(test)]
-extern crate std;
-
 #[macro_use]
 mod der;
 

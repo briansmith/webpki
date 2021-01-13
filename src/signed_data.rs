@@ -377,7 +377,15 @@ const ED_25519: AlgorithmIdentifier = AlgorithmIdentifier {
 mod tests {
     use crate::{der, signed_data, Error};
     use alloc::{string::String, vec::Vec};
-    use std::io::BufRead as _;
+
+    macro_rules! test_file_bytes {
+        ( $file_name:expr ) => {
+            include_bytes!(concat!(
+                "../third-party/chromium/data/verify_signed_data/",
+                $file_name
+            ))
+        };
+    }
 
     // TODO: The expected results need to be modified for SHA-1 deprecation.
 
@@ -385,13 +393,13 @@ mod tests {
         ($fn_name:ident, $file_name:expr, $expected_result:expr) => {
             #[test]
             fn $fn_name() {
-                test_verify_signed_data($file_name, $expected_result);
+                test_verify_signed_data(test_file_bytes!($file_name), $expected_result);
             }
         };
     }
 
-    fn test_verify_signed_data(file_name: &str, expected_result: Result<(), Error>) {
-        let tsd = parse_test_signed_data(file_name);
+    fn test_verify_signed_data(file_contents: &[u8], expected_result: Result<(), Error>) {
+        let tsd = parse_test_signed_data(file_contents);
         let spki_value = untrusted::Input::from(&tsd.spki);
         let spki_value = spki_value
             .read_all(Error::BadDER, |input| {
@@ -440,13 +448,16 @@ mod tests {
         ($fn_name:ident, $file_name:expr, $expected_result:expr) => {
             #[test]
             fn $fn_name() {
-                test_verify_signed_data_signature_outer($file_name, $expected_result);
+                test_verify_signed_data_signature_outer(
+                    test_file_bytes!($file_name),
+                    $expected_result,
+                );
             }
         };
     }
 
-    fn test_verify_signed_data_signature_outer(file_name: &str, expected_error: Error) {
-        let tsd = parse_test_signed_data(file_name);
+    fn test_verify_signed_data_signature_outer(file_contents: &[u8], expected_error: Error) {
+        let tsd = parse_test_signed_data(file_contents);
         let signature = untrusted::Input::from(&tsd.signature);
         assert_eq!(
             Err(expected_error),
@@ -461,13 +472,13 @@ mod tests {
         ($fn_name:ident, $file_name:expr, $error:expr) => {
             #[test]
             fn $fn_name() {
-                test_parse_spki_bad_outer($file_name, $error)
+                test_parse_spki_bad_outer(test_file_bytes!($file_name), $error)
             }
         };
     }
 
-    fn test_parse_spki_bad_outer(file_name: &str, expected_error: Error) {
-        let tsd = parse_test_signed_data(file_name);
+    fn test_parse_spki_bad_outer(file_contents: &[u8], expected_error: Error) {
+        let tsd = parse_test_signed_data(file_contents);
         let spki = untrusted::Input::from(&tsd.spki);
         assert_eq!(
             Err(expected_error),
@@ -709,12 +720,8 @@ mod tests {
         signature: Vec<u8>,
     }
 
-    fn parse_test_signed_data(file_name: &str) -> TestSignedData {
-        let path = std::path::PathBuf::from("third-party/chromium/data/verify_signed_data")
-            .join(file_name);
-        let file = std::fs::File::open(path).unwrap();
-        let mut lines = std::io::BufReader::new(&file).lines();
-
+    fn parse_test_signed_data(file_contents: &[u8]) -> TestSignedData {
+        let mut lines = core::str::from_utf8(file_contents).unwrap().lines();
         let spki = read_pem_section(&mut lines, "PUBLIC KEY");
         let algorithm = read_pem_section(&mut lines, "ALGORITHM");
         let data = read_pem_section(&mut lines, "DATA");
@@ -728,13 +735,13 @@ mod tests {
         }
     }
 
-    type FileLines<'a> = std::io::Lines<std::io::BufReader<&'a std::fs::File>>;
+    use alloc::str::Lines;
 
-    fn read_pem_section(lines: &mut FileLines, section_name: &str) -> Vec<u8> {
+    fn read_pem_section(lines: &mut Lines, section_name: &str) -> Vec<u8> {
         // Skip comments and header
         let begin_section = format!("-----BEGIN {}-----", section_name);
         loop {
-            let line = lines.next().unwrap().unwrap();
+            let line = lines.next().unwrap();
             if line == begin_section {
                 break;
             }
@@ -744,7 +751,7 @@ mod tests {
 
         let end_section = format!("-----END {}-----", section_name);
         loop {
-            let line = lines.next().unwrap().unwrap();
+            let line = lines.next().unwrap();
             if line == end_section {
                 break;
             }
