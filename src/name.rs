@@ -13,7 +13,7 @@
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 mod dns_name;
-pub use dns_name::{DnsNameRef, InvalidDnsNameError};
+pub use dns_name::{DnsNameRef, GeneralDnsNameRef, InvalidDnsNameError, WildcardDnsNameRef};
 
 /// Requires the `alloc` feature.
 #[cfg(feature = "alloc")]
@@ -23,3 +23,6 @@ mod ip_address;
 
 mod verify;
 pub(super) use verify::{check_name_constraints, verify_cert_dns_name};
+
+#[cfg(feature = "alloc")]
+pub(super) use verify::list_cert_dns_names;

@@ -20,6 +20,11 @@ use crate::{
     cert::{Cert, EndEntityOrCA},
     der, Error,
 };
+#[cfg(feature = "alloc")]
+use {
+    alloc::vec::Vec,
+    dns_name::{GeneralDnsNameRef, WildcardDnsNameRef},
+};
 
 pub fn verify_cert_dns_name(
     cert: &crate::EndEntityCert,
@@ -245,11 +250,11 @@ enum NameIteration {
     Stop(Result<(), Error>),
 }
 
-fn iterate_names(
-    subject: untrusted::Input,
-    subject_alt_name: Option<untrusted::Input>,
+fn iterate_names<'names>(
+    subject: untrusted::Input<'names>,
+    subject_alt_name: Option<untrusted::Input<'names>>,
     result_if_never_stopped_early: Result<(), Error>,
-    f: &dyn Fn(GeneralName) -> NameIteration,
+    f: &dyn Fn(GeneralName<'names>) -> NameIteration,
 ) -> Result<(), Error> {
     match subject_alt_name {
         Some(subject_alt_name) => {
@@ -277,6 +282,33 @@ fn iterate_names(
         NameIteration::Stop(result) => result,
         NameIteration::KeepGoing => result_if_never_stopped_early,
     }
+}
+
+#[cfg(feature = "alloc")]
+pub fn list_cert_dns_names<'names>(
+    cert: &crate::EndEntityCert<'names>,
+) -> Result<Vec<GeneralDnsNameRef<'names>>, Error> {
+    let cert = &cert.inner;
+    let names = core::cell::RefCell::new(Vec::new());
+
+    iterate_names(cert.subject, cert.subject_alt_name, Ok(()), &|name| {
+        match name {
+            GeneralName::DnsName(presented_id) => {
+                match DnsNameRef::try_from_ascii(presented_id.as_slice_less_safe())
+                    .map(GeneralDnsNameRef::DnsName)
+                    .or_else(|_| {
+                        WildcardDnsNameRef::try_from_ascii(presented_id.as_slice_less_safe())
+                            .map(GeneralDnsNameRef::Wildcard)
+                    }) {
+                    Ok(name) => names.borrow_mut().push(name),
+                    Err(_) => { /* keep going */ }
+                };
+            }
+            _ => (),
+        }
+        NameIteration::KeepGoing
+    })
+    .map(|_| names.into_inner())
 }
 
 // It is *not* valid to derive `Eq`, `PartialEq, etc. for this type. In
