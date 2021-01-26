@@ -17,6 +17,9 @@ use crate::{
     TLSClientTrustAnchors, TLSServerTrustAnchors, Time,
 };
 
+#[cfg(feature = "alloc")]
+use alloc::vec::Vec;
+
 /// An end-entity certificate.
 ///
 /// Server certificate processing in a TLS connection consists of several
