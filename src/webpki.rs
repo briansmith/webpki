@@ -44,6 +44,7 @@ mod signed_data;
 mod time;
 mod trust_anchor;
 
+#[cfg(feature = "alloc")]
 pub mod trust_anchor_util;
 
 mod verify_cert;
