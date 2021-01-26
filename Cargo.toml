@@ -61,7 +61,6 @@ all-features = true
 
 [lib]
 name = "webpki"
-path = "src/webpki.rs"
 
 [features]
 alloc = ["ring/alloc"]
