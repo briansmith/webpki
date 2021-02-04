@@ -23,7 +23,7 @@ pub enum Error {
     /// The encoding of an ASN.1 DER-encoded time is invalid.
     BadDERTime,
 
-    /// A CA certificate is veing used as an end-entity certificate.
+    /// A CA certificate is being used as an end-entity certificate.
     CAUsedAsEndEntity,
 
     /// The certificate is expired; i.e. the time it is being validated for is
