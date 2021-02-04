@@ -29,7 +29,7 @@
 #![allow(clippy::single_match)]
 
 #[cfg(any(test, feature = "alloc"))]
-#[macro_use]
+#[cfg_attr(test, macro_use)]
 extern crate alloc;
 
 #[macro_use]
@@ -43,9 +43,6 @@ mod name;
 mod signed_data;
 mod time;
 mod trust_anchor;
-
-#[cfg(feature = "alloc")]
-pub mod trust_anchor_util;
 
 mod verify_cert;
 
