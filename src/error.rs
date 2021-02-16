@@ -68,6 +68,9 @@ pub enum Error {
     UnknownIssuer,
 
     /// The certificate is not a v3 X.509 certificate.
+    ///
+    /// This error may be also reported if the certificate version field
+    /// is malformed.
     UnsupportedCertVersion,
 
     /// The certificate contains an unsupported critical extension.

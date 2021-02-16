@@ -57,7 +57,7 @@ impl<'a> TrustAnchor<'a> {
             possibly_invalid_certificate_serial_number,
         ) {
             Ok(cert) => Ok(Self::from(cert)),
-            Err(Error::BadDER) => parse_cert_v1(cert_der).or(Err(Error::BadDER)),
+            Err(Error::UnsupportedCertVersion) => parse_cert_v1(cert_der).or(Err(Error::BadDER)),
             Err(err) => Err(err),
         }
     }
