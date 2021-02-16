@@ -167,9 +167,9 @@ fn check_presented_id_conforms_to_constraints_in_subtree(
                 dns_name::presented_id_matches_constraint(name, base).ok_or(Error::BadDER)
             }
 
-            (GeneralName::DirectoryName(name), GeneralName::DirectoryName(base)) => {
-                presented_directory_name_matches_constraint(name, base, subtrees)
-            }
+            (GeneralName::DirectoryName(name), GeneralName::DirectoryName(base)) => Ok(
+                presented_directory_name_matches_constraint(name, base, subtrees),
+            ),
 
             (GeneralName::IPAddress(name), GeneralName::IPAddress(base)) => {
                 ip_address::presented_id_matches_constraint(name, base)
@@ -232,10 +232,10 @@ fn presented_directory_name_matches_constraint(
     name: untrusted::Input,
     constraint: untrusted::Input,
     subtrees: Subtrees,
-) -> Result<bool, Error> {
+) -> bool {
     match subtrees {
-        Subtrees::PermittedSubtrees => Ok(name == constraint),
-        Subtrees::ExcludedSubtrees => Ok(true),
+        Subtrees::PermittedSubtrees => name == constraint,
+        Subtrees::ExcludedSubtrees => true,
     }
 }
 
