@@ -70,6 +70,13 @@ pub enum Error {
     /// The certificate is not a v3 X.509 certificate.
     UnsupportedCertVersion,
 
+    /// The certificate extensions are missing or malformed.
+    ///
+    /// In particular, webpki requires the DNS name(s) be in the subjectAltName
+    /// extension as required by the CA/Browser Forum Baseline Requirements
+    /// and as recommended by RFC6125.
+    MissingOrMalformedExtensions,
+
     /// The certificate contains an unsupported critical extension.
     UnsupportedCriticalExtension,
 
