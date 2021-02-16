@@ -135,7 +135,7 @@ fn version3(input: &mut untrusted::Reader) -> Result<(), Error> {
     der::nested(
         input,
         der::Tag::ContextSpecificConstructed0,
-        Error::BadDER,
+        Error::UnsupportedCertVersion,
         |input| {
             let version = der::small_nonnegative_integer(input)?;
             if version != 2 {
