@@ -51,8 +51,8 @@ pub use {
     error::Error,
     name::{DnsNameRef, InvalidDnsNameError},
     signed_data::{
-        SignatureAlgorithm, ECDSA_P256_SHA256, ECDSA_P256_SHA384, ECDSA_P384_SHA256,
-        ECDSA_P384_SHA384, ED25519,
+        SignatureAlgorithm, ALL_SIGNATURE_ALGORITHMS, ECDSA_P256_SHA256, ECDSA_P256_SHA384,
+        ECDSA_P384_SHA256, ECDSA_P384_SHA384, ED25519,
     },
     time::Time,
     trust_anchor::{TLSClientTrustAnchors, TLSServerTrustAnchors, TrustAnchor},

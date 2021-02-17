@@ -373,6 +373,25 @@ const ED_25519: AlgorithmIdentifier = AlgorithmIdentifier {
     asn1_id_value: untrusted::Input::from(include_bytes!("data/alg-ed25519.der")),
 };
 
+/// All signature algorithms supported by the webpki crate.
+///
+/// Note the list depends on whether `alloc` feature is on or off.
+pub static ALL_SIGNATURE_ALGORITHMS: &[&SignatureAlgorithm] = &[
+    &ECDSA_P256_SHA256,
+    &ECDSA_P256_SHA384,
+    &ECDSA_P384_SHA256,
+    &ECDSA_P384_SHA384,
+    &ED25519,
+    #[cfg(feature = "alloc")]
+    &RSA_PKCS1_2048_8192_SHA256,
+    #[cfg(feature = "alloc")]
+    &RSA_PKCS1_2048_8192_SHA384,
+    #[cfg(feature = "alloc")]
+    &RSA_PKCS1_2048_8192_SHA512,
+    #[cfg(feature = "alloc")]
+    &RSA_PKCS1_3072_8192_SHA384,
+];
+
 #[cfg(test)]
 mod tests {
     use crate::{der, signed_data, Error};

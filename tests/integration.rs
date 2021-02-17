@@ -15,22 +15,6 @@
 use core::convert::TryFrom;
 extern crate webpki;
 
-static ALL_SIGALGS: &[&webpki::SignatureAlgorithm] = &[
-    &webpki::ECDSA_P256_SHA256,
-    &webpki::ECDSA_P256_SHA384,
-    &webpki::ECDSA_P384_SHA256,
-    &webpki::ECDSA_P384_SHA384,
-    &webpki::ED25519,
-    #[cfg(feature = "alloc")]
-    &webpki::RSA_PKCS1_2048_8192_SHA256,
-    #[cfg(feature = "alloc")]
-    &webpki::RSA_PKCS1_2048_8192_SHA384,
-    #[cfg(feature = "alloc")]
-    &webpki::RSA_PKCS1_2048_8192_SHA512,
-    #[cfg(feature = "alloc")]
-    &webpki::RSA_PKCS1_3072_8192_SHA384,
-];
-
 /* Checks we can verify netflix's cert chain.  This is notable
  * because they're rooted at a Verisign v1 root. */
 #[cfg(feature = "alloc")]
@@ -49,7 +33,12 @@ pub fn netflix() {
     let cert = webpki::EndEntityCert::try_from(ee).unwrap();
     assert_eq!(
         Ok(()),
-        cert.verify_is_valid_tls_server_cert(ALL_SIGALGS, &anchors, &[inter], time)
+        cert.verify_is_valid_tls_server_cert(
+            webpki::ALL_SIGNATURE_ALGORITHMS,
+            &anchors,
+            &[inter],
+            time
+        )
     );
 }
 
@@ -67,7 +56,7 @@ pub fn ed25519() {
     let cert = webpki::EndEntityCert::try_from(ee).unwrap();
     assert_eq!(
         Ok(()),
-        cert.verify_is_valid_tls_server_cert(ALL_SIGALGS, &anchors, &[], time)
+        cert.verify_is_valid_tls_server_cert(webpki::ALL_SIGNATURE_ALGORITHMS, &anchors, &[], time)
     );
 }
 
