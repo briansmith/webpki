@@ -13,6 +13,8 @@
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 use core::convert::TryFrom;
+use webpki::Error;
+
 extern crate webpki;
 
 static ALL_SIGALGS: &[&webpki::SignatureAlgorithm] = &[
@@ -68,6 +70,24 @@ pub fn ed25519() {
     assert_eq!(
         Ok(()),
         cert.verify_is_valid_tls_server_cert(ALL_SIGALGS, &anchors, &[], time)
+    );
+}
+
+#[test]
+pub fn ed25519_unsupported_algorithms() {
+    let ee: &[u8] = include_bytes!("ed25519/ee.der");
+    let ca = include_bytes!("ed25519/ca.der");
+
+    let anchors = vec![webpki::TrustAnchor::from_cert_der(ca).unwrap()];
+    let anchors = webpki::TLSServerTrustAnchors(&anchors);
+
+    #[allow(clippy::unreadable_literal)] // TODO: Make this clear.
+    let time = webpki::Time::from_seconds_since_unix_epoch(1547363522);
+
+    let cert = webpki::EndEntityCert::try_from(ee).unwrap();
+    assert_eq!(
+        Err(Error::UnsupportedSignatureAlgorithm),
+        cert.verify_is_valid_tls_server_cert(&[], &anchors, &[], time)
     );
 }
 

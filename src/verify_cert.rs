@@ -53,35 +53,40 @@ pub fn build_chain(
 
     // TODO: revocation.
 
-    match loop_while_non_fatal_error(trust_anchors, |trust_anchor: &TrustAnchor| {
-        let trust_anchor_subject = untrusted::Input::from(trust_anchor.subject);
-        if cert.issuer != trust_anchor_subject {
-            return Err(Error::UnknownIssuer);
-        }
+    let error = match loop_while_non_fatal_error(
+        Error::UnknownIssuer,
+        trust_anchors,
+        |trust_anchor: &TrustAnchor| {
+            let trust_anchor_subject = untrusted::Input::from(trust_anchor.subject);
+            if cert.issuer != trust_anchor_subject {
+                return Err(Error::UnknownIssuer);
+            }
 
-        let name_constraints = trust_anchor.name_constraints.map(untrusted::Input::from);
+            let name_constraints = trust_anchor.name_constraints.map(untrusted::Input::from);
 
-        untrusted::read_all_optional(name_constraints, Error::BadDER, |value| {
-            name::check_name_constraints(value, &cert)
-        })?;
+            untrusted::read_all_optional(name_constraints, Error::BadDER, |value| {
+                name::check_name_constraints(value, &cert)
+            })?;
 
-        let trust_anchor_spki = untrusted::Input::from(trust_anchor.spki);
+            let trust_anchor_spki = untrusted::Input::from(trust_anchor.spki);
 
-        // TODO: check_distrust(trust_anchor_subject, trust_anchor_spki)?;
+            // TODO: check_distrust(trust_anchor_subject, trust_anchor_spki)?;
 
-        check_signatures(supported_sig_algs, cert, trust_anchor_spki)?;
+            check_signatures(supported_sig_algs, cert, trust_anchor_spki)?;
 
-        Ok(())
-    }) {
+            Ok(())
+        },
+    ) {
         Ok(()) => {
             return Ok(());
         }
-        Err(..) => {
+        Err(e) => {
             // If the error is not fatal, then keep going.
+            e
         }
-    }
+    };
 
-    loop_while_non_fatal_error(intermediate_certs, |cert_der| {
+    loop_while_non_fatal_error(error, intermediate_certs, |cert_der| {
         let potential_issuer =
             cert::parse_cert(untrusted::Input::from(*cert_der), EndEntityOrCA::CA(&cert))?;
 
@@ -331,20 +336,44 @@ fn check_eku(
     }
 }
 
-fn loop_while_non_fatal_error<V, F>(values: V, f: F) -> Result<(), Error>
+// Find the most important error from errors of trying
+// to build a chain from trusted anchors.
+fn most_important_error_for_build_chain(a: Error, b: Error) -> Error {
+    fn rank(e: Error) -> u32 {
+        match e {
+            // these are the most important errors
+            Error::BadDER => 100001,
+            Error::UnsupportedSignatureAlgorithm => 100000,
+            // this is the default error, any other error beats it
+            Error::UnknownIssuer => 0,
+            // The order of the rest errors probably matter too
+            // but let's use some random ordering for a while.
+            e => (e as u32) + 1,
+        }
+    }
+    if rank(a) >= rank(b) {
+        a
+    } else {
+        b
+    }
+}
+
+fn loop_while_non_fatal_error<V, F>(default_error: Error, values: V, f: F) -> Result<(), Error>
 where
     V: IntoIterator,
     F: Fn(V::Item) -> Result<(), Error>,
 {
+    let mut error = default_error;
     for v in values {
         match f(v) {
             Ok(()) => {
                 return Ok(());
             }
-            Err(..) => {
+            Err(new_error) => {
+                error = most_important_error_for_build_chain(error, new_error)
                 // If the error is not fatal, then keep going.
             }
         }
     }
-    Err(Error::UnknownIssuer)
+    Err(error)
 }
