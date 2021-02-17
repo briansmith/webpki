@@ -19,11 +19,25 @@ pub use ring::io::{
 };
 
 #[inline(always)]
+pub fn expect_tag_and_get_value_ex<'a, E>(
+    input: &mut untrusted::Reader<'a>,
+    tag: Tag,
+    tag_mismatch_error: E,
+    other_error: E,
+) -> Result<untrusted::Input<'a>, E> {
+    let (actual_tag, inner) = read_tag_and_get_value(input).map_err(|_| other_error)?;
+    if usize::from(tag) != usize::from(actual_tag) {
+        return Err(tag_mismatch_error);
+    }
+    Ok(inner)
+}
+
+#[inline(always)]
 pub fn expect_tag_and_get_value<'a>(
     input: &mut untrusted::Reader<'a>,
     tag: Tag,
 ) -> Result<untrusted::Input<'a>, Error> {
-    ring::io::der::expect_tag_and_get_value(input, tag).map_err(|_| Error::BadDER)
+    expect_tag_and_get_value_ex(input, tag, Error::BadDER, Error::BadDER)
 }
 
 pub struct Value<'a> {
@@ -64,6 +78,19 @@ pub fn read_tag_and_get_value<'a>(
     input: &mut untrusted::Reader<'a>,
 ) -> Result<(u8, untrusted::Input<'a>), Error> {
     ring::io::der::read_tag_and_get_value(input).map_err(|_| Error::BadDER)
+}
+
+// TODO: investigate taking decoder as a reference to reduce generated code
+// size.
+pub fn nested_ex<'a, R, E: Copy>(
+    input: &mut untrusted::Reader<'a>,
+    tag: Tag,
+    tag_mismatch_error: E,
+    other_error: E,
+    decoder: impl FnOnce(&mut untrusted::Reader<'a>) -> Result<R, E>,
+) -> Result<R, E> {
+    let inner = expect_tag_and_get_value_ex(input, tag, tag_mismatch_error, other_error)?;
+    inner.read_all(other_error, decoder)
 }
 
 // TODO: investigate taking decoder as a reference to reduce generated code
