@@ -68,22 +68,6 @@ pub fn read_tag_and_get_value<'a>(
 
 // TODO: investigate taking decoder as a reference to reduce generated code
 // size.
-#[inline(always)]
-pub fn nested_mut<'a, F, R, E: Copy>(
-    input: &mut untrusted::Reader<'a>,
-    tag: Tag,
-    error: E,
-    decoder: F,
-) -> Result<R, E>
-where
-    F: FnMut(&mut untrusted::Reader<'a>) -> Result<R, E>,
-{
-    let inner = expect_tag_and_get_value(input, tag).map_err(|_| error)?;
-    inner.read_all(error, decoder).map_err(|_| error)
-}
-
-// TODO: investigate taking decoder as a reference to reduce generated code
-// size.
 pub fn nested_of_mut<'a, F, E: Copy>(
     input: &mut untrusted::Reader<'a>,
     outer_tag: Tag,
@@ -94,9 +78,9 @@ pub fn nested_of_mut<'a, F, E: Copy>(
 where
     F: FnMut(&mut untrusted::Reader<'a>) -> Result<(), E>,
 {
-    nested_mut(input, outer_tag, error, |outer| {
+    nested(input, outer_tag, error, |outer| {
         loop {
-            nested_mut(outer, inner_tag, error, |inner| decoder(inner))?;
+            nested(outer, inner_tag, error, |inner| decoder(inner))?;
             if outer.at_end() {
                 break;
             }

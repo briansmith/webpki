@@ -101,7 +101,7 @@ pub(crate) fn parse_cert_internal<'a>(
         // special logic for handling critical Netscape Cert Type extensions.
         // That has been intentionally omitted.
 
-        der::nested_mut(
+        der::nested(
             tbs,
             der::Tag::ContextSpecificConstructed3,
             Error::BadDER,
