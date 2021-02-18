@@ -425,7 +425,7 @@ fn ascii_lower(b: u8) -> u8 {
     }
 }
 
-#[derive(PartialEq)]
+#[derive(Clone, Copy, PartialEq)]
 enum AllowWildcards {
     No,
     Yes,
