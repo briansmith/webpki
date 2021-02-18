@@ -53,7 +53,7 @@ pub fn build_chain(
 
     // TODO: revocation.
 
-    match loop_while_non_fatal_error(trust_anchors, |trust_anchor: &TrustAnchor| {
+    let found_trust_anchor = try_any(trust_anchors, |trust_anchor: &TrustAnchor| {
         let trust_anchor_subject = untrusted::Input::from(trust_anchor.subject);
         if cert.issuer != trust_anchor_subject {
             return Err(Error::UnknownIssuer);
@@ -72,16 +72,13 @@ pub fn build_chain(
         check_signatures(supported_sig_algs, cert, trust_anchor_spki)?;
 
         Ok(())
-    }) {
-        Ok(()) => {
-            return Ok(());
-        }
-        Err(..) => {
-            // If the error is not fatal, then keep going.
-        }
+    });
+
+    if found_trust_anchor {
+        return Ok(());
     }
 
-    loop_while_non_fatal_error(intermediate_certs, |cert_der| {
+    let found_chain = try_any(intermediate_certs, |cert_der| {
         let potential_issuer =
             cert::parse_cert(untrusted::Input::from(*cert_der), EndEntityOrCA::CA(&cert))?;
 
@@ -125,7 +122,13 @@ pub fn build_chain(
             time,
             next_sub_ca_count,
         )
-    })
+    });
+
+    if found_chain {
+        return Ok(());
+    }
+
+    Err(Error::UnknownIssuer)
 }
 
 fn check_signatures(
@@ -331,22 +334,7 @@ fn check_eku(
     }
 }
 
-fn loop_while_non_fatal_error<V>(
-    values: V,
-    f: impl Fn(V::Item) -> Result<(), Error>,
-) -> Result<(), Error>
-where
-    V: IntoIterator,
-{
-    for v in values {
-        match f(v) {
-            Ok(()) => {
-                return Ok(());
-            }
-            Err(..) => {
-                // If the error is not fatal, then keep going.
-            }
-        }
-    }
-    Err(Error::UnknownIssuer)
+/// Returns true if `f(value)` succeeds for any value in `values`.
+fn try_any<I, T, E>(values: impl IntoIterator<Item = I>, f: impl Fn(I) -> Result<T, E>) -> bool {
+    values.into_iter().any(|value| f(value).is_ok())
 }
