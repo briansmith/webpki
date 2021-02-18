@@ -104,7 +104,7 @@ pub fn bit_string_with_no_unused_bits<'a>(
 // Like mozilla::pkix, we accept the nonconformant explicit encoding of
 // the default value (false) for compatibility with real-world certificates.
 pub fn optional_boolean(input: &mut untrusted::Reader) -> Result<bool, Error> {
-    if !input.peek(Tag::Boolean as u8) {
+    if !input.peek(Tag::Boolean.into()) {
         return Ok(false);
     }
     nested(input, Tag::Boolean, Error::BadDER, |input| {
@@ -125,7 +125,7 @@ pub fn small_nonnegative_integer(input: &mut untrusted::Reader) -> Result<u8, Er
 }
 
 pub fn time_choice(input: &mut untrusted::Reader) -> Result<time::Time, Error> {
-    let is_utc_time = input.peek(Tag::UTCTime as u8);
+    let is_utc_time = input.peek(Tag::UTCTime.into());
     let expected_tag = if is_utc_time {
         Tag::UTCTime
     } else {

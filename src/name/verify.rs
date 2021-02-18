@@ -67,7 +67,7 @@ pub fn check_name_constraints(
         inner: &mut untrusted::Reader<'b>,
         subtrees_tag: der::Tag,
     ) -> Result<Option<untrusted::Input<'b>>, Error> {
-        if !inner.peek(subtrees_tag as u8) {
+        if !inner.peek(subtrees_tag.into()) {
             return Ok(None);
         }
         let subtrees = der::nested(inner, subtrees_tag, Error::BadDER, |tagged| {
