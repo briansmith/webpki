@@ -26,7 +26,16 @@
 
 #![doc(html_root_url = "https://briansmith.org/rustdoc/")]
 #![cfg_attr(not(feature = "std"), no_std)]
-#![allow(clippy::single_match)]
+#![allow(
+    clippy::doc_markdown,
+    clippy::if_not_else,
+    clippy::inline_always,
+    clippy::items_after_statements,
+    clippy::missing_errors_doc,
+    clippy::module_name_repetitions,
+    clippy::single_match,
+    clippy::single_match_else
+)]
 #![deny(clippy::as_conversions)]
 
 #[cfg(any(test, feature = "alloc"))]
