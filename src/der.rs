@@ -68,15 +68,15 @@ pub fn read_tag_and_get_value<'a>(
 
 // TODO: investigate taking decoder as a reference to reduce generated code
 // size.
-pub fn nested_of_mut<'a, F, E: Copy>(
+pub fn nested_of_mut<'a, E>(
     input: &mut untrusted::Reader<'a>,
     outer_tag: Tag,
     inner_tag: Tag,
     error: E,
-    mut decoder: F,
+    mut decoder: impl FnMut(&mut untrusted::Reader<'a>) -> Result<(), E>,
 ) -> Result<(), E>
 where
-    F: FnMut(&mut untrusted::Reader<'a>) -> Result<(), E>,
+    E: Copy,
 {
     nested(input, outer_tag, error, |outer| {
         loop {

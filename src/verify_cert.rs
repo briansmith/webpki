@@ -331,10 +331,12 @@ fn check_eku(
     }
 }
 
-fn loop_while_non_fatal_error<V, F>(values: V, f: F) -> Result<(), Error>
+fn loop_while_non_fatal_error<V>(
+    values: V,
+    f: impl Fn(V::Item) -> Result<(), Error>,
+) -> Result<(), Error>
 where
     V: IntoIterator,
-    F: Fn(V::Item) -> Result<(), Error>,
 {
     for v in values {
         match f(v) {
