@@ -89,22 +89,13 @@ pub fn build_chain(
             return Err(Error::UnknownIssuer);
         }
 
-        // Prevent loops; see RFC 4158 section 5.2.
-        let mut prev = cert;
-        loop {
-            if potential_issuer.spki.value() == prev.spki.value()
-                && potential_issuer.subject == prev.subject
-            {
-                return Err(Error::UnknownIssuer);
-            }
-            match &prev.ee_or_ca {
-                EndEntityOrCA::EndEntity => {
-                    break;
-                }
-                EndEntityOrCA::CA(child_cert) => {
-                    prev = child_cert;
-                }
-            }
+        // See RFC 4158 section 5.2.
+        let loop_detected = cert.iter_from_self_through_end_entity().any(|cert| {
+            potential_issuer.spki.value() == cert.spki.value()
+                && potential_issuer.subject == cert.subject
+        });
+        if loop_detected {
+            return Err(Error::UnknownIssuer);
         }
 
         untrusted::read_all_optional(potential_issuer.name_constraints, Error::BadDER, |value| {
@@ -133,25 +124,13 @@ fn check_signatures(
     cert_chain: &Cert,
     trust_anchor_key: untrusted::Input,
 ) -> Result<(), Error> {
-    let mut spki_value = trust_anchor_key;
-    let mut cert = cert_chain;
-    loop {
-        signed_data::verify_signed_data(supported_sig_algs, spki_value, &cert.signed_data)?;
-
-        // TODO: check revocation
-
-        match &cert.ee_or_ca {
-            EndEntityOrCA::CA(child_cert) => {
-                spki_value = cert.spki.value();
-                cert = child_cert;
-            }
-            EndEntityOrCA::EndEntity => {
-                break;
-            }
-        }
-    }
-
-    Ok(())
+    cert_chain
+        .iter_from_self_through_end_entity()
+        .try_fold(trust_anchor_key, |spki_value, cert| {
+            signed_data::verify_signed_data(supported_sig_algs, spki_value, &cert.signed_data)?;
+            Ok(cert.spki.value())
+        })
+        .map(|_| ())
 }
 
 fn check_issuer_independent_properties(

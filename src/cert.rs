@@ -34,6 +34,31 @@ pub struct Cert<'a> {
     pub subject_alt_name: Option<untrusted::Input<'a>>,
 }
 
+impl<'a> Cert<'a> {
+    /// Returns an iterator of all the certs in the chain so far.
+    ///
+    /// The first item will be `self` and the last item will be the end-entity
+    /// certificate.
+    pub fn iter_from_self_through_end_entity(&'a self) -> impl Iterator<Item = &'a Cert<'a>> + 'a {
+        struct Iter<'c> {
+            next: Option<&'c Cert<'c>>,
+        }
+        impl<'c> Iterator for Iter<'c> {
+            type Item = &'c Cert<'c>;
+
+            fn next(&mut self) -> Option<Self::Item> {
+                let next_next = match self.next?.ee_or_ca {
+                    EndEntityOrCA::EndEntity => None,
+                    EndEntityOrCA::CA(c) => Some(c),
+                };
+                core::mem::replace(&mut self.next, next_next)
+            }
+        }
+
+        Iter { next: Some(self) }
+    }
+}
+
 pub fn parse_cert<'a>(
     cert_der: untrusted::Input<'a>,
     ee_or_ca: EndEntityOrCA<'a>,
