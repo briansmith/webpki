@@ -137,7 +137,6 @@ jobs:
           # portable.
           - arm-unknown-linux-gnueabihf
           - i686-pc-windows-msvc
-          - x86_64-apple-darwin
           - x86_64-unknown-linux-musl
           - x86_64-unknown-linux-gnu
 
@@ -167,9 +166,6 @@ jobs:
 
           - target: i686-pc-windows-msvc
             host_os: windows-latest
-
-          - target: x86_64-apple-darwin
-            host_os: macos-latest
 
           - target: x86_64-unknown-linux-musl
             host_os: ubuntu-18.04
