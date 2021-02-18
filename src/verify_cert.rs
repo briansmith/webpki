@@ -232,7 +232,7 @@ fn check_basic_constraints(
             // certificates have pathLenConstraint.
             let path_len_constraint = if !input.at_end() {
                 let value = der::small_nonnegative_integer(input)?;
-                Some(value as usize)
+                Some(usize::from(value))
             } else {
                 None
             };
