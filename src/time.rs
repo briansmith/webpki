@@ -29,8 +29,8 @@ impl Time {
     /// `webpki::Time::try_from(time: std::time::SystemTime)` instead when
     /// `std::time::SystemTime` is available (when `#![no_std]` isn't being
     /// used).
-    pub fn from_seconds_since_unix_epoch(secs: u64) -> Time {
-        Time(secs)
+    pub fn from_seconds_since_unix_epoch(secs: u64) -> Self {
+        Self(secs)
     }
 }
 
@@ -59,6 +59,6 @@ impl core::convert::TryFrom<std::time::SystemTime> for Time {
     fn try_from(value: std::time::SystemTime) -> Result<Self, Self::Error> {
         value
             .duration_since(std::time::UNIX_EPOCH)
-            .map(|d| Time::from_seconds_since_unix_epoch(d.as_secs()))
+            .map(|d| Self::from_seconds_since_unix_epoch(d.as_secs()))
     }
 }
