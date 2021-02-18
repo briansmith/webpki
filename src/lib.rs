@@ -27,6 +27,7 @@
 #![doc(html_root_url = "https://briansmith.org/rustdoc/")]
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::single_match)]
+#![deny(clippy::as_conversions)]
 
 #[cfg(any(test, feature = "alloc"))]
 #[cfg_attr(test, macro_use)]
