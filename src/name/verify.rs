@@ -16,10 +16,7 @@ use super::{
     dns_name::{self, DnsNameRef},
     ip_address,
 };
-use crate::{
-    cert::{Cert, EndEntityOrCA},
-    der, Error,
-};
+use crate::{cert::Cert, der, Error};
 
 pub fn verify_cert_dns_name(
     cert: &crate::EndEntityCert,
@@ -79,21 +76,22 @@ pub fn check_name_constraints(
     let permitted_subtrees = parse_subtrees(input, der::Tag::ContextSpecificConstructed0)?;
     let excluded_subtrees = parse_subtrees(input, der::Tag::ContextSpecificConstructed1)?;
 
-    let mut child = subordinate_certs;
-    loop {
-        iterate_names(child.subject, child.subject_alt_name, Ok(()), &|name| {
-            check_presented_id_conforms_to_constraints(name, permitted_subtrees, excluded_subtrees)
-        })?;
-
-        child = match child.ee_or_ca {
-            EndEntityOrCA::CA(child_cert) => child_cert,
-            EndEntityOrCA::EndEntity => {
-                break;
-            }
-        };
-    }
-
-    Ok(())
+    subordinate_certs
+        .iter_from_self_through_end_entity()
+        .try_for_each(|subordinate| {
+            iterate_names(
+                subordinate.subject,
+                subordinate.subject_alt_name,
+                Ok(()),
+                &|name| {
+                    check_presented_id_conforms_to_constraints(
+                        name,
+                        permitted_subtrees,
+                        excluded_subtrees,
+                    )
+                },
+            )
+        })
 }
 
 fn check_presented_id_conforms_to_constraints(
