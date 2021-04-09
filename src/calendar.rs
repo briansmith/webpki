@@ -67,7 +67,7 @@ fn days_before_year_since_unix_epoch(year: u64) -> Result<u64, Error> {
     // Unix epoch. It is likely that other software won't deal well with
     // certificates that have dates before the epoch.
     if year < 1970 {
-        return Err(Error::BadDERTime);
+        return Err(Error::BadDerTime);
     }
     let days_before_year_ad = days_before_year_ad(year);
     debug_assert!(days_before_year_ad >= DAYS_BEFORE_UNIX_EPOCH_AD);
