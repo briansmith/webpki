@@ -68,7 +68,7 @@ impl<'a> core::convert::TryFrom<&'a [u8]> for EndEntityCert<'a> {
         Ok(Self {
             inner: cert::parse_cert(
                 untrusted::Input::from(cert_der),
-                cert::EndEntityOrCA::EndEntity,
+                cert::EndEntityOrCa::EndEntity,
             )?,
         })
     }

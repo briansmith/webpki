@@ -153,7 +153,7 @@ pub(super) fn presented_id_matches_reference_id(
 ) -> Option<bool> {
     presented_id_matches_reference_id_internal(
         presented_dns_id,
-        IDRole::ReferenceID,
+        IdRole::Reference,
         reference_dns_id,
     )
 }
@@ -164,7 +164,7 @@ pub(super) fn presented_id_matches_constraint(
 ) -> Option<bool> {
     presented_id_matches_reference_id_internal(
         presented_dns_id,
-        IDRole::NameConstraint,
+        IdRole::NameConstraint,
         reference_dns_id,
     )
 }
@@ -291,10 +291,10 @@ pub(super) fn presented_id_matches_constraint(
 //     https://www.ietf.org/mail-archive/web/pkix/current/msg21192.html
 fn presented_id_matches_reference_id_internal(
     presented_dns_id: untrusted::Input,
-    reference_dns_id_role: IDRole,
+    reference_dns_id_role: IdRole,
     reference_dns_id: untrusted::Input,
 ) -> Option<bool> {
-    if !is_valid_dns_id(presented_dns_id, IDRole::PresentedID, AllowWildcards::Yes) {
+    if !is_valid_dns_id(presented_dns_id, IdRole::Presented, AllowWildcards::Yes) {
         return None;
     }
 
@@ -306,9 +306,9 @@ fn presented_id_matches_reference_id_internal(
     let mut reference = untrusted::Reader::new(reference_dns_id);
 
     match reference_dns_id_role {
-        IDRole::ReferenceID => (),
+        IdRole::Reference => (),
 
-        IDRole::NameConstraint if presented_dns_id.len() > reference_dns_id.len() => {
+        IdRole::NameConstraint if presented_dns_id.len() > reference_dns_id.len() => {
             if reference_dns_id.is_empty() {
                 // An empty constraint matches everything.
                 return Some(true);
@@ -357,9 +357,9 @@ fn presented_id_matches_reference_id_internal(
             }
         }
 
-        IDRole::NameConstraint => (),
+        IdRole::NameConstraint => (),
 
-        IDRole::PresentedID => unreachable!(),
+        IdRole::Presented => unreachable!(),
     }
 
     // Only allow wildcard labels that consist only of '*'.
@@ -398,7 +398,7 @@ fn presented_id_matches_reference_id_internal(
     // Allow a relative presented DNS ID to match an absolute reference DNS ID,
     // unless we're matching a name constraint.
     if !reference.at_end() {
-        if reference_dns_id_role != IDRole::NameConstraint {
+        if reference_dns_id_role != IdRole::NameConstraint {
             match reference.read_byte() {
                 Ok(b'.') => (),
                 _ => {
@@ -432,14 +432,14 @@ enum AllowWildcards {
 }
 
 #[derive(Clone, Copy, PartialEq)]
-enum IDRole {
-    ReferenceID,
-    PresentedID,
+enum IdRole {
+    Reference,
+    Presented,
     NameConstraint,
 }
 
 fn is_valid_reference_dns_id(hostname: untrusted::Input) -> bool {
-    is_valid_dns_id(hostname, IDRole::ReferenceID, AllowWildcards::No)
+    is_valid_dns_id(hostname, IdRole::Reference, AllowWildcards::No)
 }
 
 // https://tools.ietf.org/html/rfc5280#section-4.2.1.6:
@@ -454,7 +454,7 @@ fn is_valid_reference_dns_id(hostname: untrusted::Input) -> bool {
 // requirement above, underscores are also allowed in names for compatibility.
 fn is_valid_dns_id(
     hostname: untrusted::Input,
-    id_role: IDRole,
+    id_role: IdRole,
     allow_wildcards: AllowWildcards,
 ) -> bool {
     // https://blogs.msdn.microsoft.com/oldnewthing/20120412-00/?p=7873/
@@ -464,7 +464,7 @@ fn is_valid_dns_id(
 
     let mut input = untrusted::Reader::new(hostname);
 
-    if id_role == IDRole::NameConstraint && input.at_end() {
+    if id_role == IdRole::NameConstraint && input.at_end() {
         return true;
     }
 
@@ -523,7 +523,7 @@ fn is_valid_dns_id(
 
             Ok(b'.') => {
                 dot_count += 1;
-                if label_length == 0 && (id_role != IDRole::NameConstraint || !is_first_byte) {
+                if label_length == 0 && (id_role != IdRole::NameConstraint || !is_first_byte) {
                     return false;
                 }
                 if label_ends_with_hyphen {
@@ -545,7 +545,7 @@ fn is_valid_dns_id(
 
     // Only reference IDs, not presented IDs or name constraints, may be
     // absolute.
-    if label_length == 0 && id_role != IDRole::ReferenceID {
+    if label_length == 0 && id_role != IdRole::Reference {
         return false;
     }
 

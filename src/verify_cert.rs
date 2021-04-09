@@ -13,7 +13,7 @@
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 use crate::{
-    cert::{self, Cert, EndEntityOrCA},
+    cert::{self, Cert, EndEntityOrCa},
     der, name, signed_data, time, Error, SignatureAlgorithm, TrustAnchor,
 };
 
@@ -39,14 +39,14 @@ pub fn build_chain(
     // TODO: HPKP checks.
 
     match used_as_ca {
-        UsedAsCA::Yes => {
+        UsedAsCa::Yes => {
             const MAX_SUB_CA_COUNT: usize = 6;
 
             if sub_ca_count >= MAX_SUB_CA_COUNT {
                 return Err(Error::UnknownIssuer);
             }
         }
-        UsedAsCA::No => {
+        UsedAsCa::No => {
             assert_eq!(0, sub_ca_count);
         }
     }
@@ -83,7 +83,7 @@ pub fn build_chain(
 
     loop_while_non_fatal_error(intermediate_certs, |cert_der| {
         let potential_issuer =
-            cert::parse_cert(untrusted::Input::from(*cert_der), EndEntityOrCA::CA(&cert))?;
+            cert::parse_cert(untrusted::Input::from(*cert_der), EndEntityOrCa::Ca(&cert))?;
 
         if potential_issuer.subject != cert.issuer {
             return Err(Error::UnknownIssuer);
@@ -98,10 +98,10 @@ pub fn build_chain(
                 return Err(Error::UnknownIssuer);
             }
             match &prev.ee_or_ca {
-                EndEntityOrCA::EndEntity => {
+                EndEntityOrCa::EndEntity => {
                     break;
                 }
-                EndEntityOrCA::CA(child_cert) => {
+                EndEntityOrCa::Ca(child_cert) => {
                     prev = child_cert;
                 }
             }
@@ -112,8 +112,8 @@ pub fn build_chain(
         })?;
 
         let next_sub_ca_count = match used_as_ca {
-            UsedAsCA::No => sub_ca_count,
-            UsedAsCA::Yes => sub_ca_count + 1,
+            UsedAsCa::No => sub_ca_count,
+            UsedAsCa::Yes => sub_ca_count + 1,
         };
 
         build_chain(
@@ -141,11 +141,11 @@ fn check_signatures(
         // TODO: check revocation
 
         match &cert.ee_or_ca {
-            EndEntityOrCA::CA(child_cert) => {
+            EndEntityOrCa::Ca(child_cert) => {
                 spki_value = cert.spki.value();
                 cert = child_cert;
             }
-            EndEntityOrCA::EndEntity => {
+            EndEntityOrCa::EndEntity => {
                 break;
             }
         }
@@ -157,7 +157,7 @@ fn check_signatures(
 fn check_issuer_independent_properties(
     cert: &Cert,
     time: time::Time,
-    used_as_ca: UsedAsCA,
+    used_as_ca: UsedAsCa,
     sub_ca_count: usize,
     required_eku_if_present: KeyPurposeId,
 ) -> Result<(), Error> {
@@ -204,22 +204,22 @@ fn check_validity(input: &mut untrusted::Reader, time: time::Time) -> Result<(),
 }
 
 #[derive(Clone, Copy)]
-enum UsedAsCA {
+enum UsedAsCa {
     Yes,
     No,
 }
 
-fn used_as_ca(ee_or_ca: &EndEntityOrCA) -> UsedAsCA {
+fn used_as_ca(ee_or_ca: &EndEntityOrCa) -> UsedAsCa {
     match ee_or_ca {
-        EndEntityOrCA::EndEntity => UsedAsCA::No,
-        EndEntityOrCA::CA(..) => UsedAsCA::Yes,
+        EndEntityOrCa::EndEntity => UsedAsCa::No,
+        EndEntityOrCa::Ca(..) => UsedAsCa::Yes,
     }
 }
 
 // https://tools.ietf.org/html/rfc5280#section-4.2.1.9
 fn check_basic_constraints(
     input: Option<&mut untrusted::Reader>,
-    used_as_ca: UsedAsCA,
+    used_as_ca: UsedAsCa,
     sub_ca_count: usize,
 ) -> Result<(), Error> {
     let (is_ca, path_len_constraint) = match input {
@@ -243,9 +243,9 @@ fn check_basic_constraints(
     };
 
     match (used_as_ca, is_ca, path_len_constraint) {
-        (UsedAsCA::No, true, _) => Err(Error::CaUsedAsEndEntity),
-        (UsedAsCA::Yes, false, _) => Err(Error::EndEntityUsedAsCa),
-        (UsedAsCA::Yes, true, Some(len)) if sub_ca_count > len => {
+        (UsedAsCa::No, true, _) => Err(Error::CaUsedAsEndEntity),
+        (UsedAsCa::Yes, false, _) => Err(Error::EndEntityUsedAsCa),
+        (UsedAsCa::Yes, true, Some(len)) if sub_ca_count > len => {
             Err(Error::PathLenConstraintViolated)
         }
         _ => Ok(()),
