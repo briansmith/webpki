@@ -28,10 +28,10 @@ pub(super) fn presented_id_matches_constraint(
     constraint: untrusted::Input,
 ) -> Result<bool, Error> {
     if name.len() != 4 && name.len() != 16 {
-        return Err(Error::BadDER);
+        return Err(Error::BadDer);
     }
     if constraint.len() != 8 && constraint.len() != 32 {
-        return Err(Error::BadDER);
+        return Err(Error::BadDer);
     }
 
     // an IPv4 address never matches an IPv6 constraint, and vice versa.
@@ -39,7 +39,7 @@ pub(super) fn presented_id_matches_constraint(
         return Ok(false);
     }
 
-    let (constraint_address, constraint_mask) = constraint.read_all(Error::BadDER, |value| {
+    let (constraint_address, constraint_mask) = constraint.read_all(Error::BadDer, |value| {
         let address = value.read_bytes(constraint.len() / 2).unwrap();
         let mask = value.read_bytes(constraint.len() / 2).unwrap();
         Ok((address, mask))

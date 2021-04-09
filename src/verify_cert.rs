@@ -61,7 +61,7 @@ pub fn build_chain(
 
         let name_constraints = trust_anchor.name_constraints.map(untrusted::Input::from);
 
-        untrusted::read_all_optional(name_constraints, Error::BadDER, |value| {
+        untrusted::read_all_optional(name_constraints, Error::BadDer, |value| {
             name::check_name_constraints(value, &cert)
         })?;
 
@@ -107,7 +107,7 @@ pub fn build_chain(
             }
         }
 
-        untrusted::read_all_optional(potential_issuer.name_constraints, Error::BadDER, |value| {
+        untrusted::read_all_optional(potential_issuer.name_constraints, Error::BadDer, |value| {
             name::check_name_constraints(value, &cert)
         })?;
 
@@ -170,11 +170,11 @@ fn check_issuer_independent_properties(
     // KeyUsage extension.
 
     cert.validity
-        .read_all(Error::BadDER, |value| check_validity(value, time))?;
-    untrusted::read_all_optional(cert.basic_constraints, Error::BadDER, |value| {
+        .read_all(Error::BadDer, |value| check_validity(value, time))?;
+    untrusted::read_all_optional(cert.basic_constraints, Error::BadDer, |value| {
         check_basic_constraints(value, used_as_ca, sub_ca_count)
     })?;
-    untrusted::read_all_optional(cert.eku, Error::BadDER, |value| {
+    untrusted::read_all_optional(cert.eku, Error::BadDer, |value| {
         check_eku(value, required_eku_if_present)
     })?;
 
@@ -243,8 +243,8 @@ fn check_basic_constraints(
     };
 
     match (used_as_ca, is_ca, path_len_constraint) {
-        (UsedAsCA::No, true, _) => Err(Error::CAUsedAsEndEntity),
-        (UsedAsCA::Yes, false, _) => Err(Error::EndEntityUsedAsCA),
+        (UsedAsCA::No, true, _) => Err(Error::CaUsedAsEndEntity),
+        (UsedAsCA::Yes, false, _) => Err(Error::EndEntityUsedAsCa),
         (UsedAsCA::Yes, true, Some(len)) if sub_ca_count > len => {
             Err(Error::PathLenConstraintViolated)
         }
@@ -307,7 +307,7 @@ fn check_eku(
                     break;
                 }
                 if input.at_end() {
-                    return Err(Error::RequiredEKUNotFound);
+                    return Err(Error::RequiredEkuNotFound);
                 }
             }
             Ok(())
@@ -323,7 +323,7 @@ fn check_eku(
             // end-entity certificate isn't able to sign trusted OCSP responses
             // for itself or for other certificates issued by its issuing CA.
             if required_eku_if_present.oid_value == EKU_OCSP_SIGNING.oid_value {
-                return Err(Error::RequiredEKUNotFound);
+                return Err(Error::RequiredEkuNotFound);
             }
 
             Ok(())

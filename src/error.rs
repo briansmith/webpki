@@ -18,13 +18,13 @@ use core::fmt;
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Error {
     /// The encoding of some ASN.1 DER-encoded item is invalid.
-    BadDER,
+    BadDer,
 
     /// The encoding of an ASN.1 DER-encoded time is invalid.
-    BadDERTime,
+    BadDerTime,
 
     /// A CA certificate is being used as an end-entity certificate.
-    CAUsedAsEndEntity,
+    CaUsedAsEndEntity,
 
     /// The certificate is expired; i.e. the time it is being validated for is
     /// later than the certificate's notAfter time.
@@ -38,7 +38,7 @@ pub enum Error {
     CertNotValidYet,
 
     /// An end-entity certificate is being used as a CA certificate.
-    EndEntityUsedAsCA,
+    EndEntityUsedAsCa,
 
     /// An X.509 extension is invalid.
     ExtensionValueInvalid,
@@ -62,7 +62,7 @@ pub enum Error {
 
     /// The certificate is not valid for the Extended Key Usage for which it is
     /// being validated.
-    RequiredEKUNotFound,
+    RequiredEkuNotFound,
 
     /// A valid issuer for the certificate could not be found.
     UnknownIssuer,
