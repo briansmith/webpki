@@ -1,6 +1,6 @@
 use crate::cert::{certificate_serial_number, Cert};
 use crate::{
-    cert::{parse_cert_internal, EndEntityOrCA},
+    cert::{parse_cert_internal, EndEntityOrCa},
     der, Error,
 };
 
@@ -53,7 +53,7 @@ impl<'a> TrustAnchor<'a> {
         // embedded name constraints in a v1 certificate.
         match parse_cert_internal(
             cert_der,
-            EndEntityOrCA::EndEntity,
+            EndEntityOrCa::EndEntity,
             possibly_invalid_certificate_serial_number,
         ) {
             Ok(cert) => Ok(Self::from(cert)),

@@ -17,7 +17,7 @@ use super::{
     ip_address,
 };
 use crate::{
-    cert::{Cert, EndEntityOrCA},
+    cert::{Cert, EndEntityOrCa},
     der, Error,
 };
 
@@ -86,8 +86,8 @@ pub fn check_name_constraints(
         })?;
 
         child = match child.ee_or_ca {
-            EndEntityOrCA::CA(child_cert) => child_cert,
-            EndEntityOrCA::EndEntity => {
+            EndEntityOrCa::Ca(child_cert) => child_cert,
+            EndEntityOrCa::EndEntity => {
                 break;
             }
         };
@@ -171,7 +171,7 @@ fn check_presented_id_conforms_to_constraints_in_subtree(
                 presented_directory_name_matches_constraint(name, base, subtrees),
             ),
 
-            (GeneralName::IPAddress(name), GeneralName::IPAddress(base)) => {
+            (GeneralName::IpAddress(name), GeneralName::IpAddress(base)) => {
                 ip_address::presented_id_matches_constraint(name, base)
             }
 
@@ -288,7 +288,7 @@ fn iterate_names(
 enum GeneralName<'a> {
     DnsName(untrusted::Input<'a>),
     DirectoryName(untrusted::Input<'a>),
-    IPAddress(untrusted::Input<'a>),
+    IpAddress(untrusted::Input<'a>),
 
     // The value is the `tag & ~(der::CONTEXT_SPECIFIC | der::CONSTRUCTED)` so
     // that the name constraint checking matches tags regardless of whether
@@ -313,7 +313,7 @@ fn general_name<'a>(input: &mut untrusted::Reader<'a>) -> Result<GeneralName<'a>
     let name = match tag {
         DNS_NAME_TAG => GeneralName::DnsName(value),
         DIRECTORY_NAME_TAG => GeneralName::DirectoryName(value),
-        IP_ADDRESS_TAG => GeneralName::IPAddress(value),
+        IP_ADDRESS_TAG => GeneralName::IpAddress(value),
 
         OTHER_NAME_TAG
         | RFC822_NAME_TAG

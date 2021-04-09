@@ -14,13 +14,13 @@
 
 use crate::{der, signed_data, Error};
 
-pub enum EndEntityOrCA<'a> {
+pub enum EndEntityOrCa<'a> {
     EndEntity,
-    CA(&'a Cert<'a>),
+    Ca(&'a Cert<'a>),
 }
 
 pub struct Cert<'a> {
-    pub ee_or_ca: EndEntityOrCA<'a>,
+    pub ee_or_ca: EndEntityOrCa<'a>,
 
     pub signed_data: signed_data::SignedData<'a>,
     pub issuer: untrusted::Input<'a>,
@@ -36,7 +36,7 @@ pub struct Cert<'a> {
 
 pub fn parse_cert<'a>(
     cert_der: untrusted::Input<'a>,
-    ee_or_ca: EndEntityOrCA<'a>,
+    ee_or_ca: EndEntityOrCa<'a>,
 ) -> Result<Cert<'a>, Error> {
     parse_cert_internal(cert_der, ee_or_ca, certificate_serial_number)
 }
@@ -46,7 +46,7 @@ pub fn parse_cert<'a>(
 /// certificates.
 pub(crate) fn parse_cert_internal<'a>(
     cert_der: untrusted::Input<'a>,
-    ee_or_ca: EndEntityOrCA<'a>,
+    ee_or_ca: EndEntityOrCa<'a>,
     serial_number: fn(input: &mut untrusted::Reader<'_>) -> Result<(), Error>,
 ) -> Result<Cert<'a>, Error> {
     let (tbs, signed_data) = cert_der.read_all(Error::BadDer, |cert_der| {
