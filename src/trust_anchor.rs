@@ -39,7 +39,7 @@ impl<'a> TrustAnchor<'a> {
     /// certificate is not validated. In particular, there is no check that the
     /// certificate is self-signed or even that the certificate has the cA basic
     /// constraint.
-    pub fn from_cert_der(cert_der: &'a [u8]) -> Result<Self, Error> {
+    pub fn try_from_cert_der(cert_der: &'a [u8]) -> Result<Self, Error> {
         let cert_der = untrusted::Input::from(cert_der);
 
         // XXX: `EndEntityOrCA::EndEntity` is used instead of `EndEntityOrCA::CA`
