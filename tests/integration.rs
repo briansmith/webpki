@@ -40,7 +40,7 @@ pub fn netflix() {
     let inter = include_bytes!("netflix/inter.der");
     let ca = include_bytes!("netflix/ca.der");
 
-    let anchors = vec![webpki::TrustAnchor::from_cert_der(ca).unwrap()];
+    let anchors = vec![webpki::TrustAnchor::try_from_cert_der(ca).unwrap()];
     let anchors = webpki::TlsServerTrustAnchors(&anchors);
 
     #[allow(clippy::unreadable_literal)] // TODO: Make this clear.
@@ -58,7 +58,7 @@ pub fn ed25519() {
     let ee: &[u8] = include_bytes!("ed25519/ee.der");
     let ca = include_bytes!("ed25519/ca.der");
 
-    let anchors = vec![webpki::TrustAnchor::from_cert_der(ca).unwrap()];
+    let anchors = vec![webpki::TrustAnchor::try_from_cert_der(ca).unwrap()];
     let anchors = webpki::TlsServerTrustAnchors(&anchors);
 
     #[allow(clippy::unreadable_literal)] // TODO: Make this clear.
@@ -74,13 +74,14 @@ pub fn ed25519() {
 #[test]
 fn read_root_with_zero_serial() {
     let ca = include_bytes!("misc/serial_zero.der");
-    let _ = webpki::TrustAnchor::from_cert_der(ca).expect("godaddy cert should parse as anchor");
+    let _ =
+        webpki::TrustAnchor::try_from_cert_der(ca).expect("godaddy cert should parse as anchor");
 }
 
 #[test]
 fn read_root_with_neg_serial() {
     let ca = include_bytes!("misc/serial_neg.der");
-    let _ = webpki::TrustAnchor::from_cert_der(ca).expect("idcat cert should parse as anchor");
+    let _ = webpki::TrustAnchor::try_from_cert_der(ca).expect("idcat cert should parse as anchor");
 }
 
 #[cfg(feature = "std")]
