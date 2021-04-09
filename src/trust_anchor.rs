@@ -28,11 +28,11 @@ pub struct TrustAnchor<'a> {
 
 /// Trust anchors which may be used for authenticating servers.
 #[derive(Debug)]
-pub struct TLSServerTrustAnchors<'a>(pub &'a [TrustAnchor<'a>]);
+pub struct TlsServerTrustAnchors<'a>(pub &'a [TrustAnchor<'a>]);
 
 /// Trust anchors which may be used for authenticating clients.
 #[derive(Debug)]
-pub struct TLSClientTrustAnchors<'a>(pub &'a [TrustAnchor<'a>]);
+pub struct TlsClientTrustAnchors<'a>(pub &'a [TrustAnchor<'a>]);
 
 impl<'a> TrustAnchor<'a> {
     /// Interprets the given DER-encoded certificate as a `TrustAnchor`. The

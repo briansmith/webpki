@@ -65,7 +65,7 @@ pub use {
         ECDSA_P384_SHA384, ED25519,
     },
     time::Time,
-    trust_anchor::{TLSClientTrustAnchors, TLSServerTrustAnchors, TrustAnchor},
+    trust_anchor::{TlsClientTrustAnchors, TlsServerTrustAnchors, TrustAnchor},
 };
 
 #[cfg(feature = "alloc")]
@@ -77,3 +77,20 @@ pub use {
         RSA_PSS_2048_8192_SHA384_LEGACY_KEY, RSA_PSS_2048_8192_SHA512_LEGACY_KEY,
     },
 };
+
+#[cfg(feature = "alloc")]
+#[allow(unknown_lints, clippy::upper_case_acronyms)]
+#[deprecated(note = "Use DnsName")]
+pub type DNSName = DnsName;
+
+#[deprecated(note = "use DnsNameRef")]
+#[allow(unknown_lints, clippy::upper_case_acronyms)]
+pub type DNSNameRef<'a> = DnsNameRef<'a>;
+
+#[deprecated(note = "use TlsServerTrustAnchors")]
+#[allow(unknown_lints, clippy::upper_case_acronyms)]
+pub type TLSServerTrustAnchors<'a> = TlsServerTrustAnchors<'a>;
+
+#[deprecated(note = "use TlsClientTrustAnchors")]
+#[allow(unknown_lints, clippy::upper_case_acronyms)]
+pub type TLSClientTrustAnchors<'a> = TlsClientTrustAnchors<'a>;

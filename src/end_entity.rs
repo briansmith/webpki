@@ -13,8 +13,8 @@
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 use crate::{
-    cert, name, signed_data, verify_cert, DnsNameRef, Error, SignatureAlgorithm,
-    TLSClientTrustAnchors, TLSServerTrustAnchors, Time,
+    cert, name, signed_data, verify_cert, DnsNameRef, Error, SignatureAlgorithm, Time,
+    TlsClientTrustAnchors, TlsServerTrustAnchors,
 };
 
 #[cfg(feature = "alloc")]
@@ -92,7 +92,7 @@ impl<'a> EndEntityCert<'a> {
     pub fn verify_is_valid_tls_server_cert(
         &self,
         supported_sig_algs: &[&SignatureAlgorithm],
-        &TLSServerTrustAnchors(trust_anchors): &TLSServerTrustAnchors,
+        &TlsServerTrustAnchors(trust_anchors): &TlsServerTrustAnchors,
         intermediate_certs: &[&[u8]],
         time: Time,
     ) -> Result<(), Error> {
@@ -124,7 +124,7 @@ impl<'a> EndEntityCert<'a> {
     pub fn verify_is_valid_tls_client_cert(
         &self,
         supported_sig_algs: &[&SignatureAlgorithm],
-        &TLSClientTrustAnchors(trust_anchors): &TLSClientTrustAnchors,
+        &TlsClientTrustAnchors(trust_anchors): &TlsClientTrustAnchors,
         intermediate_certs: &[&[u8]],
         time: Time,
     ) -> Result<(), Error> {
