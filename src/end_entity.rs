@@ -154,13 +154,10 @@ impl<'a> EndEntityCert<'a> {
     /// Requires the `alloc` default feature; i.e. this isn't available in
     /// `#![no_std]` configurations.
     #[cfg(feature = "alloc")]
-    pub fn verify_is_valid_for_at_least_one_dns_name<'names, Names>(
+    pub fn verify_is_valid_for_at_least_one_dns_name<'names>(
         &self,
-        dns_names: Names,
-    ) -> Result<Vec<DnsNameRef<'names>>, Error>
-    where
-        Names: Iterator<Item = DnsNameRef<'names>>,
-    {
+        dns_names: impl Iterator<Item = DnsNameRef<'names>>,
+    ) -> Result<Vec<DnsNameRef<'names>>, Error> {
         let result: Vec<DnsNameRef<'names>> = dns_names
             .filter(|n| self.verify_is_valid_for_dns_name(*n).is_ok())
             .collect();
