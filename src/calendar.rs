@@ -62,13 +62,13 @@ pub fn time_from_ymdhms_utc(
     ))
 }
 
-const MIN_SUPPORTED_YEAR: u64 = 1970;
+const UNIX_EPOCH_YEAR: u64 = 1970;
 
 fn days_before_year_since_unix_epoch(year: u64) -> Result<u64, Error> {
     // We don't support dates before January 1, 1970 because that is the
     // Unix epoch. It is likely that other software won't deal well with
     // certificates that have dates before the epoch.
-    if year < MIN_SUPPORTED_YEAR {
+    if year < UNIX_EPOCH_YEAR {
         return Err(Error::BadDerTime);
     }
     let days_before_year_ad = days_before_year_ad(year);
@@ -107,24 +107,24 @@ const DAYS_BEFORE_UNIX_EPOCH_AD: u64 = 719162;
 mod tests {
     #[test]
     fn test_days_before_unix_epoch() {
-        use super::{days_before_year_ad, DAYS_BEFORE_UNIX_EPOCH_AD, MIN_SUPPORTED_YEAR};
+        use super::{days_before_year_ad, DAYS_BEFORE_UNIX_EPOCH_AD, UNIX_EPOCH_YEAR};
         assert_eq!(
             DAYS_BEFORE_UNIX_EPOCH_AD,
-            days_before_year_ad(MIN_SUPPORTED_YEAR)
+            days_before_year_ad(UNIX_EPOCH_YEAR)
         );
     }
 
     #[test]
     fn test_days_before_year_since_unix_epoch() {
-        use super::{days_before_year_since_unix_epoch, Error, MIN_SUPPORTED_YEAR};
-        assert_eq!(Ok(0), days_before_year_since_unix_epoch(MIN_SUPPORTED_YEAR));
+        use super::{days_before_year_since_unix_epoch, Error, UNIX_EPOCH_YEAR};
+        assert_eq!(Ok(0), days_before_year_since_unix_epoch(UNIX_EPOCH_YEAR));
         assert_eq!(
             Ok(365),
-            days_before_year_since_unix_epoch(MIN_SUPPORTED_YEAR + 1)
+            days_before_year_since_unix_epoch(UNIX_EPOCH_YEAR + 1)
         );
         assert_eq!(
             Err(Error::BadDerTime),
-            days_before_year_since_unix_epoch(MIN_SUPPORTED_YEAR - 1)
+            days_before_year_since_unix_epoch(UNIX_EPOCH_YEAR - 1)
         );
     }
 
@@ -154,12 +154,12 @@ mod tests {
     #[allow(clippy::unreadable_literal)] // TODO: Make this clear.
     #[test]
     fn test_time_from_ymdhms_utc() {
-        use super::{time_from_ymdhms_utc, Error, Time, MIN_SUPPORTED_YEAR};
+        use super::{time_from_ymdhms_utc, Error, Time, UNIX_EPOCH_YEAR};
 
         // Before 1970
         assert_eq!(
             Err(Error::BadDerTime),
-            time_from_ymdhms_utc(MIN_SUPPORTED_YEAR - 1, 1, 1, 0, 0, 0)
+            time_from_ymdhms_utc(UNIX_EPOCH_YEAR - 1, 1, 1, 0, 0, 0)
         );
 
         // year boundary
