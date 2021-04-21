@@ -68,8 +68,12 @@ all-features = true
 name = "webpki"
 
 [features]
+# TODO: In the next release, make this non-default.
+default = ["std"]
 alloc = ["ring/alloc"]
 std = ["alloc"]
+# TODO: In the next release, remove this.
+trust_anchor_util = ["std"]
 
 [dependencies]
 ring = { version = "0.16.19", default-features = false }
