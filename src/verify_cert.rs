@@ -61,7 +61,7 @@ pub fn build_chain(
 
         let name_constraints = trust_anchor.name_constraints.map(untrusted::Input::from);
 
-        untrusted::read_all_optional(name_constraints, Error::BadDer, |value| {
+        untrusted::read_all_optional(name_constraints, Error::BadDER, |value| {
             name::check_name_constraints(value, &cert)
         })?;
 
@@ -107,7 +107,7 @@ pub fn build_chain(
             }
         }
 
-        untrusted::read_all_optional(potential_issuer.name_constraints, Error::BadDer, |value| {
+        untrusted::read_all_optional(potential_issuer.name_constraints, Error::BadDER, |value| {
             name::check_name_constraints(value, &cert)
         })?;
 
@@ -170,11 +170,11 @@ fn check_issuer_independent_properties(
     // KeyUsage extension.
 
     cert.validity
-        .read_all(Error::BadDer, |value| check_validity(value, time))?;
-    untrusted::read_all_optional(cert.basic_constraints, Error::BadDer, |value| {
+        .read_all(Error::BadDER, |value| check_validity(value, time))?;
+    untrusted::read_all_optional(cert.basic_constraints, Error::BadDER, |value| {
         check_basic_constraints(value, used_as_ca, sub_ca_count)
     })?;
-    untrusted::read_all_optional(cert.eku, Error::BadDer, |value| {
+    untrusted::read_all_optional(cert.eku, Error::BadDER, |value| {
         check_eku(value, required_eku_if_present)
     })?;
 
