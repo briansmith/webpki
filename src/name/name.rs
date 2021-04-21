@@ -1,4 +1,4 @@
-// Copyright 2015-2020 Brian Smith.
+// Copyright 2021 Brian Smith.
 //
 // Permission to use, copy, modify, and/or distribute this software for any
 // purpose with or without fee is hereby granted, provided that the above
@@ -12,20 +12,12 @@
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-mod dns_name;
-pub use self::{
-    dns_name::{DnsNameRef, InvalidDnsNameError},
-    name::Name,
-};
+use super::DnsNameRef;
 
-/// Requires the `alloc` feature.
-#[cfg(feature = "alloc")]
-pub use dns_name::DnsName;
-
-mod ip_address;
-
-#[allow(clippy::module_inception)]
-mod name;
-
-mod verify;
-pub(super) use verify::{check_name_constraints, verify_cert_dns_name};
+/// A name that identifies a subject.
+#[derive(Clone, Copy)]
+#[non_exhaustive]
+pub enum Name<'a> {
+    /// A DNS name.
+    DnsName(DnsNameRef<'a>),
+}
