@@ -23,8 +23,13 @@ cargo clippy \
   --all-features ---all-targets \
   -- \
   --deny warnings \
+  \
+  --deny clippy::as_conversions \
+  \
   --allow clippy::len_without_is_empty \
   --allow clippy::new_without_default \
+  --allow clippy::single_match \
+  --allow clippy::single_match_else \
   --allow clippy::type_complexity \
   --allow clippy::upper_case_acronyms \
   $NULL
