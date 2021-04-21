@@ -22,6 +22,7 @@ cargo clippy \
   --target-dir=target/clippy \
   --all-features ---all-targets \
   -- \
+  --deny missing_docs \
   --deny warnings \
   \
   --deny clippy::as_conversions \

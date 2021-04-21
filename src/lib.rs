@@ -68,18 +68,18 @@ pub use {
 };
 
 #[cfg(feature = "alloc")]
-#[allow(unknown_lints, clippy::upper_case_acronyms)]
+#[allow(missing_docs, unknown_lints, clippy::upper_case_acronyms)]
 #[deprecated(note = "Use DnsName")]
 pub type DNSName = DnsName;
 
 #[deprecated(note = "use DnsNameRef")]
-#[allow(unknown_lints, clippy::upper_case_acronyms)]
+#[allow(missing_docs, unknown_lints, clippy::upper_case_acronyms)]
 pub type DNSNameRef<'a> = DnsNameRef<'a>;
 
 #[deprecated(note = "use TlsServerTrustAnchors")]
-#[allow(unknown_lints, clippy::upper_case_acronyms)]
+#[allow(missing_docs, unknown_lints, clippy::upper_case_acronyms)]
 pub type TLSServerTrustAnchors<'a> = TlsServerTrustAnchors<'a>;
 
 #[deprecated(note = "use TlsClientTrustAnchors")]
-#[allow(unknown_lints, clippy::upper_case_acronyms)]
+#[allow(missing_docs, unknown_lints, clippy::upper_case_acronyms)]
 pub type TLSClientTrustAnchors<'a> = TlsClientTrustAnchors<'a>;
