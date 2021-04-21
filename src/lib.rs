@@ -42,6 +42,7 @@ mod name;
 mod signed_data;
 mod time;
 mod trust_anchor;
+pub mod trust_anchor_util;
 
 mod verify_cert;
 
@@ -75,6 +76,10 @@ pub type DNSName = DnsName;
 #[deprecated(note = "use DnsNameRef")]
 #[allow(missing_docs, unknown_lints, clippy::upper_case_acronyms)]
 pub type DNSNameRef<'a> = DnsNameRef<'a>;
+
+#[deprecated(note = "use InvalidDnsNameError")]
+#[allow(missing_docs, unknown_lints, clippy::upper_case_acronyms)]
+pub type InvalidDNSNameError = InvalidDnsNameError;
 
 #[deprecated(note = "use TlsServerTrustAnchors")]
 #[allow(missing_docs, unknown_lints, clippy::upper_case_acronyms)]

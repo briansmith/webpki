@@ -42,6 +42,7 @@ include = [
     "src/signed_data.rs",
     "src/time.rs",
     "src/trust_anchor.rs",
+    "src/trust_anchor_util.rs",
     "src/verify_cert.rs",
     "src/lib.rs",
 
