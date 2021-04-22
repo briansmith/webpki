@@ -175,9 +175,7 @@ macro_rules! oid {
 #[cfg(test)]
 mod tests {
     fn bytes_reader(bytes: &[u8]) -> untrusted::Reader {
-        let input = untrusted::Input::from(bytes);
-        let reader = untrusted::Reader::new(input);
-        return reader;
+        return untrusted::Reader::new(untrusted::Input::from(bytes));
     }
 
     #[test]
@@ -211,4 +209,7 @@ mod tests {
             optional_boolean(&mut bytes_reader(&[0x01, 0x01, 0x00])).unwrap()
         );
     }
+
+    #[test]
+    fn test_bit_string_with_no_unused_bits() {}
 }
