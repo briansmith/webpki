@@ -156,10 +156,34 @@ mod tests {
     fn test_time_from_ymdhms_utc() {
         use super::{time_from_ymdhms_utc, Error, Time, UNIX_EPOCH_YEAR};
 
-        // Before 1970
+        // 1969-12-31 00:00:00
         assert_eq!(
             Err(Error::BadDerTime),
             time_from_ymdhms_utc(UNIX_EPOCH_YEAR - 1, 1, 1, 0, 0, 0)
+        );
+
+        // 1969-12-31 23:59:59
+        assert_eq!(
+            Err(Error::BadDerTime),
+            time_from_ymdhms_utc(UNIX_EPOCH_YEAR - 1, 12, 31, 23, 59, 59)
+        );
+
+        // 1970-01-01 00:00:00
+        assert_eq!(
+            Time::from_seconds_since_unix_epoch(0),
+            time_from_ymdhms_utc(UNIX_EPOCH_YEAR, 1, 1, 0, 0, 0).unwrap()
+        );
+
+        // 1970-01-01 00:00:01
+        assert_eq!(
+            Time::from_seconds_since_unix_epoch(1),
+            time_from_ymdhms_utc(UNIX_EPOCH_YEAR, 1, 1, 0, 0, 1).unwrap()
+        );
+
+        // 1971-01-01 00:00:00
+        assert_eq!(
+            Time::from_seconds_since_unix_epoch(365 * 86400),
+            time_from_ymdhms_utc(UNIX_EPOCH_YEAR + 1, 1, 1, 0, 0, 0).unwrap()
         );
 
         // year boundary
