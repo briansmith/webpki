@@ -26,3 +26,42 @@ fn test_dns_name_ref_traits() {
         assert_eq!(format!("{:?}", &a), "DnsNameRef(\"example.com\")");
     }
 }
+
+#[cfg(feature = "alloc")]
+#[test]
+fn test_dns_name_traits() {
+    use webpki::DnsName;
+
+    fn compile_time_assert_hash<T: core::hash::Hash>() {}
+
+    compile_time_assert_hash::<DnsName>();
+    compile_time_assert_send::<DnsName>();
+    compile_time_assert_sync::<DnsName>();
+
+    let a_ref = DnsNameRef::try_from_ascii(b"example.com").unwrap();
+
+    // `From<DnsNameRef>`
+    let a: DnsName = DnsName::from(a_ref);
+
+    // `Clone`, `Debug`, `PartialEq`.
+    assert_eq!(&a, &a.clone());
+
+    // `Debug`.
+    assert_eq!(format!("{:?}", &a), "DnsName(\"example.com\")");
+
+    // PartialEq is case-insensitive
+    assert_eq!(
+        a,
+        DnsName::from(DnsNameRef::try_from_ascii(b"Example.Com").unwrap())
+    );
+
+    // PartialEq isn't completely wrong.
+    assert_ne!(
+        a,
+        DnsName::from(DnsNameRef::try_from_ascii(b"fxample.com").unwrap())
+    );
+    assert_ne!(
+        a,
+        DnsName::from(DnsNameRef::try_from_ascii(b"example.co").unwrap())
+    );
+}
