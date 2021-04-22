@@ -241,8 +241,8 @@ mod tests {
         // Valid input
         assert_eq!(
             untrusted::Input::from(&[0x12, 0x34]),
-            bit_string_with_no_unused_bits(&mut bytes_reader(&[0x03, 0x03, 0x00, 0x12, 0x34])).unwrap()
+            bit_string_with_no_unused_bits(&mut bytes_reader(&[0x03, 0x03, 0x00, 0x12, 0x34]))
+                .unwrap()
         );
     }
 }
-
