@@ -140,8 +140,8 @@ impl<'a> EndEntityCert<'a> {
     }
 
     /// Verifies that the certificate is valid for the given DNS host name.
-    pub fn verify_for_name(&self, name: Name) -> Result<(), Error> {
-        match name {
+    pub fn verify_for_name<'n>(&self, name: impl Into<Name<'n>>) -> Result<(), Error> {
+        match name.into() {
             Name::DnsName(dns_name) => name::verify_cert_dns_name(&self, dns_name),
         }
     }

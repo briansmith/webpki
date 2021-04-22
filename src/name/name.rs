@@ -21,3 +21,10 @@ pub enum Name<'a> {
     /// A DNS name.
     DnsName(DnsNameRef<'a>),
 }
+
+impl<'a> From<DnsNameRef<'a>> for Name<'a> {
+    #[inline]
+    fn from(name: DnsNameRef<'a>) -> Self {
+        Self::DnsName(name)
+    }
+}

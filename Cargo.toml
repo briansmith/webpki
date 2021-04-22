@@ -38,6 +38,7 @@ include = [
     "src/name.rs",
     "src/name/dns_name.rs",
     "src/name/ip_address.rs",
+    "src/name/name.rs",
     "src/name/verify.rs",
     "src/signed_data.rs",
     "src/time.rs",
