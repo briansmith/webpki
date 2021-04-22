@@ -171,3 +171,44 @@ macro_rules! oid {
         [(40 * $first) + $second, $( $tail ),*]
     )
 }
+
+#[cfg(test)]
+mod tests {
+    fn bytes_reader(bytes: &[u8]) -> untrusted::Reader {
+        let input = untrusted::Input::from(bytes);
+        let reader = untrusted::Reader::new(input);
+        return reader;
+    }
+
+    #[test]
+    fn test_optional_boolean() {
+        use super::{optional_boolean, Error};
+
+        // Empty input results in false
+        assert_eq!(false, optional_boolean(&mut bytes_reader(&[])).unwrap());
+
+        // Optional, so another data type results in false
+        assert_eq!(
+            false,
+            optional_boolean(&mut bytes_reader(&[0x05, 0x00])).unwrap()
+        );
+
+        // Only 0x00 and 0xff are accepted values
+        assert_eq!(
+            Err(Error::BadDer),
+            optional_boolean(&mut bytes_reader(&[0x01, 0x01, 0x42]))
+        );
+
+        // True
+        assert_eq!(
+            true,
+            optional_boolean(&mut bytes_reader(&[0x01, 0x01, 0xff])).unwrap()
+        );
+
+        // False
+        assert_eq!(
+            false,
+            optional_boolean(&mut bytes_reader(&[0x01, 0x01, 0x00])).unwrap()
+        );
+    }
+}
