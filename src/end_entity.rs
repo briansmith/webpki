@@ -13,7 +13,7 @@
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 use crate::{
-    cert, name, signed_data, verify_cert, DnsNameRef, Error, SignatureAlgorithm, Time,
+    cert, name, signed_data, verify_cert, Error, Name, SignatureAlgorithm, Time,
     TlsClientTrustAnchors, TlsServerTrustAnchors,
 };
 
@@ -27,7 +27,7 @@ use alloc::vec::Vec;
 ///
 /// * `EndEntityCert.verify_is_valid_tls_server_cert`: Verify that the server's
 ///   certificate is currently valid *for use by a TLS server*.
-/// * `EndEntityCert.verify_is_valid_for_dns_name`: Verify that the server's
+/// * `EndEntityCert.verify_name`: Verify that the server's
 ///   certificate is valid for the host that is being connected to.
 /// * `EndEntityCert.verify_signature`: Verify that the signature of server's
 ///   `ServerKeyExchange` message is valid for the server's certificate.
@@ -37,8 +37,8 @@ use alloc::vec::Vec;
 ///
 /// * `EndEntityCert.verify_is_valid_tls_client_cert`: Verify that the client's
 ///   certificate is currently valid *for use by a TLS client*.
-/// * `EndEntityCert.verify_is_valid_for_dns_name` or
-///   `EndEntityCert.verify_is_valid_for_at_least_one_dns_name`: Verify that the
+/// * `EndEntityCert.verify_name` or
+///   `EndEntityCert.verify_for_at_least_one_name`: Verify that the
 ///   client's certificate is valid for the identity or identities used to
 ///   identify the client. (Currently client authentication only works when the
 ///   client is identified by one or more DNS hostnames.)
@@ -140,8 +140,10 @@ impl<'a> EndEntityCert<'a> {
     }
 
     /// Verifies that the certificate is valid for the given DNS host name.
-    pub fn verify_is_valid_for_dns_name(&self, dns_name: DnsNameRef) -> Result<(), Error> {
-        name::verify_cert_dns_name(&self, dns_name)
+    pub fn verify_for_name<'n>(&self, name: impl Into<Name<'n>>) -> Result<(), Error> {
+        match name.into() {
+            Name::DnsName(dns_name) => name::verify_cert_dns_name(&self, dns_name),
+        }
     }
 
     /// Verifies that the certificate is valid for at least one of the given DNS
@@ -154,12 +156,12 @@ impl<'a> EndEntityCert<'a> {
     /// Requires the `alloc` default feature; i.e. this isn't available in
     /// `#![no_std]` configurations.
     #[cfg(feature = "alloc")]
-    pub fn verify_is_valid_for_at_least_one_dns_name<'names>(
+    pub fn verify_for_at_least_one_name<'names>(
         &self,
-        dns_names: impl Iterator<Item = DnsNameRef<'names>>,
-    ) -> Result<Vec<DnsNameRef<'names>>, Error> {
-        let result: Vec<DnsNameRef<'names>> = dns_names
-            .filter(|n| self.verify_is_valid_for_dns_name(*n).is_ok())
+        dns_names: impl Iterator<Item = Name<'names>>,
+    ) -> Result<Vec<Name<'names>>, Error> {
+        let result: Vec<Name<'names>> = dns_names
+            .filter(|n| self.verify_for_name(*n).is_ok())
             .collect();
         if result.is_empty() {
             return Err(Error::CertNotValidForName);

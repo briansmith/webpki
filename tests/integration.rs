@@ -13,6 +13,7 @@
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 use core::convert::TryFrom;
+
 extern crate webpki;
 
 static ALL_SIGALGS: &[&webpki::SignatureAlgorithm] = &[
@@ -50,6 +51,15 @@ pub fn netflix() {
     assert_eq!(
         Ok(()),
         cert.verify_is_valid_tls_server_cert(ALL_SIGALGS, &anchors, &[inter], time)
+    );
+
+    let name = webpki::DnsNameRef::try_from_ascii_str("netflix.com").unwrap();
+    assert_eq!(Ok(()), cert.verify_for_name(name));
+
+    let wrong_name = webpki::DnsNameRef::try_from_ascii_str("netflix.co").unwrap();
+    assert_eq!(
+        Err(webpki::Error::CertNotValidForName),
+        cert.verify_for_name(wrong_name)
     );
 }
 
