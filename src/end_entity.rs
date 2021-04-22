@@ -17,9 +17,6 @@ use crate::{
     TlsClientTrustAnchors, TlsServerTrustAnchors,
 };
 
-#[cfg(feature = "alloc")]
-use alloc::vec::Vec;
-
 /// An end-entity certificate.
 ///
 /// Server certificate processing in a TLS connection consists of several
@@ -142,29 +139,6 @@ impl<'a> EndEntityCert<'a> {
     /// Verifies that the certificate is valid for the given DNS host name.
     pub fn verify_is_valid_for_dns_name(&self, dns_name: DnsNameRef) -> Result<(), Error> {
         name::verify_cert_dns_name(&self, dns_name)
-    }
-
-    /// Verifies that the certificate is valid for at least one of the given DNS
-    /// host names.
-    ///
-    /// If the certificate is not valid for any of the given names then this
-    /// fails with `Error::CertNotValidForName`. Otherwise the DNS names for
-    /// which the certificate is valid are returned.
-    ///
-    /// Requires the `alloc` default feature; i.e. this isn't available in
-    /// `#![no_std]` configurations.
-    #[cfg(feature = "alloc")]
-    pub fn verify_is_valid_for_at_least_one_dns_name<'names>(
-        &self,
-        dns_names: impl Iterator<Item = DnsNameRef<'names>>,
-    ) -> Result<Vec<DnsNameRef<'names>>, Error> {
-        let result: Vec<DnsNameRef<'names>> = dns_names
-            .filter(|n| self.verify_is_valid_for_dns_name(*n).is_ok())
-            .collect();
-        if result.is_empty() {
-            return Err(Error::CertNotValidForName);
-        }
-        Ok(result)
     }
 
     /// Verifies the signature `signature` of message `msg` using the
