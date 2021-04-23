@@ -1,4 +1,6 @@
 name: ci
+permissions:
+  contents: read
 on:
   pull_request:
   push:
@@ -16,6 +18,8 @@ jobs:
           profile: minimal
           components: rustfmt
       - uses: actions/checkout@v2
+        with:
+          persist-credentials: false
       - run: cargo fmt --all -- --check
 
   clippy:
@@ -32,6 +36,8 @@ jobs:
           components: clippy
 
       - uses: actions/checkout@v2
+        with:
+          persist-credentials: false
 
       - run: mk/clippy.sh
 
@@ -58,6 +64,8 @@ jobs:
       - run: cargo install cargo-audit --vers "0.13.1"
 
       - uses: actions/checkout@v2
+        with:
+          persist-credentials: false
 
       - run: cargo generate-lockfile
 
@@ -86,6 +94,8 @@ jobs:
       - run: cargo install cargo-deny --locked --vers "0.8.5"
 
       - uses: actions/checkout@v2
+        with:
+          persist-credentials: false
 
       - run: cargo deny check
 
@@ -114,6 +124,8 @@ jobs:
           toolchain: ${{ matrix.rust_channel }}
 
       - uses: actions/checkout@v2
+        with:
+          persist-credentials: false
 
       - run: |
           cargo doc --all-features
@@ -131,6 +143,8 @@ jobs:
           profile: minimal
 
       - uses: actions/checkout@v2
+        with:
+          persist-credentials: false
 
       - run: cargo package
 
@@ -195,6 +209,8 @@ jobs:
         run: sudo apt-get update -y
 
       - uses: actions/checkout@v2
+        with:
+          persist-credentials: false
 
       - if: ${{ !contains(matrix.host_os, 'windows') }}
         run: mk/install-build-tools.sh --target=${{ matrix.target }} ${{ matrix.features }}
@@ -248,6 +264,8 @@ jobs:
         run: sudo apt-get update -y
 
       - uses: actions/checkout@v2
+        with:
+          persist-credentials: false
 
       - if: ${{ !contains(matrix.host_os, 'windows') }}
         run: RING_COVERAGE=1 mk/install-build-tools.sh --target=${{ matrix.target }} ${{ matrix.features }}
