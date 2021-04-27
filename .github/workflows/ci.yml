@@ -12,12 +12,12 @@ jobs:
     runs-on: ubuntu-18.04
 
     steps:
-      - uses: actions-rs/toolchain@v1
+      - uses: briansmith/actions-rs-toolchain@v1
         with:
           toolchain: stable
           profile: minimal
           components: rustfmt
-      - uses: actions/checkout@v2
+      - uses: briansmith/actions-checkout@v2
         with:
           persist-credentials: false
       - run: cargo fmt --all -- --check
@@ -29,13 +29,13 @@ jobs:
     runs-on: ubuntu-18.04
 
     steps:
-      - uses: actions-rs/toolchain@v1
+      - uses: briansmith/actions-rs-toolchain@v1
         with:
           toolchain: stable
           profile: minimal
           components: clippy
 
-      - uses: actions/checkout@v2
+      - uses: briansmith/actions-checkout@v2
         with:
           persist-credentials: false
 
@@ -48,12 +48,12 @@ jobs:
     runs-on: ubuntu-18.04
 
     steps:
-      - uses: actions-rs/toolchain@v1
+      - uses: briansmith/actions-rs-toolchain@v1
         with:
           toolchain: stable
           profile: minimal
 
-      - uses: actions/cache@v2
+      - uses: briansmith/actions-cache@v2
         with:
           path: |
             ~/.cargo/bin/cargo-audit
@@ -63,7 +63,7 @@ jobs:
 
       - run: cargo install cargo-audit --vers "0.13.1"
 
-      - uses: actions/checkout@v2
+      - uses: briansmith/actions-checkout@v2
         with:
           persist-credentials: false
 
@@ -78,12 +78,12 @@ jobs:
     runs-on: ubuntu-18.04
 
     steps:
-      - uses: actions-rs/toolchain@v1
+      - uses: briansmith/actions-rs-toolchain@v1
         with:
           toolchain: stable
           profile: minimal
 
-      - uses: actions/cache@v2
+      - uses: briansmith/actions-cache@v2
         with:
           path: |
             ~/.cargo/bin/cargo-deny
@@ -93,7 +93,7 @@ jobs:
 
       - run: cargo install cargo-deny --locked --vers "0.8.5"
 
-      - uses: actions/checkout@v2
+      - uses: briansmith/actions-checkout@v2
         with:
           persist-credentials: false
 
@@ -117,13 +117,13 @@ jobs:
           - target: x86_64-unknown-linux-gnu
 
     steps:
-      - uses: actions-rs/toolchain@v1
+      - uses: briansmith/actions-rs-toolchain@v1
         with:
           override: true
           target: ${{ matrix.target }}
           toolchain: ${{ matrix.rust_channel }}
 
-      - uses: actions/checkout@v2
+      - uses: briansmith/actions-checkout@v2
         with:
           persist-credentials: false
 
@@ -137,12 +137,12 @@ jobs:
     runs-on: ubuntu-18.04
 
     steps:
-      - uses: actions-rs/toolchain@v1
+      - uses: briansmith/actions-rs-toolchain@v1
         with:
           toolchain: stable
           profile: minimal
 
-      - uses: actions/checkout@v2
+      - uses: briansmith/actions-checkout@v2
         with:
           persist-credentials: false
 
@@ -208,14 +208,14 @@ jobs:
       - if: ${{ contains(matrix.host_os, 'ubuntu') }}
         run: sudo apt-get update -y
 
-      - uses: actions/checkout@v2
+      - uses: briansmith/actions-checkout@v2
         with:
           persist-credentials: false
 
       - if: ${{ !contains(matrix.host_os, 'windows') }}
         run: mk/install-build-tools.sh --target=${{ matrix.target }} ${{ matrix.features }}
 
-      - uses: actions-rs/toolchain@v1
+      - uses: briansmith/actions-rs-toolchain@v1
         with:
           override: true
           target: ${{ matrix.target }}
@@ -263,14 +263,14 @@ jobs:
       - if: ${{ contains(matrix.host_os, 'ubuntu') }}
         run: sudo apt-get update -y
 
-      - uses: actions/checkout@v2
+      - uses: briansmith/actions-checkout@v2
         with:
           persist-credentials: false
 
       - if: ${{ !contains(matrix.host_os, 'windows') }}
         run: RING_COVERAGE=1 mk/install-build-tools.sh --target=${{ matrix.target }} ${{ matrix.features }}
 
-      - uses: actions-rs/toolchain@v1
+      - uses: briansmith/actions-rs-toolchain@v1
         with:
           override: true
           target: ${{ matrix.target }}
@@ -283,7 +283,7 @@ jobs:
         run: |
           RING_COVERAGE=1 mk/cargo.sh +${{ matrix.rust_channel }} test -vv --target=${{ matrix.target }} ${{ matrix.cargo_options }} ${{ matrix.features }} ${{ matrix.mode }}
 
-      - uses: codecov/codecov-action@v1
+      - uses: briansmith/codecov-codecov-action@v1
         with:
           directory: ./target/${{ matrix.target }}/debug/coverage/reports
           fail_ci_if_error: true
