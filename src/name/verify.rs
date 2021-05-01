@@ -70,10 +70,7 @@ pub fn check_name_constraints(
         if !inner.peek(subtrees_tag.into()) {
             return Ok(None);
         }
-        let subtrees = der::nested(inner, subtrees_tag, Error::BadDer, |tagged| {
-            der::expect_tag_and_get_value(tagged, der::Tag::Sequence)
-        })?;
-        Ok(Some(subtrees))
+        der::expect_tag_and_get_value(inner, subtrees_tag).map(Some)
     }
 
     let permitted_subtrees = parse_subtrees(input, der::Tag::ContextSpecificConstructed0)?;
@@ -165,6 +162,10 @@ fn check_presented_id_conforms_to_constraints_in_subtree(
         let matches = match (name, base) {
             (GeneralName::DnsName(name), GeneralName::DnsName(base)) => {
                 dns_name::presented_id_matches_constraint(name, base).ok_or(Error::BadDer)
+            }
+
+            (GeneralName::DirectoryName(name), GeneralName::DnsName(base)) => {
+                common_name(name).map(|cn| cn == base)
             }
 
             (GeneralName::DirectoryName(name), GeneralName::DirectoryName(base)) => Ok(
@@ -325,4 +326,19 @@ fn general_name<'a>(input: &mut untrusted::Reader<'a>) -> Result<GeneralName<'a>
         _ => return Err(Error::BadDer),
     };
     Ok(name)
+}
+
+static COMMON_NAME: untrusted::Input = untrusted::Input::from(&[85, 4, 3]);
+
+fn common_name(input: untrusted::Input) -> Result<untrusted::Input, Error> {
+    let inner = &mut untrusted::Reader::new(input);
+    der::nested(inner, der::Tag::Set, Error::BadDer, |tagged| {
+        der::nested(tagged, der::Tag::Sequence, Error::BadDer, |tagged| {
+            let value = der::expect_tag_and_get_value(tagged, der::Tag::OID)?;
+            if value != COMMON_NAME {
+                return Err(Error::BadDer);
+            }
+            der::expect_tag_and_get_value(tagged, der::Tag::UTF8String)
+        })
+    })
 }

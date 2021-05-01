@@ -53,6 +53,25 @@ pub fn netflix() {
     );
 }
 
+#[cfg(feature = "alloc")]
+#[test]
+pub fn wpt() {
+    let ee: &[u8] = include_bytes!("wpt/ee.der");
+    let ca = include_bytes!("wpt/ca.der");
+
+    let anchors = vec![webpki::TrustAnchor::try_from_cert_der(ca).unwrap()];
+    let anchors = webpki::TlsServerTrustAnchors(&anchors);
+
+    #[allow(clippy::unreadable_literal)] // TODO: Make this clear.
+    let time = webpki::Time::from_seconds_since_unix_epoch(1619256684);
+
+    let cert = webpki::EndEntityCert::try_from(ee).unwrap();
+    assert_eq!(
+        Ok(()),
+        cert.verify_is_valid_tls_server_cert(ALL_SIGALGS, &anchors, &[], time)
+    );
+}
+
 #[test]
 pub fn ed25519() {
     let ee: &[u8] = include_bytes!("ed25519/ee.der");
