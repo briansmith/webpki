@@ -80,7 +80,7 @@ ring = { version = "0.16.19", default-features = false }
 untrusted = "0.7.1"
 
 [dev-dependencies]
-base64 = "0.9.1"
+base64 = "0.13"
 
 [profile.bench]
 opt-level = 3
