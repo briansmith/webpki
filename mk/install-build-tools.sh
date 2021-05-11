@@ -32,7 +32,7 @@ case $target in
   accept_android_license=24333f8a63b6825ea9c5514f83c2829b004d1fee
   grep --quiet --no-messages "$accept_android_license" "$android_license_file" \
     || echo $accept_android_license  >> "$android_license_file"
-  sudo "${ANDROID_SDK_ROOT}/tools/bin/sdkmanager" ndk-bundle
+  "${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager" ndk-bundle
   ;;
 esac
 
@@ -82,14 +82,11 @@ case $target in
 esac
 
 if [ -n "$use_clang" ]; then
-  llvm_version=10
-  if [ -n "${RING_COVERAGE-}" ]; then
-    # https://github.com/rust-lang/rust/pull/79365 upgraded the coverage file
-    # format to one that only LLVM 11+ can use
-    llvm_version=11
-    sudo apt-key add mk/llvm-snapshot.gpg.key
-    sudo add-apt-repository "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-$llvm_version main"
-    sudo apt-get update
-  fi
+  # https://github.com/rust-lang/rust/pull/79365 upgraded the coverage file
+  # format to one that only LLVM 11+ can use
+  llvm_version=12
+  sudo apt-key add mk/llvm-snapshot.gpg.key
+  sudo add-apt-repository "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-$llvm_version main"
+  sudo apt-get update
   install_packages clang-$llvm_version llvm-$llvm_version
 fi
