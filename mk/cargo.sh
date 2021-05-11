@@ -39,10 +39,7 @@ for arg in $*; do
 done
 
 # See comments in install-build-tools.sh.
-llvm_version=10
-if [ -n "${RING_COVERAGE-}" ]; then
-  llvm_version=11
-fi
+llvm_version=12
 
 case $target in
    aarch64-linux-android)
@@ -105,6 +102,7 @@ case $target in
     export CC_wasm32_unknown_unknown=clang-$llvm_version
     export AR_wasm32_unknown_unknown=llvm-ar-$llvm_version
     export CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUNNER=wasm-bindgen-test-runner
+    export WASM_BINDGEN_TEST_TIMEOUT=60
     ;;
   *)
     ;;
