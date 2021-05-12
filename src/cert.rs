@@ -59,7 +59,8 @@ pub(crate) fn parse_cert_internal<'a>(
     })?;
 
     tbs.read_all(Error::BadDER, |tbs| {
-        version3(tbs)?;
+        let cert_version = version(tbs)?;
+
         serial_number(tbs)?;
 
         let signature = der::expect_tag_and_get_value(tbs, der::Tag::Sequence)?;
@@ -95,6 +96,11 @@ pub(crate) fn parse_cert_internal<'a>(
             subject_alt_name: None,
         };
 
+        // V1 certificates are expected to have no extensions
+        if cert_version == CertVersion::V1 {
+            return Ok(cert);
+        }
+
         // mozilla::pkix allows the extensions to be omitted. However, since
         // the subjectAltName extension is mandatory, the extensions are
         // mandatory too, and we enforce that. Also, mozilla::pkix includes
@@ -129,20 +135,31 @@ pub(crate) fn parse_cert_internal<'a>(
     })
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum CertVersion {
+    V1,
+    V3,
+}
+
 // mozilla::pkix supports v1, v2, v3, and v4, including both the implicit
-// (correct) and explicit (incorrect) encoding of v1. We allow only v3.
-fn version3(input: &mut untrusted::Reader) -> Result<(), Error> {
+// (correct) and explicit (incorrect) encoding of v1. We allow v3, explicit v1
+// and implicit v1.
+fn version(input: &mut untrusted::Reader) -> Result<CertVersion, Error> {
+    if !input.peek(u8::from(der::Tag::ContextSpecificConstructed0)) {
+        return Ok(CertVersion::V1);
+    }
+
     der::nested(
         input,
         der::Tag::ContextSpecificConstructed0,
-        Error::UnsupportedCertVersion,
+        Error::BadDER,
         |input| {
             let version = der::small_nonnegative_integer(input)?;
-            if version != 2 {
-                // v3
-                return Err(Error::UnsupportedCertVersion);
+            match version {
+                0 => Ok(CertVersion::V1),
+                2 => Ok(CertVersion::V3),
+                _ => Err(Error::UnsupportedCertVersion),
             }
-            Ok(())
         },
     )
 }

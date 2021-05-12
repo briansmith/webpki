@@ -15,13 +15,13 @@
 use core::convert::TryFrom;
 
 #[test]
-fn test_cert_v1_unsupported() {
+fn test_cert_v1() {
     // Check with `openssl x509 -text -noout -in cert_v1.der -inform DER`
     // to verify this is a correct version 1 certificate.
     const CERT_V1_DER: &[u8] = include_bytes!("cert_v1.der");
 
     assert_eq!(
-        Some(webpki::Error::UnsupportedCertVersion),
-        webpki::EndEntityCert::try_from(CERT_V1_DER).err()
+        webpki::EndEntityCert::try_from(CERT_V1_DER).is_ok(),
+        true
     );
 }
