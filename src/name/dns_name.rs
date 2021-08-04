@@ -12,6 +12,8 @@
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
+use core::fmt;
+
 #[cfg(feature = "alloc")]
 use alloc::string::String;
 
@@ -43,6 +45,54 @@ impl DnsName {
     /// Returns a `DnsNameRef` that refers to this `DnsName`.
     pub fn as_ref(&self) -> DnsNameRef {
         DnsNameRef(self.0.as_bytes())
+    }
+}
+
+impl fmt::Display for DnsName {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(&self.0, f)
+    }
+}
+
+#[cfg(feature = "serde")]
+impl serde::Serialize for DnsName {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer
+    {
+        serializer.serialize_str(&self.0)
+    }
+}
+
+#[cfg(feature = "serde")]
+struct DnsNameVisitor;
+
+#[cfg(feature = "serde")]
+impl<'de> serde::de::Visitor<'de> for DnsNameVisitor {
+    type Value = DnsName;
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a DNS name")
+    }
+    fn visit_str<E>(self, value: &str) -> Result<DnsName, E>
+    where E: serde::de::Error
+    {
+        DnsNameRef::try_from_ascii_str(value).as_ref().map(DnsNameRef::to_owned).map_err(E::custom)
+    }
+    fn visit_bytes<E>(self, value: &[u8]) -> Result<DnsName, E>
+    where E: serde::de::Error
+    {
+        DnsNameRef::try_from_ascii(value).as_ref().map(DnsNameRef::to_owned).map_err(E::custom)
+    }
+}
+
+
+#[cfg(feature = "serde")]
+impl<'de> serde::Deserialize<'de> for DnsName {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>
+    {
+        deserializer.deserialize_str(DnsNameVisitor)
     }
 }
 
@@ -78,6 +128,41 @@ impl From<DnsNameRef<'_>> for DnsName {
 /// [RFC 5280 Section 7.2]: https://tools.ietf.org/html/rfc5280#section-7.2
 #[derive(Clone, Copy)]
 pub struct DnsNameRef<'a>(&'a [u8]);
+
+// note: Display and Serialize aren't implemented
+// since there's no easy way to safely do str serialization right now
+
+#[cfg(feature = "serde")]
+struct DnsNameRefVisitor;
+
+#[cfg(feature = "serde")]
+impl<'de> serde::de::Visitor<'de> for DnsNameRefVisitor {
+    type Value = DnsNameRef<'de>;
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a DNS name")
+    }
+    fn visit_borrowed_str<E>(self, value: &'de str) -> Result<DnsNameRef<'de>, E>
+    where E: serde::de::Error
+    {
+        DnsNameRef::try_from_ascii_str(value).map_err(E::custom)
+    }
+    fn visit_borrowed_bytes<E>(self, value: &'de [u8]) -> Result<DnsNameRef<'de>, E>
+    where E: serde::de::Error
+    {
+        DnsNameRef::try_from_ascii(value).map_err(E::custom)
+    }
+}
+
+
+#[cfg(feature = "serde")]
+impl<'de> serde::Deserialize<'de> for DnsNameRef<'de> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>
+    {
+        deserializer.deserialize_str(DnsNameRefVisitor)
+    }
+}
 
 impl AsRef<[u8]> for DnsNameRef<'_> {
     #[inline]
