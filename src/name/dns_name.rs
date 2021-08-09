@@ -785,11 +785,9 @@ mod tests {
                 untrusted::Input::from(reference),
             );
             assert_eq!(
-                actual_result,
-                expected_result,
-                "presented_dns_id_matches_reference_dns_id(\"{:?}\", IDRole::ReferenceID, \"{:?}\")",
-                presented,
-                reference
+                actual_result, expected_result,
+                "presented_id_matches_reference_id(\"{:?}\", \"{:?}\")",
+                presented, reference
             );
         }
     }
