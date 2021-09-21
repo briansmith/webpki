@@ -95,11 +95,13 @@ pub(crate) fn parse_cert_internal<'a>(
             subject_alt_name: None,
         };
 
-        // mozilla::pkix allows the extensions to be omitted. However, since
-        // the subjectAltName extension is mandatory, the extensions are
-        // mandatory too, and we enforce that. Also, mozilla::pkix includes
+        // mozilla::pkix allows the extensions to be omitted. It also includes
         // special logic for handling critical Netscape Cert Type extensions.
         // That has been intentionally omitted.
+
+        if tbs.at_end() {
+            return Ok(cert)
+        }
 
         der::nested(
             tbs,
