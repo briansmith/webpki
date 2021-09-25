@@ -106,7 +106,7 @@ pub(crate) fn parse_cert_internal<'a>(
         der::nested(
             tbs,
             der::Tag::ContextSpecificConstructed3,
-            Error::MissingOrMalformedExtensions,
+            Error::MalformedExtensions,
             |tagged| {
                 der::nested_of_mut(
                     tagged,
