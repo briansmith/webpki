@@ -47,7 +47,7 @@ pub mod trust_anchor_util;
 mod verify_cert;
 
 pub use {
-    end_entity::EndEntityCert,
+    end_entity::{CertValidity, EndEntityCert},
     error::Error,
     name::{DnsNameRef, InvalidDnsNameError},
     signed_data::{

@@ -72,6 +72,11 @@ impl<'a> TryFrom<&'a [u8]> for EndEntityCert<'a> {
     }
 }
 
+pub struct CertValidity {
+    pub not_before: Time,
+    pub not_after: Time,
+}
+
 impl<'a> EndEntityCert<'a> {
     /// Deprecated. Use `TryFrom::try_from`.
     #[deprecated(note = "Use TryFrom::try_from")]
@@ -81,6 +86,19 @@ impl<'a> EndEntityCert<'a> {
 
     pub(super) fn inner(&self) -> &cert::Cert {
         &self.inner
+    }
+
+    /// Return the validity of the certificate as a pair of not_before and not_after
+    /// timestamps.
+    pub fn validity(&self) -> Result<CertValidity, Error> {
+        self.inner.validity.read_all(Error::BadDER, |input| {
+            let not_before = crate::der::time_choice(input)?;
+            let not_after = crate::der::time_choice(input)?;
+            Ok(CertValidity {
+                not_before,
+                not_after,
+            })
+        })
     }
 
     /// Verifies that the end-entity certificate is valid for use by a TLS
