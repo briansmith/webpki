@@ -95,37 +95,33 @@ pub(crate) fn parse_cert_internal<'a>(
             subject_alt_name: None,
         };
 
-        // mozilla::pkix allows the extensions to be omitted. It also includes
-        // special logic for handling critical Netscape Cert Type extensions.
-        // That has been intentionally omitted.
-
-        if tbs.at_end() {
-            return Ok(cert)
+        if !tbs.at_end() {
+            der::nested(
+                tbs,
+                der::Tag::ContextSpecificConstructed3,
+                Error::MalformedExtensions,
+                |tagged| {
+                    der::nested_of_mut(
+                        tagged,
+                        der::Tag::Sequence,
+                        der::Tag::Sequence,
+                        Error::BadDER,
+                        |extension| {
+                            let extn_id = der::expect_tag_and_get_value(extension, der::Tag::OID)?;
+                            let critical = der::optional_boolean(extension)?;
+                            let extn_value =
+                                der::expect_tag_and_get_value(extension, der::Tag::OctetString)?;
+                            match remember_extension(&mut cert, extn_id, extn_value)? {
+                                Understood::No if critical => {
+                                    Err(Error::UnsupportedCriticalExtension)
+                                }
+                                _ => Ok(()),
+                            }
+                        },
+                    )
+                },
+            )?;
         }
-
-        der::nested(
-            tbs,
-            der::Tag::ContextSpecificConstructed3,
-            Error::MalformedExtensions,
-            |tagged| {
-                der::nested_of_mut(
-                    tagged,
-                    der::Tag::Sequence,
-                    der::Tag::Sequence,
-                    Error::BadDER,
-                    |extension| {
-                        let extn_id = der::expect_tag_and_get_value(extension, der::Tag::OID)?;
-                        let critical = der::optional_boolean(extension)?;
-                        let extn_value =
-                            der::expect_tag_and_get_value(extension, der::Tag::OctetString)?;
-                        match remember_extension(&mut cert, extn_id, extn_value)? {
-                            Understood::No if critical => Err(Error::UnsupportedCriticalExtension),
-                            _ => Ok(()),
-                        }
-                    },
-                )
-            },
-        )?;
 
         Ok(cert)
     })

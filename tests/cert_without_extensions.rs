@@ -20,7 +20,5 @@ fn cert_without_extensions_test() {
     // `openssl x509 -in cert_without_extensions.der -inform DER -text -noout`
     const CERT_WITHOUT_EXTENSIONS_DER: &[u8] = include_bytes!("cert_without_extensions.der");
 
-    assert!(
-        webpki::EndEntityCert::try_from(CERT_WITHOUT_EXTENSIONS_DER).is_ok()
-    );
+    assert!(webpki::EndEntityCert::try_from(CERT_WITHOUT_EXTENSIONS_DER).is_ok());
 }
