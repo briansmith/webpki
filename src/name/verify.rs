@@ -26,7 +26,7 @@ pub fn verify_cert_dns_name(
     dns_name: DnsNameRef,
 ) -> Result<(), Error> {
     let cert = cert.inner();
-    let dns_name = untrusted::Input::from(dns_name.as_ref().as_ref());
+    let dns_name = untrusted::Input::from(dns_name.as_ref());
     iterate_names(
         cert.subject,
         cert.subject_alt_name,
@@ -152,7 +152,7 @@ fn check_presented_id_conforms_to_constraints_in_subtree(
             input: &mut untrusted::Reader<'b>,
         ) -> Result<GeneralName<'b>, Error> {
             let general_subtree = der::expect_tag_and_get_value(input, der::Tag::Sequence)?;
-            general_subtree.read_all(Error::BadDER, |subtree| general_name(subtree))
+            general_subtree.read_all(Error::BadDER, general_name)
         }
 
         let base = match general_subtree(&mut constraints) {

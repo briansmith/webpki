@@ -62,7 +62,7 @@ pub fn build_chain(
         let name_constraints = trust_anchor.name_constraints.map(untrusted::Input::from);
 
         untrusted::read_all_optional(name_constraints, Error::BadDER, |value| {
-            name::check_name_constraints(value, &cert)
+            name::check_name_constraints(value, cert)
         })?;
 
         let trust_anchor_spki = untrusted::Input::from(trust_anchor.spki);
@@ -83,7 +83,7 @@ pub fn build_chain(
 
     loop_while_non_fatal_error(intermediate_certs, |cert_der| {
         let potential_issuer =
-            cert::parse_cert(untrusted::Input::from(*cert_der), EndEntityOrCa::Ca(&cert))?;
+            cert::parse_cert(untrusted::Input::from(*cert_der), EndEntityOrCa::Ca(cert))?;
 
         if potential_issuer.subject != cert.issuer {
             return Err(Error::UnknownIssuer);
@@ -108,7 +108,7 @@ pub fn build_chain(
         }
 
         untrusted::read_all_optional(potential_issuer.name_constraints, Error::BadDER, |value| {
-            name::check_name_constraints(value, &cert)
+            name::check_name_constraints(value, cert)
         })?;
 
         let next_sub_ca_count = match used_as_ca {

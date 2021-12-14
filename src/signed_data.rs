@@ -755,7 +755,7 @@ mod tests {
             if line == end_section {
                 break;
             }
-            base64.push_str(&line);
+            base64.push_str(line);
         }
 
         base64::decode(&base64).unwrap()
