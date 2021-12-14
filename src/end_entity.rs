@@ -145,7 +145,7 @@ impl<'a> EndEntityCert<'a> {
 
     /// Verifies that the certificate is valid for the given DNS host name.
     pub fn verify_is_valid_for_dns_name(&self, dns_name: DnsNameRef) -> Result<(), Error> {
-        name::verify_cert_dns_name(&self, dns_name)
+        name::verify_cert_dns_name(self, dns_name)
     }
 
     /// Verifies the signature `signature` of message `msg` using the
