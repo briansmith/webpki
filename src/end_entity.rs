@@ -13,8 +13,10 @@
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 use crate::{
-    cert, name, signed_data, verify_cert, DnsNameRef, Error, SignatureAlgorithm,
-    TLSClientTrustAnchors, TLSServerTrustAnchors, Time,
+    cert, name, signed_data,
+    verify_cert::{self, KeyPurposeId},
+    DnsNameRef, Error, SignatureAlgorithm, TLSClientTrustAnchors, TLSServerTrustAnchors, Time,
+    TrustAnchor,
 };
 use core::convert::TryFrom;
 
@@ -101,7 +103,7 @@ impl<'a> EndEntityCert<'a> {
         time: Time,
     ) -> Result<(), Error> {
         verify_cert::build_chain(
-            verify_cert::EKU_SERVER_AUTH,
+            &[verify_cert::EKU_SERVER_AUTH],
             supported_sig_algs,
             trust_anchors,
             intermediate_certs,
@@ -133,7 +135,26 @@ impl<'a> EndEntityCert<'a> {
         time: Time,
     ) -> Result<(), Error> {
         verify_cert::build_chain(
-            verify_cert::EKU_CLIENT_AUTH,
+            &[verify_cert::EKU_CLIENT_AUTH],
+            supported_sig_algs,
+            trust_anchors,
+            intermediate_certs,
+            &self.inner,
+            time,
+            0,
+        )
+    }
+
+    pub fn verify_is_valid_tls_cert(
+        &self,
+        required_ekus_if_present: &[KeyPurposeId],
+        supported_sig_algs: &[&SignatureAlgorithm],
+        trust_anchors: &[TrustAnchor],
+        intermediate_certs: &[&[u8]],
+        time: Time,
+    ) -> Result<(), Error> {
+        verify_cert::build_chain(
+            required_ekus_if_present,
             supported_sig_algs,
             trust_anchors,
             intermediate_certs,

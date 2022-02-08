@@ -18,7 +18,7 @@ use crate::{
 };
 
 pub fn build_chain(
-    required_eku_if_present: KeyPurposeId,
+    required_ekus_if_present: &[KeyPurposeId],
     supported_sig_algs: &[&SignatureAlgorithm],
     trust_anchors: &[TrustAnchor],
     intermediate_certs: &[&[u8]],
@@ -33,7 +33,7 @@ pub fn build_chain(
         time,
         used_as_ca,
         sub_ca_count,
-        required_eku_if_present,
+        required_ekus_if_present,
     )?;
 
     // TODO: HPKP checks.
@@ -117,7 +117,7 @@ pub fn build_chain(
         };
 
         build_chain(
-            required_eku_if_present,
+            required_ekus_if_present,
             supported_sig_algs,
             trust_anchors,
             intermediate_certs,
@@ -159,7 +159,7 @@ fn check_issuer_independent_properties(
     time: time::Time,
     used_as_ca: UsedAsCa,
     sub_ca_count: usize,
-    required_eku_if_present: KeyPurposeId,
+    required_ekus_if_present: &[KeyPurposeId],
 ) -> Result<(), Error> {
     // TODO: check_distrust(trust_anchor_subject, trust_anchor_spki)?;
     // TODO: Check signature algorithm like mozilla::pkix.
@@ -174,9 +174,11 @@ fn check_issuer_independent_properties(
     untrusted::read_all_optional(cert.basic_constraints, Error::BadDER, |value| {
         check_basic_constraints(value, used_as_ca, sub_ca_count)
     })?;
-    untrusted::read_all_optional(cert.eku, Error::BadDER, |value| {
-        check_eku(value, required_eku_if_present)
-    })?;
+    for required_eku_if_present in required_ekus_if_present.iter() {
+        untrusted::read_all_optional(cert.eku, Error::BadDER, |value| {
+            check_eku(value, *required_eku_if_present)
+        })?;
+    }
 
     Ok(())
 }
