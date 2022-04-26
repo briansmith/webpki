@@ -77,7 +77,7 @@ impl From<DnsNameRef<'_>> for DnsName {
 ///
 /// [RFC 5280 Section 7.2]: https://tools.ietf.org/html/rfc5280#section-7.2
 #[derive(Clone, Copy)]
-pub struct DnsNameRef<'a>(&'a [u8]);
+pub struct DnsNameRef<'a>(pub(crate) &'a [u8]);
 
 impl AsRef<[u8]> for DnsNameRef<'_> {
     #[inline]
@@ -136,6 +136,13 @@ impl core::fmt::Debug for DnsNameRef<'_> {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> Result<(), core::fmt::Error> {
         let lowercase = self.clone().to_owned();
         f.debug_tuple("DnsNameRef").field(&lowercase.0).finish()
+    }
+}
+
+#[cfg(not(feature = "alloc"))]
+impl core::fmt::Debug for DnsNameRef<'_> {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> Result<(), core::fmt::Error> {
+        f.debug_tuple("DnsNameRef").field(&self.0).finish()
     }
 }
 

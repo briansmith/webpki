@@ -14,7 +14,8 @@
 
 use super::{
     dns_name::{self, DnsNameRef},
-    ip_address,
+    ip_address::{self, IpAddressRef},
+    name::DnsNameOrIpRef,
 };
 use crate::{
     cert::{Cert, EndEntityOrCa},
@@ -28,7 +29,7 @@ pub fn verify_cert_dns_name(
     let cert = cert.inner();
     let dns_name = untrusted::Input::from(dns_name.as_ref());
     iterate_names(
-        cert.subject,
+        Some(cert.subject),
         cert.subject_alt_name,
         Err(Error::CertNotValidForName),
         &|name| {
@@ -49,6 +50,51 @@ pub fn verify_cert_dns_name(
             NameIteration::KeepGoing
         },
     )
+}
+
+pub fn verify_cert_dns_name_or_ip(
+    cert: &crate::EndEntityCert,
+    dns_name_or_ip: DnsNameOrIpRef,
+) -> Result<(), Error> {
+    match dns_name_or_ip {
+        DnsNameOrIpRef::DnsName(dns_name) => verify_cert_dns_name(cert, dns_name),
+        DnsNameOrIpRef::IpAddress(ip_address) => {
+            let ip_address = match ip_address {
+                IpAddressRef::IpV4AddressRef(_, ref ip_address_octets) => {
+                    untrusted::Input::from(ip_address_octets)
+                }
+                IpAddressRef::IpV6AddressRef(_, ref ip_address_octets) => {
+                    untrusted::Input::from(ip_address_octets)
+                }
+            };
+            iterate_names(
+                // IP addresses are not compared against the subject field;
+                // only against Subject Alternative Names.
+                None,
+                cert.inner().subject_alt_name,
+                Err(Error::CertNotValidForName),
+                &|name| {
+                    #[allow(clippy::single_match)]
+                    match name {
+                        GeneralName::IpAddress(presented_id) => {
+                            match ip_address::presented_id_matches_reference_id(
+                                presented_id,
+                                ip_address,
+                            ) {
+                                Ok(true) => return NameIteration::Stop(Ok(())),
+                                Ok(false) => (),
+                                Err(_) => {
+                                    return NameIteration::Stop(Err(Error::BadDER));
+                                }
+                            }
+                        }
+                        _ => (),
+                    }
+                    NameIteration::KeepGoing
+                },
+            )
+        }
+    }
 }
 
 // https://tools.ietf.org/html/rfc5280#section-4.2.1.10
@@ -81,9 +127,18 @@ pub fn check_name_constraints(
 
     let mut child = subordinate_certs;
     loop {
-        iterate_names(child.subject, child.subject_alt_name, Ok(()), &|name| {
-            check_presented_id_conforms_to_constraints(name, permitted_subtrees, excluded_subtrees)
-        })?;
+        iterate_names(
+            Some(child.subject),
+            child.subject_alt_name,
+            Ok(()),
+            &|name| {
+                check_presented_id_conforms_to_constraints(
+                    name,
+                    permitted_subtrees,
+                    excluded_subtrees,
+                )
+            },
+        )?;
 
         child = match child.ee_or_ca {
             EndEntityOrCa::Ca(child_cert) => child_cert,
@@ -246,7 +301,7 @@ enum NameIteration {
 }
 
 fn iterate_names(
-    subject: untrusted::Input,
+    subject: Option<untrusted::Input>,
     subject_alt_name: Option<untrusted::Input>,
     result_if_never_stopped_early: Result<(), Error>,
     f: &dyn Fn(GeneralName) -> NameIteration,
@@ -273,9 +328,13 @@ fn iterate_names(
         None => (),
     }
 
-    match f(GeneralName::DirectoryName(subject)) {
-        NameIteration::Stop(result) => result,
-        NameIteration::KeepGoing => result_if_never_stopped_early,
+    if let Some(subject) = subject {
+        match f(GeneralName::DirectoryName(subject)) {
+            NameIteration::Stop(result) => result,
+            NameIteration::KeepGoing => result_if_never_stopped_early,
+        }
+    } else {
+        result_if_never_stopped_early
     }
 }
 

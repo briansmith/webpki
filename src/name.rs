@@ -19,7 +19,11 @@ pub use dns_name::{DnsNameRef, InvalidDnsNameError};
 #[cfg(feature = "alloc")]
 pub use dns_name::DnsName;
 
-mod ip_address;
+#[allow(clippy::module_inception)]
+mod name;
+pub use name::{DnsNameOrIpRef, InvalidDnsNameOrIpError};
+
+pub mod ip_address;
 
 mod verify;
-pub(super) use verify::{check_name_constraints, verify_cert_dns_name};
+pub(super) use verify::{check_name_constraints, verify_cert_dns_name, verify_cert_dns_name_or_ip};
