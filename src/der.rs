@@ -165,7 +165,6 @@ pub fn time_choice(input: &mut untrusted::Reader) -> Result<time::Time, Error> {
     })
 }
 
-#[allow(unused_macros)]
 macro_rules! oid {
     ( $first:expr, $second:expr, $( $tail:expr ),* ) =>
     (
