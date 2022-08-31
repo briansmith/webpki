@@ -13,7 +13,6 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 [package]
-authors = ["Brian Smith <brian@briansmith.org>"]
 categories = ["cryptography", "no-std"]
 description = "Web PKI X.509 Certificate Verification."
 edition = "2018"
