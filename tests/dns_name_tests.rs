@@ -249,10 +249,10 @@ static IP_ADDRESS_DNS_VALIDITY: &[(&[u8], bool)] = &[
     (b"\n1.2.3.4", false),
     (b"1.2.3.4\n", false),
     // Nulls not allowed
-    (b"\0", false),
-    (b"\01.2.3.4", false),
-    (b"1.2.3.4\0", false),
-    (b"1.2.3.4\0.5", false),
+    (b"\x00", false),
+    (b"\x001.2.3.4", false),
+    (b"1.2.3.4\x00", false),
+    (b"1.2.3.4\x00.5", false),
     // Range
     (b"0.0.0.0", false),
     (b"255.255.255.255", false),
@@ -385,11 +385,11 @@ static IP_ADDRESS_DNS_VALIDITY: &[(&[u8], bool)] = &[
     (b"1234::252.253.254.255\n", false),
     (b"1234::252.253. 254.255", false),
     // Nulls
-    (b"\0", false),
-    (b"::1\0:2", false),
-    (b"::1\0", false),
-    (b"::1.2.3.4\0", false),
-    (b"::1.2\02.3.4", false),
+    (b"\x00", false),
+    (b"::1\x00:2", false),
+    (b"::1\x00", false),
+    (b"::1.2.3.4\x00", false),
+    (b"::1.2\x002.3.4", false),
 ];
 
 #[test]

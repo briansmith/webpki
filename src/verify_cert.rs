@@ -53,7 +53,7 @@ pub fn build_chain(
 
     // TODO: revocation.
 
-    match loop_while_non_fatal_error(trust_anchors, |trust_anchor: &TrustAnchor| {
+    let result = loop_while_non_fatal_error(trust_anchors, |trust_anchor: &TrustAnchor| {
         let trust_anchor_subject = untrusted::Input::from(trust_anchor.subject);
         if cert.issuer != trust_anchor_subject {
             return Err(Error::UnknownIssuer);
@@ -72,13 +72,11 @@ pub fn build_chain(
         check_signatures(supported_sig_algs, cert, trust_anchor_spki)?;
 
         Ok(())
-    }) {
-        Ok(()) => {
-            return Ok(());
-        }
-        Err(..) => {
-            // If the error is not fatal, then keep going.
-        }
+    });
+
+    // If the error is not fatal, then keep going.
+    if result.is_ok() {
+        return Ok(());
     }
 
     loop_while_non_fatal_error(intermediate_certs, |cert_der| {
@@ -339,13 +337,9 @@ where
     V: IntoIterator,
 {
     for v in values {
-        match f(v) {
-            Ok(()) => {
-                return Ok(());
-            }
-            Err(..) => {
-                // If the error is not fatal, then keep going.
-            }
+        // If the error is not fatal, then keep going.
+        if f(v).is_ok() {
+            return Ok(());
         }
     }
     Err(Error::UnknownIssuer)

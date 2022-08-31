@@ -19,7 +19,7 @@
 /// Internally this is merely a UNIX timestamp: a count of non-leap
 /// seconds since the start of 1970.  This type exists to assist
 /// unit-of-measure correctness.
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd)]
 pub struct Time(u64);
 
 impl Time {

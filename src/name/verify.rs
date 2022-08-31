@@ -32,19 +32,12 @@ pub fn verify_cert_dns_name(
         cert.subject_alt_name,
         Err(Error::CertNotValidForName),
         &|name| {
-            match name {
-                GeneralName::DnsName(presented_id) => {
-                    match dns_name::presented_id_matches_reference_id(presented_id, dns_name) {
-                        Some(true) => {
-                            return NameIteration::Stop(Ok(()));
-                        }
-                        Some(false) => (),
-                        None => {
-                            return NameIteration::Stop(Err(Error::BadDER));
-                        }
-                    }
+            if let GeneralName::DnsName(presented_id) = name {
+                match dns_name::presented_id_matches_reference_id(presented_id, dns_name) {
+                    Some(true) => return NameIteration::Stop(Ok(())),
+                    Some(false) => (),
+                    None => return NameIteration::Stop(Err(Error::BadDER)),
                 }
-                _ => (),
             }
             NameIteration::KeepGoing
         },
