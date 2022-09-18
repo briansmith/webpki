@@ -296,22 +296,18 @@ pub(super) fn presented_id_matches_constraint(
 pub(crate) fn is_valid_ipv4_address(ip_address: untrusted::Input) -> bool {
     let mut ip_address = untrusted::Reader::new(ip_address);
     let mut is_first_byte = true;
-    let mut current_textual_octet: [u8; 3] = [0, 0, 0];
-    let mut current_textual_octet_size = 0;
+    let mut current: [u8; 3] = [0, 0, 0];
+    let mut current_size = 0;
     let mut dot_count = 0;
 
     loop {
         // Returns a u32 so it's possible to identify (and error) when
         // provided textual octets > 255, not representable by u8.
-        fn textual_octets_to_octet(textual_octets: [u8; 3], textual_octet_size: usize) -> u32 {
+        fn radix10_to_octet(textual_octets: &[u8]) -> u32 {
             let mut result: u32 = 0;
-            for (i, textual_octet) in textual_octets.iter().rev().enumerate() {
-                if i >= textual_octet_size {
-                    break;
-                }
-                if let Some(digit) = char::to_digit(*textual_octet as char, 10) {
-                    result += digit * 10_u32.pow(i as u32);
-                }
+            for digit in textual_octets.iter() {
+                result *= 10;
+                result += u32::from(*digit);
             }
             result
         }
@@ -331,34 +327,33 @@ pub(crate) fn is_valid_ipv4_address(ip_address: untrusted::Input) -> bool {
                     return false;
                 }
                 dot_count += 1;
-                if current_textual_octet_size == 0 {
+                if current_size == 0 {
                     // IPv4 address cannot contain two dots in a row.
                     return false;
                 }
-                if textual_octets_to_octet(current_textual_octet, current_textual_octet_size) > 255
-                {
+                if radix10_to_octet(&current[..current_size]) > 255 {
                     // No octet can be greater than 255.
                     return false;
                 }
                 // We move on to the next textual octet.
-                current_textual_octet = [0, 0, 0];
-                current_textual_octet_size = 0;
+                current = [0, 0, 0];
+                current_size = 0;
             }
             Ok(number @ b'0'..=b'9') => {
                 if number == b'0'
-                    && current_textual_octet_size == 0
+                    && current_size == 0
                     && !ip_address.peek(b'.')
                     && !ip_address.at_end()
                 {
                     // No octet can start with 0 if a dot does not follow and if we are not at the end.
                     return false;
                 }
-                if current_textual_octet_size >= current_textual_octet.len() {
+                if current_size >= current.len() {
                     // More than 3 octets in a triple
                     return false;
                 }
-                current_textual_octet[current_textual_octet_size] = u8::from_be(number);
-                current_textual_octet_size += 1;
+                current[current_size] = number - b'0';
+                current_size += 1;
             }
             _ => {
                 return false;
@@ -367,9 +362,7 @@ pub(crate) fn is_valid_ipv4_address(ip_address: untrusted::Input) -> bool {
         is_first_byte = false;
 
         if ip_address.at_end() {
-            if current_textual_octet_size > 0
-                && textual_octets_to_octet(current_textual_octet, current_textual_octet_size) > 255
-            {
+            if current_size > 0 && radix10_to_octet(&current[..current_size]) > 255 {
                 // No octet can be greater than 255.
                 return false;
             }
