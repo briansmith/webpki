@@ -53,6 +53,59 @@ pub fn netflix() {
     );
 }
 
+/* This is notable because it is a popular use of IP address subjectAltNames. */
+#[cfg(feature = "alloc")]
+#[test]
+pub fn cloudflare_dns() {
+    let ee: &[u8] = include_bytes!("cloudflare_dns/ee.der");
+    let inter = include_bytes!("cloudflare_dns/inter.der");
+    let ca = include_bytes!("cloudflare_dns/ca.der");
+
+    let anchors = vec![webpki::TrustAnchor::try_from_cert_der(ca).unwrap()];
+    let anchors = webpki::TLSServerTrustAnchors(&anchors);
+
+    #[allow(clippy::unreadable_literal)]
+    let time = webpki::Time::from_seconds_since_unix_epoch(1663495771);
+
+    let cert = webpki::EndEntityCert::try_from(ee).unwrap();
+    assert_eq!(
+        Ok(()),
+        cert.verify_is_valid_tls_server_cert(ALL_SIGALGS, &anchors, &[inter], time)
+    );
+
+    let check_name = |name: &str| {
+        let dns_name_ref = webpki::DnsNameRef::try_from_ascii_str(name).unwrap();
+        assert_eq!(Ok(()), cert.verify_is_valid_for_dns_name(dns_name_ref));
+        let dns_name_or_ip_ref = webpki::DnsNameOrIpRef::from(dns_name_ref);
+        assert_eq!(
+            Ok(()),
+            cert.verify_is_valid_for_dns_name_or_ip(dns_name_or_ip_ref)
+        );
+        println!("{:?} ok as name", name);
+    };
+
+    let check_addr = |addr: &str| {
+        let dns_name_or_ip_ref = webpki::DnsNameOrIpRef::try_from_ascii(addr.as_bytes()).unwrap();
+        assert_eq!(
+            Ok(()),
+            cert.verify_is_valid_for_dns_name_or_ip(dns_name_or_ip_ref)
+        );
+        println!("{:?} ok as address", addr);
+    };
+
+    check_name("cloudflare-dns.com");
+    check_name("wildcard.cloudflare-dns.com");
+    check_name("one.one.one.one");
+    check_addr("1.1.1.1");
+    check_addr("1.0.0.1");
+    check_addr("162.159.36.1");
+    check_addr("162.159.46.1");
+    check_addr("2606:4700:4700:0000:0000:0000:0000:1111");
+    check_addr("2606:4700:4700:0000:0000:0000:0000:1001");
+    check_addr("2606:4700:4700:0000:0000:0000:0000:0064");
+    check_addr("2606:4700:4700:0000:0000:0000:0000:6400");
+}
+
 #[test]
 pub fn ed25519() {
     let ee: &[u8] = include_bytes!("ed25519/ee.der");
