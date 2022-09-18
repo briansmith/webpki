@@ -353,6 +353,10 @@ pub(crate) fn is_valid_ipv4_address(ip_address: untrusted::Input) -> bool {
                     // No octet can start with 0 if a dot does not follow and if we are not at the end.
                     return false;
                 }
+                if current_textual_octet_size >= current_textual_octet.len() {
+                    // More than 3 octets in a triple
+                    return false;
+                }
                 current_textual_octet[current_textual_octet_size] = u8::from_be(number);
                 current_textual_octet_size += 1;
             }
@@ -465,6 +469,10 @@ mod tests {
         (b"0.025.0.0", false),
         (b"0.0.025.0", false),
         (b"0.0.0.025", false),
+        (b"1234.0.0.0", false),
+        (b"0.1234.0.0", false),
+        (b"0.0.1234.0", false),
+        (b"0.0.0.1234", false),
     ];
 
     #[test]
