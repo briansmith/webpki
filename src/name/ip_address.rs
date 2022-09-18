@@ -418,7 +418,7 @@ pub(crate) fn is_valid_ipv6_address(ip_address: untrusted::Input) -> bool {
                 // We move on to the next textual block.
                 current_textual_block_size = 0;
             }
-            Ok(b'0'..=b'9') | Ok(b'a'..=b'f') => {
+            Ok(b'0'..=b'9') | Ok(b'a'..=b'f') | Ok(b'A'..=b'F') => {
                 if current_textual_block_size == 4 {
                     // Blocks cannot contain more than 4 hexadecimal characters.
                     return false;
@@ -495,6 +495,7 @@ mod tests {
         // Valid IPv6 addresses
         (b"2a05:d018:076c:b685:e8ab:afd3:af51:3aed", true),
         (b"ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff", true),
+        (b"FFFF:ffff:ffff:ffff:ffff:ffff:ffff:ffff", true), // both case hex allowed
         // Invalid IPv6 addresses
 
         // Missing octets on uncompressed addresses. The unmatching letter has the violation
