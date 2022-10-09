@@ -83,7 +83,7 @@ pub fn build_chain(
 
     loop_while_non_fatal_error(intermediate_certs, |cert_der| {
         let potential_issuer =
-            cert::parse_cert(untrusted::Input::from(*cert_der), EndEntityOrCa::Ca(cert))?;
+            cert::parse_cert(untrusted::Input::from(cert_der), EndEntityOrCa::Ca(cert))?;
 
         if potential_issuer.subject != cert.issuer {
             return Err(Error::UnknownIssuer);
