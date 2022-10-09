@@ -49,7 +49,10 @@ mod verify_cert;
 pub use {
     end_entity::EndEntityCert,
     error::Error,
-    name::{DnsNameRef, InvalidDnsNameError},
+    name::{
+        ip_address::InvalidIpAddressError, ip_address::IpAddressRef, DnsNameOrIpRef, DnsNameRef,
+        InvalidDnsNameError, InvalidDnsNameOrIpError,
+    },
     signed_data::{
         SignatureAlgorithm, ECDSA_P256_SHA256, ECDSA_P256_SHA384, ECDSA_P384_SHA256,
         ECDSA_P384_SHA384, ED25519,
@@ -60,7 +63,7 @@ pub use {
 
 #[cfg(feature = "alloc")]
 pub use {
-    name::DnsName,
+    name::{ip_address::IpAddress, DnsName},
     signed_data::{
         RSA_PKCS1_2048_8192_SHA256, RSA_PKCS1_2048_8192_SHA384, RSA_PKCS1_2048_8192_SHA512,
         RSA_PKCS1_3072_8192_SHA384, RSA_PSS_2048_8192_SHA256_LEGACY_KEY,
