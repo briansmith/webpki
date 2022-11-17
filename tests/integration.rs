@@ -72,6 +72,30 @@ pub fn ed25519() {
 }
 
 #[test]
+fn critical_extensions() {
+    let root = include_bytes!("critical_extensions/root-cert.der");
+    let ca = include_bytes!("critical_extensions/ca-cert.der");
+
+    let time = webpki::Time::try_from(std::time::SystemTime::now()).unwrap();
+    let anchors = [webpki::TrustAnchor::try_from_cert_der(root).unwrap()];
+    let anchors = webpki::TLSServerTrustAnchors(&anchors);
+
+    let ee = include_bytes!("critical_extensions/ee-cert-noncrit-unknown-ext.der");
+    let res = webpki::EndEntityCert::try_from(&ee[..])
+        .and_then(|cert| cert.verify_is_valid_tls_server_cert(ALL_SIGALGS, &anchors, &[ca], time));
+    assert_eq!(res, Ok(()), "accept non-critical unknown extension");
+
+    let ee = include_bytes!("critical_extensions/ee-cert-crit-unknown-ext.der");
+    let res = webpki::EndEntityCert::try_from(&ee[..])
+        .and_then(|cert| cert.verify_is_valid_tls_server_cert(ALL_SIGALGS, &anchors, &[ca], time));
+    assert_eq!(
+        res,
+        Err(webpki::Error::UnsupportedCriticalExtension),
+        "reject critical unknown extension"
+    );
+}
+
+#[test]
 fn read_root_with_zero_serial() {
     let ca = include_bytes!("misc/serial_zero.der");
     let _ =
