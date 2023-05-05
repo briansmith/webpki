@@ -24,6 +24,25 @@ pub fn build_chain(
     intermediate_certs: &[&[u8]],
     cert: &Cert,
     time: time::Time,
+) -> Result<(), Error> {
+    build_chain_inner(
+        required_eku_if_present,
+        supported_sig_algs,
+        trust_anchors,
+        intermediate_certs,
+        cert,
+        time,
+        0,
+    )
+}
+
+fn build_chain_inner(
+    required_eku_if_present: KeyPurposeId,
+    supported_sig_algs: &[&SignatureAlgorithm],
+    trust_anchors: &[TrustAnchor],
+    intermediate_certs: &[&[u8]],
+    cert: &Cert,
+    time: time::Time,
     sub_ca_count: usize,
 ) -> Result<(), Error> {
     let used_as_ca = used_as_ca(&cert.ee_or_ca);
@@ -116,7 +135,7 @@ pub fn build_chain(
             UsedAsCa::Yes => sub_ca_count + 1,
         };
 
-        build_chain(
+        build_chain_inner(
             required_eku_if_present,
             supported_sig_algs,
             trust_anchors,
