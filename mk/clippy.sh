@@ -35,6 +35,7 @@ cargo clippy \
   --allow clippy::redundant_closure \
   --allow clippy::single_match \
   --allow clippy::single_match_else \
+  --allow clippy::too_many_arguments \
   --allow clippy::type_complexity \
   --allow clippy::upper_case_acronyms \
   --allow clippy::useless_asref \

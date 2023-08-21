@@ -158,10 +158,9 @@ jobs:
           - stable
           - nightly
 
-          # MSRV: Rust 1.47 and later have bugs in rustc that prevent some
-          # projects from upgrading past 1.46 yet. So, maintain compatibility
-          # for 1.46 until those bugs are fixed.
-          - 1.46.0
+          # MSRV: webpki builds and works with Rust 1.47 and later. The
+          # rcgen-based test requires 1.67.0 or later.
+          - 1.67.0
 
           - beta
 
