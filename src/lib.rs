@@ -27,14 +27,20 @@
 #![doc(html_root_url = "https://briansmith.org/rustdoc/")]
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(
+    clippy::clone_on_copy,
+    clippy::derive_partial_eq_without_eq,
     clippy::doc_markdown,
+    clippy::explicit_auto_deref,
     clippy::if_not_else,
     clippy::inline_always,
     clippy::items_after_statements,
     clippy::missing_errors_doc,
     clippy::module_name_repetitions,
+    clippy::needless_borrow,
+    clippy::redundant_closure,
     clippy::single_match,
-    clippy::single_match_else
+    clippy::single_match_else,
+    clippy::useless_asref
 )]
 #![deny(clippy::as_conversions)]
 

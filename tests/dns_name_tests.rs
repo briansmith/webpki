@@ -232,6 +232,7 @@ static DNS_NAME_VALIDITY: &[(&[u8], bool)] = &[
 
 // (IP address, is valid DNS name). The comments here refer to the validity of
 // the string as an IP address, not as a DNS name validity.
+#[allow(clippy::octal_escapes)]
 static IP_ADDRESS_DNS_VALIDITY: &[(&[u8], bool)] = &[
     (b"", false),
     (b"1", false),
