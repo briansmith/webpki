@@ -30,7 +30,6 @@ cargo clippy \
   --allow clippy::explicit_auto_deref \
   --allow clippy::len_without_is_empty \
   --allow clippy::new_without_default \
-  --allow clippy::octal_escapes \
   --allow clippy::redundant_closure \
   --allow clippy::single_match \
   --allow clippy::single_match_else \
