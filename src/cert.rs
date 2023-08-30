@@ -49,16 +49,16 @@ pub(crate) fn parse_cert_internal<'a>(
     ee_or_ca: EndEntityOrCa<'a>,
     serial_number: fn(input: &mut untrusted::Reader<'_>) -> Result<(), Error>,
 ) -> Result<Cert<'a>, Error> {
-    let (tbs, signed_data) = cert_der.read_all(Error::BadDER, |cert_der| {
+    let (tbs, signed_data) = cert_der.read_all(Error::BadDer, |cert_der| {
         der::nested(
             cert_der,
             der::Tag::Sequence,
-            Error::BadDER,
+            Error::BadDer,
             signed_data::parse_signed_data,
         )
     })?;
 
-    tbs.read_all(Error::BadDER, |tbs| {
+    tbs.read_all(Error::BadDer, |tbs| {
         version3(tbs)?;
         serial_number(tbs)?;
 
@@ -110,7 +110,7 @@ pub(crate) fn parse_cert_internal<'a>(
                     tagged,
                     der::Tag::Sequence,
                     der::Tag::Sequence,
-                    Error::BadDER,
+                    Error::BadDer,
                     |extension| {
                         let extn_id = der::expect_tag_and_get_value(extension, der::Tag::OID)?;
                         let critical = der::optional_boolean(extension)?;
@@ -154,7 +154,7 @@ pub fn certificate_serial_number(input: &mut untrusted::Reader) -> Result<(), Er
 
     let value = der::positive_integer(input)?;
     if value.big_endian_without_leading_zero().len() > 20 {
-        return Err(Error::BadDER);
+        return Err(Error::BadDer);
     }
     Ok(())
 }
@@ -215,7 +215,7 @@ fn remember_extension<'a>(
         }
         None => {
             // All the extensions that we care about are wrapped in a SEQUENCE.
-            let sequence_value = value.read_all(Error::BadDER, |value| {
+            let sequence_value = value.read_all(Error::BadDer, |value| {
                 der::expect_tag_and_get_value(value, der::Tag::Sequence)
             })?;
             *out = Some(sequence_value);

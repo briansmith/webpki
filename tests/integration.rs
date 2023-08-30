@@ -41,7 +41,7 @@ pub fn netflix() {
     let ca = include_bytes!("netflix/ca.der");
 
     let anchors = vec![webpki::TrustAnchor::try_from_cert_der(ca).unwrap()];
-    let anchors = webpki::TLSServerTrustAnchors(&anchors);
+    let anchors = webpki::TlsServerTrustAnchors(&anchors);
 
     #[allow(clippy::unreadable_literal)] // TODO: Make this clear.
     let time = webpki::Time::from_seconds_since_unix_epoch(1492441716);
@@ -59,7 +59,7 @@ pub fn ed25519() {
     let ca = include_bytes!("ed25519/ca.der");
 
     let anchors = vec![webpki::TrustAnchor::try_from_cert_der(ca).unwrap()];
-    let anchors = webpki::TLSServerTrustAnchors(&anchors);
+    let anchors = webpki::TlsServerTrustAnchors(&anchors);
 
     #[allow(clippy::unreadable_literal)] // TODO: Make this clear.
     let time = webpki::Time::from_seconds_since_unix_epoch(1547363522);

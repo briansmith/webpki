@@ -125,7 +125,7 @@ impl<'a> DnsNameRef<'a> {
     pub fn to_owned(&self) -> DnsName {
         // DnsNameRef is already guaranteed to be valid ASCII, which is a
         // subset of UTF-8.
-        let s: &str = (*self).into();
+        let s: &str = self.clone().into();
         DnsName(s.to_ascii_lowercase())
     }
 }

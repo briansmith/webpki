@@ -13,10 +13,12 @@
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 use crate::{
-    cert, name, signed_data, verify_cert, DnsNameRef, Error, SignatureAlgorithm,
-    TLSClientTrustAnchors, TLSServerTrustAnchors, Time,
+    cert, name, signed_data, verify_cert, DnsNameRef, Error, SignatureAlgorithm, Time,
+    TlsClientTrustAnchors, TlsServerTrustAnchors,
 };
-use core::convert::TryFrom;
+
+#[cfg(feature = "alloc")]
+use alloc::vec::Vec;
 
 /// An end-entity certificate.
 ///
@@ -57,7 +59,7 @@ pub struct EndEntityCert<'a> {
     inner: cert::Cert<'a>,
 }
 
-impl<'a> TryFrom<&'a [u8]> for EndEntityCert<'a> {
+impl<'a> core::convert::TryFrom<&'a [u8]> for EndEntityCert<'a> {
     type Error = Error;
 
     /// Parse the ASN.1 DER-encoded X.509 encoding of the certificate
@@ -73,12 +75,6 @@ impl<'a> TryFrom<&'a [u8]> for EndEntityCert<'a> {
 }
 
 impl<'a> EndEntityCert<'a> {
-    /// Deprecated. Use `TryFrom::try_from`.
-    #[deprecated(note = "Use TryFrom::try_from")]
-    pub fn from(cert_der: &'a [u8]) -> Result<Self, Error> {
-        TryFrom::try_from(cert_der)
-    }
-
     pub(super) fn inner(&self) -> &cert::Cert {
         &self.inner
     }
@@ -96,7 +92,7 @@ impl<'a> EndEntityCert<'a> {
     pub fn verify_is_valid_tls_server_cert(
         &self,
         supported_sig_algs: &[&SignatureAlgorithm],
-        &TLSServerTrustAnchors(trust_anchors): &TLSServerTrustAnchors,
+        &TlsServerTrustAnchors(trust_anchors): &TlsServerTrustAnchors,
         intermediate_certs: &[&[u8]],
         time: Time,
     ) -> Result<(), Error> {
@@ -128,7 +124,7 @@ impl<'a> EndEntityCert<'a> {
     pub fn verify_is_valid_tls_client_cert(
         &self,
         supported_sig_algs: &[&SignatureAlgorithm],
-        &TLSClientTrustAnchors(trust_anchors): &TLSClientTrustAnchors,
+        &TlsClientTrustAnchors(trust_anchors): &TlsClientTrustAnchors,
         intermediate_certs: &[&[u8]],
         time: Time,
     ) -> Result<(), Error> {
@@ -145,7 +141,33 @@ impl<'a> EndEntityCert<'a> {
 
     /// Verifies that the certificate is valid for the given DNS host name.
     pub fn verify_is_valid_for_dns_name(&self, dns_name: DnsNameRef) -> Result<(), Error> {
-        name::verify_cert_dns_name(self, dns_name)
+        name::verify_cert_dns_name(&self, dns_name)
+    }
+
+    /// Verifies that the certificate is valid for at least one of the given DNS
+    /// host names.
+    ///
+    /// If the certificate is not valid for any of the given names then this
+    /// fails with `Error::CertNotValidForName`. Otherwise the DNS names for
+    /// which the certificate is valid are returned.
+    ///
+    /// Requires the `alloc` default feature; i.e. this isn't available in
+    /// `#![no_std]` configurations.
+    #[cfg(feature = "alloc")]
+    pub fn verify_is_valid_for_at_least_one_dns_name<'names, Names>(
+        &self,
+        dns_names: Names,
+    ) -> Result<Vec<DnsNameRef<'names>>, Error>
+    where
+        Names: Iterator<Item = DnsNameRef<'names>>,
+    {
+        let result: Vec<DnsNameRef<'names>> = dns_names
+            .filter(|n| self.verify_is_valid_for_dns_name(*n).is_ok())
+            .collect();
+        if result.is_empty() {
+            return Err(Error::CertNotValidForName);
+        }
+        Ok(result)
     }
 
     /// Verifies the signature `signature` of message `msg` using the
@@ -160,7 +182,7 @@ impl<'a> EndEntityCert<'a> {
     /// `DigitallySigned.algorithm` of TLS type `SignatureAndHashAlgorithm`. In
     /// TLS 1.2 a single `SignatureAndHashAlgorithm` may map to multiple
     /// `SignatureAlgorithm`s. For example, a TLS 1.2
-    /// `SignatureAndHashAlgorithm` of (ECDSA, SHA-256) may map to any or all
+    /// `ignatureAndHashAlgorithm` of (ECDSA, SHA-256) may map to any or all
     /// of {`ECDSA_P256_SHA256`, `ECDSA_P384_SHA256`}, depending on how the TLS
     /// implementation is configured.
     ///
