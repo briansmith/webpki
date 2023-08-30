@@ -6,7 +6,7 @@ on:
   push:
 jobs:
   rustfmt:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-22.04
 
     steps:
       - uses: briansmith/actions-rs-toolchain@v1
@@ -20,7 +20,7 @@ jobs:
       - run: cargo fmt --all -- --check
 
   clippy:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-22.04
 
     steps:
       - uses: briansmith/actions-rs-toolchain@v1
@@ -36,7 +36,7 @@ jobs:
       - run: mk/clippy.sh
 
   audit:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-22.04
 
     steps:
       - uses: briansmith/actions-rs-toolchain@v1
@@ -63,7 +63,7 @@ jobs:
       - run: cargo audit --deny warnings
 
   deny:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-22.04
 
     steps:
       - uses: briansmith/actions-rs-toolchain@v1
@@ -89,7 +89,7 @@ jobs:
 
   # Verify that documentation builds.
   rustdoc:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-22.04
 
     strategy:
       matrix:
@@ -116,7 +116,7 @@ jobs:
           cargo doc --all-features
 
   package:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-22.04
 
     steps:
       - uses: briansmith/actions-rs-toolchain@v1
@@ -172,16 +172,16 @@ jobs:
 
         include:
           - target: arm-unknown-linux-gnueabihf
-            host_os: ubuntu-18.04
+            host_os: ubuntu-22.04
 
           - target: i686-pc-windows-msvc
             host_os: windows-latest
 
           - target: x86_64-unknown-linux-musl
-            host_os: ubuntu-18.04
+            host_os: ubuntu-22.04
 
           - target: x86_64-unknown-linux-gnu
-            host_os: ubuntu-18.04
+            host_os: ubuntu-22.04
 
     steps:
       - if: ${{ contains(matrix.host_os, 'ubuntu') }}
@@ -233,7 +233,7 @@ jobs:
         # TODO: targets
         include:
           - target: x86_64-unknown-linux-musl
-            host_os: ubuntu-18.04
+            host_os: ubuntu-22.04
 
     steps:
       - if: ${{ contains(matrix.host_os, 'ubuntu') }}

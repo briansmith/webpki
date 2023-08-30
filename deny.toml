@@ -10,6 +10,7 @@ allow = [
     "LicenseRef-ring",
     "LicenseRef-webpki",
     "MIT",
+    "Unicode-DFS-2016",
 ]
 confidence-threshold = 1.0
 
