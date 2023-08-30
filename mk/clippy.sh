@@ -29,7 +29,6 @@ cargo clippy \
   --allow clippy::clone_on_copy \
   --allow clippy::explicit_auto_deref \
   --allow clippy::len_without_is_empty \
-  --allow clippy::needless_borrow \
   --allow clippy::new_without_default \
   --allow clippy::octal_escapes \
   --allow clippy::redundant_closure \
