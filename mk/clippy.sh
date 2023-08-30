@@ -26,7 +26,6 @@ cargo clippy \
   \
   --deny clippy::as_conversions \
   \
-  --allow clippy::clone_on_copy \
   --allow clippy::explicit_auto_deref \
   --allow clippy::too_many_arguments \
   $NULL
