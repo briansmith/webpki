@@ -18,12 +18,10 @@ use core::fmt;
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Error {
     /// The encoding of some ASN.1 DER-encoded item is invalid.
-    // TODO: Rename to `BadDer` in the next release.
-    BadDER,
+    BadDer,
 
     /// The encoding of an ASN.1 DER-encoded time is invalid.
-    // TODO: Rename to `BadDerTime` in the next release.
-    BadDERTime,
+    BadDerTime,
 
     /// A CA certificate is being used as an end-entity certificate.
     CaUsedAsEndEntity,

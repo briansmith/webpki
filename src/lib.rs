@@ -26,6 +26,17 @@
 
 #![doc(html_root_url = "https://briansmith.org/rustdoc/")]
 #![cfg_attr(not(feature = "std"), no_std)]
+#![allow(
+    clippy::doc_markdown,
+    clippy::if_not_else,
+    clippy::inline_always,
+    clippy::items_after_statements,
+    clippy::missing_errors_doc,
+    clippy::module_name_repetitions,
+    clippy::single_match,
+    clippy::single_match_else
+)]
+#![deny(clippy::as_conversions)]
 
 #[cfg(any(test, feature = "alloc"))]
 #[cfg_attr(test, macro_use)]
@@ -42,7 +53,6 @@ mod name;
 mod signed_data;
 mod time;
 mod trust_anchor;
-pub mod trust_anchor_util;
 
 mod verify_cert;
 
@@ -55,7 +65,7 @@ pub use {
         ECDSA_P384_SHA384, ED25519,
     },
     time::Time,
-    trust_anchor::{TLSClientTrustAnchors, TLSServerTrustAnchors, TrustAnchor},
+    trust_anchor::{TlsClientTrustAnchors, TlsServerTrustAnchors, TrustAnchor},
 };
 
 #[cfg(feature = "alloc")]
@@ -69,14 +79,18 @@ pub use {
 };
 
 #[cfg(feature = "alloc")]
-#[allow(missing_docs, unknown_lints, clippy::upper_case_acronyms)]
+#[allow(unknown_lints, clippy::upper_case_acronyms)]
 #[deprecated(note = "Use DnsName")]
 pub type DNSName = DnsName;
 
 #[deprecated(note = "use DnsNameRef")]
-#[allow(missing_docs, unknown_lints, clippy::upper_case_acronyms)]
+#[allow(unknown_lints, clippy::upper_case_acronyms)]
 pub type DNSNameRef<'a> = DnsNameRef<'a>;
 
-#[deprecated(note = "use InvalidDnsNameError")]
-#[allow(missing_docs, unknown_lints, clippy::upper_case_acronyms)]
-pub type InvalidDNSNameError = InvalidDnsNameError;
+#[deprecated(note = "use TlsServerTrustAnchors")]
+#[allow(unknown_lints, clippy::upper_case_acronyms)]
+pub type TLSServerTrustAnchors<'a> = TlsServerTrustAnchors<'a>;
+
+#[deprecated(note = "use TlsClientTrustAnchors")]
+#[allow(unknown_lints, clippy::upper_case_acronyms)]
+pub type TLSClientTrustAnchors<'a> = TlsClientTrustAnchors<'a>;
