@@ -20,13 +20,14 @@ IFS=$'\n\t'
 export NULL=""
 cargo clippy \
   --target-dir=target/clippy \
-  --all-features ---all-targets \
+  --all-features --all-targets \
   -- \
   --deny missing_docs \
   --deny warnings \
   \
   --deny clippy::as_conversions \
   \
+  --allow clippy::explicit_auto_deref \
   --allow clippy::len_without_is_empty \
   --allow clippy::new_without_default \
   --allow clippy::single_match \
