@@ -35,5 +35,4 @@ cargo clippy \
   --allow clippy::too_many_arguments \
   --allow clippy::type_complexity \
   --allow clippy::upper_case_acronyms \
-  --allow clippy::useless_asref \
   $NULL

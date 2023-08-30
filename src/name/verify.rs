@@ -26,7 +26,7 @@ pub fn verify_cert_dns_name(
     dns_name: DnsNameRef,
 ) -> Result<(), Error> {
     let cert = cert.inner();
-    let dns_name = untrusted::Input::from(dns_name.as_ref().as_ref());
+    let dns_name = untrusted::Input::from(dns_name.as_ref());
     iterate_names(
         cert.subject,
         cert.subject_alt_name,
