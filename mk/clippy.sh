@@ -28,11 +28,5 @@ cargo clippy \
   \
   --allow clippy::clone_on_copy \
   --allow clippy::explicit_auto_deref \
-  --allow clippy::len_without_is_empty \
-  --allow clippy::new_without_default \
-  --allow clippy::single_match \
-  --allow clippy::single_match_else \
   --allow clippy::too_many_arguments \
-  --allow clippy::type_complexity \
-  --allow clippy::upper_case_acronyms \
   $NULL
