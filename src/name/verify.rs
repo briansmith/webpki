@@ -152,7 +152,7 @@ fn check_presented_id_conforms_to_constraints_in_subtree(
             input: &mut untrusted::Reader<'b>,
         ) -> Result<GeneralName<'b>, Error> {
             let general_subtree = der::expect_tag_and_get_value(input, der::Tag::Sequence)?;
-            general_subtree.read_all(Error::BadDer, |subtree| general_name(subtree))
+            general_subtree.read_all(Error::BadDer, general_name)
         }
 
         let base = match general_subtree(&mut constraints) {
