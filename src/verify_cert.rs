@@ -243,7 +243,13 @@ impl Budget {
 
 impl Default for Budget {
     fn default() -> Self {
-        Self { signatures: 100 }
+        Self {
+            // This limit is taken from the remediation for golang CVE-2018-16875.  However,
+            // note that golang subsequently implemented AKID matching due to this limit
+            // being hit in real applications (see <https://github.com/spiffe/spire/issues/1004>).
+            // So this may actually be too aggressive.
+            signatures: 100,
+        }
     }
 }
 
