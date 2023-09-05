@@ -12,6 +12,8 @@
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
+use core::default::Default;
+
 use crate::{
     cert::{self, Cert, EndEntityOrCa},
     der, name, signed_data, time, Error, SignatureAlgorithm, TrustAnchor,
@@ -33,7 +35,7 @@ pub fn build_chain(
         cert,
         time,
         0,
-        &mut 0,
+        &mut Budget::default(),
     );
     result.map_err(|error| {
         match error {
@@ -79,6 +81,7 @@ impl From<Error> for ErrorOrInternalError {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn build_chain_inner(
     required_eku_if_present: KeyPurposeId,
     supported_sig_algs: &[&SignatureAlgorithm],
@@ -87,7 +90,7 @@ fn build_chain_inner(
     cert: &Cert,
     time: time::Time,
     sub_ca_count: usize,
-    signatures: &mut usize,
+    budget: &mut Budget,
 ) -> Result<(), ErrorOrInternalError> {
     let used_as_ca = used_as_ca(&cert.ee_or_ca);
 
@@ -132,7 +135,7 @@ fn build_chain_inner(
 
         // TODO: check_distrust(trust_anchor_subject, trust_anchor_spki)?;
 
-        check_signatures(supported_sig_algs, cert, trust_anchor_spki, signatures)?;
+        check_signatures(supported_sig_algs, cert, trust_anchor_spki, budget)?;
 
         Ok(())
     }) {
@@ -190,7 +193,7 @@ fn build_chain_inner(
             &potential_issuer,
             time,
             next_sub_ca_count,
-            signatures,
+            budget,
         )
     })
 }
@@ -199,16 +202,12 @@ fn check_signatures(
     supported_sig_algs: &[&SignatureAlgorithm],
     cert_chain: &Cert,
     trust_anchor_key: untrusted::Input,
-    signatures: &mut usize,
+    budget: &mut Budget,
 ) -> Result<(), ErrorOrInternalError> {
     let mut spki_value = trust_anchor_key;
     let mut cert = cert_chain;
     loop {
-        *signatures += 1;
-        if *signatures > 100 {
-            return Err(InternalError::MaximumSignatureChecksExceeded.into());
-        }
-
+        budget.consume_signature()?;
         signed_data::verify_signed_data(supported_sig_algs, spki_value, &cert.signed_data)?;
 
         // TODO: check revocation
@@ -225,6 +224,27 @@ fn check_signatures(
     }
 
     Ok(())
+}
+
+struct Budget {
+    signatures: usize,
+}
+
+impl Budget {
+    #[inline]
+    fn consume_signature(&mut self) -> Result<(), InternalError> {
+        self.signatures = self
+            .signatures
+            .checked_sub(1)
+            .ok_or(InternalError::MaximumSignatureChecksExceeded)?;
+        Ok(())
+    }
+}
+
+impl Default for Budget {
+    fn default() -> Self {
+        Self { signatures: 100 }
+    }
 }
 
 fn check_issuer_independent_properties(
@@ -489,7 +509,7 @@ mod tests {
             cert.inner(),
             time,
             0,
-            &mut 0,
+            &mut Budget::default(),
         );
 
         assert!(matches!(
