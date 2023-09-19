@@ -48,6 +48,7 @@ pub struct SignedData<'a> {
 ///     signatureAlgorithm AlgorithmIdentifier,
 ///     signatureValue BIT STRING
 /// }
+/// ```
 ///
 /// OCSP responses (RFC 6960) look like this:
 /// ```ASN.1
