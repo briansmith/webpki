@@ -122,17 +122,13 @@ fn build_chain_inner(
             return Err(Error::UnknownIssuer.into());
         }
 
-        let name_constraints = trust_anchor.name_constraints.map(untrusted::Input::from);
-
-        untrusted::read_all_optional(name_constraints, Error::BadDer, |value| {
-            name::check_name_constraints(value, cert)
-        })?;
-
         let trust_anchor_spki = untrusted::Input::from(trust_anchor.spki);
 
         // TODO: check_distrust(trust_anchor_subject, trust_anchor_spki)?;
 
         check_signatures(supported_sig_algs, cert, trust_anchor_spki, signatures)?;
+
+        check_signed_chain_name_constraints(cert, trust_anchor)?;
 
         Ok(())
     }) {
@@ -173,10 +169,6 @@ fn build_chain_inner(
             }
         }
 
-        untrusted::read_all_optional(potential_issuer.name_constraints, Error::BadDer, |value| {
-            name::check_name_constraints(value, cert)
-        })?;
-
         let next_sub_ca_count = match used_as_ca {
             UsedAsCa::No => sub_ca_count,
             UsedAsCa::Yes => sub_ca_count + 1,
@@ -216,6 +208,35 @@ fn check_signatures(
         match &cert.ee_or_ca {
             EndEntityOrCa::Ca(child_cert) => {
                 spki_value = cert.spki.value();
+                cert = child_cert;
+            }
+            EndEntityOrCa::EndEntity => {
+                break;
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn check_signed_chain_name_constraints(
+    cert_chain: &Cert,
+    trust_anchor: &TrustAnchor,
+) -> Result<(), Error> {
+    let mut cert = cert_chain;
+    let mut name_constraints = trust_anchor
+        .name_constraints
+        .as_ref()
+        .map(|der| untrusted::Input::from(der));
+
+    loop {
+        untrusted::read_all_optional(name_constraints, Error::BadDer, |value| {
+            name::check_name_constraints(value, cert)
+        })?;
+
+        match &cert.ee_or_ca {
+            EndEntityOrCa::Ca(child_cert) => {
+                name_constraints = cert.name_constraints;
                 cert = child_cert;
             }
             EndEntityOrCa::EndEntity => {
