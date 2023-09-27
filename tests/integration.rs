@@ -15,6 +15,7 @@
 use core::convert::TryFrom;
 extern crate webpki;
 
+// Keep the list in sync with the list in cli utility.
 static ALL_SIGALGS: &[&webpki::SignatureAlgorithm] = &[
     &webpki::ECDSA_P256_SHA256,
     &webpki::ECDSA_P256_SHA384,
