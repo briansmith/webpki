@@ -23,21 +23,24 @@ pub(super) struct Budget {
 impl Budget {
     #[inline]
     pub fn consume_signature(&mut self) -> Result<(), InternalError> {
-        self.signatures = self
-            .signatures
-            .checked_sub(1)
-            .ok_or(InternalError::MaximumSignatureChecksExceeded)?;
-        Ok(())
+        checked_sub(
+            &mut self.signatures,
+            InternalError::MaximumSignatureChecksExceeded,
+        )
     }
 
     #[inline]
     pub fn consume_build_chain_call(&mut self) -> Result<(), InternalError> {
-        self.build_chain_calls = self
-            .build_chain_calls
-            .checked_sub(1)
-            .ok_or(InternalError::MaximumPathBuildCallsExceeded)?;
-        Ok(())
+        checked_sub(
+            &mut self.build_chain_calls,
+            InternalError::MaximumPathBuildCallsExceeded,
+        )
     }
+}
+
+fn checked_sub(value: &mut usize, underflow_error: InternalError) -> Result<(), InternalError> {
+    *value = value.checked_sub(1).ok_or(underflow_error)?;
+    Ok(())
 }
 
 impl Default for Budget {
