@@ -52,7 +52,7 @@ impl Default for Budget {
             // So this may actually be too aggressive.
             signatures: 100,
 
-            // This limit is taken from NSS libmozpkix, see:
+            // This limit is taken from mozilla::pkix, see:
             // <https://github.com/nss-dev/nss/blob/bb4a1d38dd9e92923525ac6b5ed0288479f3f3fc/lib/mozpkix/lib/pkixbuild.cpp#L381-L393>
             build_chain_calls: 200_000,
         }
