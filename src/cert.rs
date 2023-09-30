@@ -12,7 +12,7 @@
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-use crate::{der, signed_data, Error};
+use crate::{der, equal, signed_data, Error};
 
 pub enum EndEntityOrCa<'a> {
     EndEntity,
@@ -66,7 +66,7 @@ pub(crate) fn parse_cert_internal<'a>(
         // TODO: In mozilla::pkix, the comparison is done based on the
         // normalized value (ignoring whether or not there is an optional NULL
         // parameter for RSA-based algorithms), so this may be too strict.
-        if signature != signed_data.algorithm {
+        if !equal(signature, signed_data.algorithm) {
             return Err(Error::SignatureAlgorithmMismatch);
         }
 

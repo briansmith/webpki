@@ -56,8 +56,8 @@ alloc = ["ring/alloc"]
 std = ["alloc"]
 
 [dependencies]
-ring = { version = "0.16.19", default-features = false }
-untrusted = "0.7.1"
+ring = { version = "0.17.0", default-features = false }
+untrusted = "0.9"
 
 [dev-dependencies]
 base64 = "0.9.1"
