@@ -116,6 +116,15 @@ pub(crate) enum InternalError {
     MaximumPathBuildCallsExceeded,
 }
 
+impl InternalError {
+    fn is_fatal(&self) -> bool {
+        matches!(
+            self,
+            Self::MaximumSignatureChecksExceeded | Self::MaximumPathBuildCallsExceeded
+        )
+    }
+}
+
 pub(crate) enum ErrorOrInternalError {
     Error(Error),
     InternalError(InternalError),
@@ -125,10 +134,7 @@ impl ErrorOrInternalError {
     pub fn is_fatal(&self) -> bool {
         match self {
             ErrorOrInternalError::Error(_) => false,
-            ErrorOrInternalError::InternalError(InternalError::MaximumSignatureChecksExceeded)
-            | ErrorOrInternalError::InternalError(InternalError::MaximumPathBuildCallsExceeded) => {
-                true
-            }
+            ErrorOrInternalError::InternalError(e) => e.is_fatal(),
         }
     }
 }
