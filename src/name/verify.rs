@@ -18,7 +18,7 @@ use super::{
 };
 use crate::{
     cert::{Cert, EndEntityOrCa},
-    der, Error,
+    der, equal, Error,
 };
 
 pub fn verify_cert_dns_name(
@@ -234,7 +234,7 @@ fn presented_directory_name_matches_constraint(
     subtrees: Subtrees,
 ) -> bool {
     match subtrees {
-        Subtrees::PermittedSubtrees => name == constraint,
+        Subtrees::PermittedSubtrees => equal(name, constraint),
         Subtrees::ExcludedSubtrees => true,
     }
 }

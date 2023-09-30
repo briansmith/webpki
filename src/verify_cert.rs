@@ -17,7 +17,7 @@ use core::default::Default;
 use crate::{
     budget::Budget,
     cert::{self, Cert, EndEntityOrCa},
-    der,
+    der, equal,
     error::ErrorOrInternalError,
     name, signed_data, time, Error, SignatureAlgorithm, TrustAnchor,
 };
@@ -89,7 +89,7 @@ fn build_chain_inner(
 
     match loop_while_non_fatal_error(trust_anchors, |trust_anchor: &TrustAnchor| {
         let trust_anchor_subject = untrusted::Input::from(trust_anchor.subject);
-        if cert.issuer != trust_anchor_subject {
+        if !equal(cert.issuer, trust_anchor_subject) {
             return Err(Error::UnknownIssuer.into());
         }
 
@@ -118,15 +118,15 @@ fn build_chain_inner(
         let potential_issuer =
             cert::parse_cert(untrusted::Input::from(cert_der), EndEntityOrCa::Ca(cert))?;
 
-        if potential_issuer.subject != cert.issuer {
+        if !equal(potential_issuer.subject, cert.issuer) {
             return Err(Error::UnknownIssuer.into());
         }
 
         // Prevent loops; see RFC 4158 section 5.2.
         let mut prev = cert;
         loop {
-            if potential_issuer.spki.value() == prev.spki.value()
-                && potential_issuer.subject == prev.subject
+            if equal(potential_issuer.spki.value(), prev.spki.value())
+                && equal(potential_issuer.subject, prev.subject)
             {
                 return Err(Error::UnknownIssuer.into());
             }
@@ -361,7 +361,7 @@ fn check_eku(
         Some(input) => {
             loop {
                 let value = der::expect_tag_and_get_value(input, der::Tag::OID)?;
-                if value == required_eku_if_present.oid_value {
+                if equal(value, required_eku_if_present.oid_value) {
                     input.skip_to_end();
                     break;
                 }
@@ -381,7 +381,10 @@ fn check_eku(
             // important that id-kp-OCSPSigning is explicit so that a normal
             // end-entity certificate isn't able to sign trusted OCSP responses
             // for itself or for other certificates issued by its issuing CA.
-            if required_eku_if_present.oid_value == EKU_OCSP_SIGNING.oid_value {
+            if equal(
+                required_eku_if_present.oid_value,
+                EKU_OCSP_SIGNING.oid_value,
+            ) {
                 return Err(Error::RequiredEkuNotFound);
             }
 

@@ -95,3 +95,9 @@ pub type TLSServerTrustAnchors<'a> = TlsServerTrustAnchors<'a>;
 #[deprecated(note = "use TlsClientTrustAnchors")]
 #[allow(unknown_lints, clippy::upper_case_acronyms)]
 pub type TLSClientTrustAnchors<'a> = TlsClientTrustAnchors<'a>;
+
+// We don't operate on secret data so a convenient comparison function is warranted.
+#[must_use]
+fn equal(a: untrusted::Input, b: untrusted::Input) -> bool {
+    a.as_slice_less_safe() == b.as_slice_less_safe()
+}
