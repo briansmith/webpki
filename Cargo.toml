@@ -29,21 +29,7 @@ include = [
     "LICENSE",
     "README.md",
 
-    "src/calendar.rs",
-    "src/cert.rs",
-    "src/der.rs",
-    "src/end_entity.rs",
-    "src/error.rs",
-    "src/name.rs",
-    "src/name/dns_name.rs",
-    "src/name/ip_address.rs",
-    "src/name/verify.rs",
-    "src/signed_data.rs",
-    "src/time.rs",
-    "src/trust_anchor.rs",
-    "src/verify_cert.rs",
-    "src/lib.rs",
-
+    "src/**/*.rs",
     "src/data/**/*",
 
     "tests/dns_name_tests.rs",
