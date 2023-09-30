@@ -25,6 +25,4 @@ cargo clippy \
   --deny warnings \
   \
   --deny clippy::as_conversions \
-  \
-  --allow clippy::too_many_arguments \
   $NULL
