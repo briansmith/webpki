@@ -106,3 +106,41 @@ impl fmt::Display for Error {
 /// Requires the `std` feature.
 #[cfg(feature = "std")]
 impl ::std::error::Error for Error {}
+
+/// Errors that we cannot report externally since `Error` wasn't declared
+/// non-exhaustive, but which we need to differentiate internally (at least
+/// for testing).
+pub(crate) enum InternalError {
+    MaximumSignatureChecksExceeded,
+    /// The maximum number of internal path building calls has been reached. Path complexity is too great.
+    MaximumPathBuildCallsExceeded,
+}
+
+pub(crate) enum ErrorOrInternalError {
+    Error(Error),
+    InternalError(InternalError),
+}
+
+impl ErrorOrInternalError {
+    pub fn is_fatal(&self) -> bool {
+        match self {
+            ErrorOrInternalError::Error(_) => false,
+            ErrorOrInternalError::InternalError(InternalError::MaximumSignatureChecksExceeded)
+            | ErrorOrInternalError::InternalError(InternalError::MaximumPathBuildCallsExceeded) => {
+                true
+            }
+        }
+    }
+}
+
+impl From<InternalError> for ErrorOrInternalError {
+    fn from(value: InternalError) -> Self {
+        Self::InternalError(value)
+    }
+}
+
+impl From<Error> for ErrorOrInternalError {
+    fn from(error: Error) -> Self {
+        Self::Error(error)
+    }
+}

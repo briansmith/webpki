@@ -15,8 +15,11 @@
 use core::default::Default;
 
 use crate::{
+    budget::Budget,
     cert::{self, Cert, EndEntityOrCa},
-    der, name, signed_data, time, Error, SignatureAlgorithm, TrustAnchor,
+    der,
+    error::ErrorOrInternalError,
+    name, signed_data, time, Error, SignatureAlgorithm, TrustAnchor,
 };
 
 pub fn build_chain(
@@ -44,44 +47,6 @@ pub fn build_chain(
             ErrorOrInternalError::InternalError(_) => Error::UnknownIssuer,
         }
     })
-}
-
-/// Errors that we cannot report externally since `Error` wasn't declared
-/// non-exhaustive, but which we need to differentiate internally (at least
-/// for testing).
-enum InternalError {
-    MaximumSignatureChecksExceeded,
-    /// The maximum number of internal path building calls has been reached. Path complexity is too great.
-    MaximumPathBuildCallsExceeded,
-}
-
-enum ErrorOrInternalError {
-    Error(Error),
-    InternalError(InternalError),
-}
-
-impl ErrorOrInternalError {
-    fn is_fatal(&self) -> bool {
-        match self {
-            ErrorOrInternalError::Error(_) => false,
-            ErrorOrInternalError::InternalError(InternalError::MaximumSignatureChecksExceeded)
-            | ErrorOrInternalError::InternalError(InternalError::MaximumPathBuildCallsExceeded) => {
-                true
-            }
-        }
-    }
-}
-
-impl From<InternalError> for ErrorOrInternalError {
-    fn from(value: InternalError) -> Self {
-        Self::InternalError(value)
-    }
-}
-
-impl From<Error> for ErrorOrInternalError {
-    fn from(error: Error) -> Self {
-        Self::Error(error)
-    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -246,47 +211,6 @@ fn check_signed_chain_name_constraints(
     }
 
     Ok(())
-}
-
-struct Budget {
-    signatures: usize,
-    build_chain_calls: usize,
-}
-
-impl Budget {
-    #[inline]
-    fn consume_signature(&mut self) -> Result<(), InternalError> {
-        self.signatures = self
-            .signatures
-            .checked_sub(1)
-            .ok_or(InternalError::MaximumSignatureChecksExceeded)?;
-        Ok(())
-    }
-
-    #[inline]
-    fn consume_build_chain_call(&mut self) -> Result<(), InternalError> {
-        self.build_chain_calls = self
-            .build_chain_calls
-            .checked_sub(1)
-            .ok_or(InternalError::MaximumPathBuildCallsExceeded)?;
-        Ok(())
-    }
-}
-
-impl Default for Budget {
-    fn default() -> Self {
-        Self {
-            // This limit is taken from the remediation for golang CVE-2018-16875.  However,
-            // note that golang subsequently implemented AKID matching due to this limit
-            // being hit in real applications (see <https://github.com/spiffe/spire/issues/1004>).
-            // So this may actually be too aggressive.
-            signatures: 100,
-
-            // This limit is taken from NSS libmozpkix, see:
-            // <https://github.com/nss-dev/nss/blob/bb4a1d38dd9e92923525ac6b5ed0288479f3f3fc/lib/mozpkix/lib/pkixbuild.cpp#L381-L393>
-            build_chain_calls: 200_000,
-        }
-    }
 }
 
 fn check_issuer_independent_properties(
@@ -497,7 +421,7 @@ mod tests {
     use core::convert::TryFrom;
 
     use super::*;
-    use crate::verify_cert::{Budget, InternalError};
+    use crate::error::InternalError;
 
     enum ChainTrustAnchor {
         InChain,
