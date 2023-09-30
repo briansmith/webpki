@@ -41,6 +41,8 @@
 #[cfg_attr(test, macro_use)]
 extern crate alloc;
 
+mod budget;
+
 #[macro_use]
 mod der;
 
