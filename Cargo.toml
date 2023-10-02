@@ -22,7 +22,7 @@ name = "webpki"
 readme = "README.md"
 repository = "https://github.com/briansmith/webpki"
 rust-version = "1.61.0"
-version = "0.22.2"
+version = "0.22.3"
 
 include = [
     "Cargo.toml",
