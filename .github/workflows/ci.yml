@@ -145,6 +145,9 @@ jobs:
           # There is no platform-specific code in webpki. Choose a handful of
           # platforms mostly to smoketest that the build machinery in mk/ is
           # portable.
+          # Specifically choose `aarch64-pc-windows-msvc` since it was new in
+          # *ring* 0.17.
+          - aarch64-pc-windows-msvc
           - arm-unknown-linux-gnueabihf
           - i686-pc-windows-msvc
           - x86_64-unknown-linux-musl
@@ -168,6 +171,11 @@ jobs:
             rust_channel: 1.46.0
 
         include:
+          - target: aarch64-pc-windows-msvc
+            host_os: windows-latest
+            # GitHub Actions doesn't have a way to run this target yet.
+            cargo_options: --no-run
+
           - target: arm-unknown-linux-gnueabihf
             host_os: ubuntu-22.04
 
@@ -200,6 +208,11 @@ jobs:
       - if: ${{ matrix.target == 'aarch64-apple-darwin' }}
         run: echo "DEVELOPER_DIR=/Applications/Xcode_12.2.app/Contents/Developer" >> $GITHUB_ENV
 
+      - if: ${{ matrix.target == 'aarch64-pc-windows-msvc' }}
+        run: |
+          echo "C:\Program Files (x86)\Microsoft Visual Studio\2022\Enterprise\VC\Tools\Llvm\x64\bin" >> $GITHUB_PATH
+        shell: bash
+
       - if: ${{ !contains(matrix.host_os, 'windows') }}
         run: |
           mk/cargo.sh test -vv --target=${{ matrix.target }} ${{ matrix.cargo_options }} ${{ matrix.features }} ${{ matrix.mode }}
@@ -213,8 +226,8 @@ jobs:
         run: |
           mk/cargo.sh test -p rcgen-tests -vv --target=${{ matrix.target }} ${{ matrix.cargo_options }} ${{ matrix.features }} ${{ matrix.mode }}
 
-      # rcgen-based tests require Rust 1.67.
-      - if: ${{ contains(matrix.host_os, 'windows') && !contains(matrix.rust_channel, '1.61.0') }}
+      # rcgen-based tests require Rust 1.67, and uses *ring* 0.16 which doesn't build for aarch64-pc-windows-msvc.
+      - if: ${{ contains(matrix.host_os, 'windows') && !contains(matrix.rust_channel, '1.61.0') && !contains(matrix.target, 'aarch64-pc-windows-msvc') }}
         run: |
           cargo test -vv -p rcgen-tests --target=${{ matrix.target }} ${{ matrix.cargo_options }} ${{ matrix.features }} ${{ matrix.mode }}
 
