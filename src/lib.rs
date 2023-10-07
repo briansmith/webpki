@@ -59,7 +59,7 @@ mod verify_cert;
 
 pub use {
     end_entity::EndEntityCert,
-    error::Error,
+    error::{Error, ErrorExt},
     name::{DnsNameRef, InvalidDnsNameError},
     signed_data::{
         SignatureAlgorithm, ECDSA_P256_SHA256, ECDSA_P256_SHA384, ECDSA_P384_SHA256,

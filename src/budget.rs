@@ -13,7 +13,7 @@
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-use crate::error::InternalError;
+use crate::ErrorExt;
 
 pub(super) struct Budget {
     signatures: usize,
@@ -22,23 +22,23 @@ pub(super) struct Budget {
 
 impl Budget {
     #[inline]
-    pub fn consume_signature(&mut self) -> Result<(), InternalError> {
+    pub fn consume_signature(&mut self) -> Result<(), ErrorExt> {
         checked_sub(
             &mut self.signatures,
-            InternalError::MaximumSignatureChecksExceeded,
+            ErrorExt::MaximumSignatureChecksExceeded,
         )
     }
 
     #[inline]
-    pub fn consume_build_chain_call(&mut self) -> Result<(), InternalError> {
+    pub fn consume_build_chain_call(&mut self) -> Result<(), ErrorExt> {
         checked_sub(
             &mut self.build_chain_calls,
-            InternalError::MaximumPathBuildCallsExceeded,
+            ErrorExt::MaximumPathBuildCallsExceeded,
         )
     }
 }
 
-fn checked_sub(value: &mut usize, underflow_error: InternalError) -> Result<(), InternalError> {
+fn checked_sub(value: &mut usize, underflow_error: ErrorExt) -> Result<(), ErrorExt> {
     *value = value.checked_sub(1).ok_or(underflow_error)?;
     Ok(())
 }

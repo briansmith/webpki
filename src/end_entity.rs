@@ -13,7 +13,7 @@
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 use crate::{
-    cert, name, signed_data, verify_cert, DnsNameRef, Error, SignatureAlgorithm, Time,
+    cert, name, signed_data, verify_cert, DnsNameRef, Error, ErrorExt, SignatureAlgorithm, Time,
     TlsClientTrustAnchors, TlsServerTrustAnchors,
 };
 
@@ -79,6 +79,25 @@ impl<'a> EndEntityCert<'a> {
         &self.inner
     }
 
+    /// Backward-SemVer-compatible wrapper around `verify_is_valid_tls_server_cert_ext`.
+    ///
+    /// Errors that aren't representable as an `Error` are mapped to `Error::UnknownIssuer`.
+    pub fn verify_is_valid_tls_server_cert(
+        &self,
+        supported_sig_algs: &[&SignatureAlgorithm],
+        trust_anchors: &TlsServerTrustAnchors,
+        intermediate_certs: &[&[u8]],
+        time: Time,
+    ) -> Result<(), Error> {
+        self.verify_is_valid_tls_server_cert_ext(
+            supported_sig_algs,
+            trust_anchors,
+            intermediate_certs,
+            time,
+        )
+        .map_err(ErrorExt::into_error_lossy)
+    }
+
     /// Verifies that the end-entity certificate is valid for use by a TLS
     /// server.
     ///
@@ -89,13 +108,13 @@ impl<'a> EndEntityCert<'a> {
     /// intermediate certificates that the server sent in the TLS handshake.
     /// `time` is the time for which the validation is effective (usually the
     /// current time).
-    pub fn verify_is_valid_tls_server_cert(
+    pub fn verify_is_valid_tls_server_cert_ext(
         &self,
         supported_sig_algs: &[&SignatureAlgorithm],
         &TlsServerTrustAnchors(trust_anchors): &TlsServerTrustAnchors,
         intermediate_certs: &[&[u8]],
         time: Time,
-    ) -> Result<(), Error> {
+    ) -> Result<(), ErrorExt> {
         verify_cert::build_chain(
             verify_cert::EKU_SERVER_AUTH,
             supported_sig_algs,
@@ -120,7 +139,7 @@ impl<'a> EndEntityCert<'a> {
     /// `cert` is the purported end-entity certificate of the client. `time` is
     /// the time for which the validation is effective (usually the current
     /// time).
-    pub fn verify_is_valid_tls_client_cert(
+    pub fn verify_is_valid_tls_client_cert_ext(
         &self,
         supported_sig_algs: &[&SignatureAlgorithm],
         &TlsClientTrustAnchors(trust_anchors): &TlsClientTrustAnchors,
@@ -135,6 +154,7 @@ impl<'a> EndEntityCert<'a> {
             &self.inner,
             time,
         )
+        .map_err(ErrorExt::into_error_lossy)
     }
 
     /// Verifies that the certificate is valid for the given DNS host name.
