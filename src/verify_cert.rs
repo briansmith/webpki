@@ -18,7 +18,7 @@ use crate::{
     budget::Budget,
     cert::{self, Cert, EndEntityOrCa},
     der, equal,
-    error::ErrorOrInternalError,
+    error::ErrorExt,
     name, signed_data, time, Error, SignatureAlgorithm, TrustAnchor,
 };
 
@@ -29,8 +29,8 @@ pub fn build_chain(
     intermediate_certs: &[&[u8]],
     cert: &Cert,
     time: time::Time,
-) -> Result<(), Error> {
-    let result = build_chain_inner(
+) -> Result<(), ErrorExt> {
+    build_chain_inner(
         required_eku_if_present,
         supported_sig_algs,
         trust_anchors,
@@ -39,14 +39,7 @@ pub fn build_chain(
         time,
         0,
         &mut Budget::default(),
-    );
-    result.map_err(|error| {
-        match error {
-            ErrorOrInternalError::Error(e) => e,
-            // Eat internal errors,
-            ErrorOrInternalError::InternalError(_) => Error::UnknownIssuer,
-        }
-    })
+    )
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -59,7 +52,7 @@ fn build_chain_inner(
     time: time::Time,
     sub_ca_count: usize,
     budget: &mut Budget,
-) -> Result<(), ErrorOrInternalError> {
+) -> Result<(), ErrorExt> {
     let used_as_ca = used_as_ca(&cert.ee_or_ca);
 
     check_issuer_independent_properties(
@@ -164,7 +157,7 @@ fn check_signatures(
     cert_chain: &Cert,
     trust_anchor_key: untrusted::Input,
     budget: &mut Budget,
-) -> Result<(), ErrorOrInternalError> {
+) -> Result<(), ErrorExt> {
     let mut spki_value = trust_anchor_key;
     let mut cert = cert_chain;
     loop {
@@ -395,8 +388,8 @@ fn check_eku(
 
 fn loop_while_non_fatal_error<V>(
     values: V,
-    mut f: impl FnMut(V::Item) -> Result<(), ErrorOrInternalError>,
-) -> Result<(), ErrorOrInternalError>
+    mut f: impl FnMut(V::Item) -> Result<(), ErrorExt>,
+) -> Result<(), ErrorExt>
 where
     V: IntoIterator,
 {
@@ -424,7 +417,6 @@ mod tests {
     use core::convert::TryFrom;
 
     use super::*;
-    use crate::error::InternalError;
 
     enum ChainTrustAnchor {
         InChain,
@@ -434,7 +426,7 @@ mod tests {
     fn build_degenerate_chain(
         intermediate_count: usize,
         trust_anchor: ChainTrustAnchor,
-    ) -> ErrorOrInternalError {
+    ) -> ErrorExt {
         use crate::ECDSA_P256_SHA256;
         use crate::{EndEntityCert, Time};
 
@@ -504,16 +496,13 @@ mod tests {
     fn test_too_many_signatures() {
         assert!(matches!(
             build_degenerate_chain(5, ChainTrustAnchor::NotInChain),
-            ErrorOrInternalError::InternalError(InternalError::MaximumSignatureChecksExceeded),
+            ErrorExt::MaximumSignatureChecksExceeded,
         ));
     }
 
     #[test]
     fn test_too_many_path_calls() {
         let result = build_degenerate_chain(10, ChainTrustAnchor::InChain);
-        assert!(matches!(
-            result,
-            ErrorOrInternalError::InternalError(InternalError::MaximumPathBuildCallsExceeded),
-        ));
+        assert!(matches!(result, ErrorExt::MaximumPathBuildCallsExceeded,));
     }
 }

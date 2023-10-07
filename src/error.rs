@@ -107,45 +107,37 @@ impl fmt::Display for Error {
 #[cfg(feature = "std")]
 impl ::std::error::Error for Error {}
 
-/// Errors that we cannot report externally since `Error` wasn't declared
-/// non-exhaustive, but which we need to differentiate internally (at least
-/// for testing).
-pub(crate) enum InternalError {
+/// An error that occurs during certificate validation or name validation.
+///
+/// `ErrorExt` effectively extends `Error` to support reporting new errors. Because `Error` is not
+/// declared `#[non_exhaustive]` it could not be directly extended in a backward-compatible way.
+#[non_exhaustive]
+pub enum ErrorExt {
+    Error(Error),
     MaximumSignatureChecksExceeded,
     /// The maximum number of internal path building calls has been reached. Path complexity is too great.
     MaximumPathBuildCallsExceeded,
 }
 
-impl InternalError {
-    fn is_fatal(&self) -> bool {
-        matches!(
-            self,
-            Self::MaximumSignatureChecksExceeded | Self::MaximumPathBuildCallsExceeded
-        )
-    }
-}
-
-pub(crate) enum ErrorOrInternalError {
-    Error(Error),
-    InternalError(InternalError),
-}
-
-impl ErrorOrInternalError {
-    pub fn is_fatal(&self) -> bool {
+impl ErrorExt {
+    pub(crate) fn is_fatal(&self) -> bool {
         match self {
-            ErrorOrInternalError::Error(_) => false,
-            ErrorOrInternalError::InternalError(e) => e.is_fatal(),
+            Self::Error(_) => false,
+            Self::MaximumSignatureChecksExceeded | Self::MaximumPathBuildCallsExceeded => true,
+        }
+    }
+
+    pub(crate) fn into_error_lossy(self) -> Error {
+        match self {
+            Self::Error(e) => e,
+            Self::MaximumSignatureChecksExceeded | Self::MaximumPathBuildCallsExceeded => {
+                Error::UnknownIssuer
+            }
         }
     }
 }
 
-impl From<InternalError> for ErrorOrInternalError {
-    fn from(value: InternalError) -> Self {
-        Self::InternalError(value)
-    }
-}
-
-impl From<Error> for ErrorOrInternalError {
+impl From<Error> for ErrorExt {
     fn from(error: Error) -> Self {
         Self::Error(error)
     }
