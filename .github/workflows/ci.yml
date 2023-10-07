@@ -210,6 +210,16 @@ jobs:
         run: |
           cargo test -vv --target=${{ matrix.target }} ${{ matrix.cargo_options }} ${{ matrix.features }} ${{ matrix.mode }}
 
+      # rcgen-based tests require Rust 1.67.
+      - if: ${{ !contains(matrix.host_os, 'windows') && !contains(matrix.rust_channel, '1.61.0') }}
+        run: |
+          mk/cargo.sh test -p rcgen-tests -vv --target=${{ matrix.target }} ${{ matrix.cargo_options }} ${{ matrix.features }} ${{ matrix.mode }}
+
+      # rcgen-based tests require Rust 1.67.
+      - if: ${{ contains(matrix.host_os, 'windows') && !contains(matrix.rust_channel, '1.61.0') }}
+        run: |
+          cargo test -vv -p rcgen-tests --target=${{ matrix.target }} ${{ matrix.cargo_options }} ${{ matrix.features }} ${{ matrix.mode }}
+
   coverage:
     runs-on: ${{ matrix.host_os }}
 
@@ -256,7 +266,7 @@ jobs:
 
       - if: ${{ !contains(matrix.host_os, 'windows') }}
         run: |
-          RING_COVERAGE=1 mk/cargo.sh +${{ matrix.rust_channel }} test -vv --target=${{ matrix.target }} ${{ matrix.cargo_options }} ${{ matrix.features }} ${{ matrix.mode }}
+          RING_COVERAGE=1 mk/cargo.sh +${{ matrix.rust_channel }} test --workspace -vv --target=${{ matrix.target }} ${{ matrix.cargo_options }} ${{ matrix.features }} ${{ matrix.mode }}
 
       - uses: briansmith/codecov-codecov-action@v1
         with:
