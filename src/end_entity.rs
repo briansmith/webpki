@@ -125,6 +125,25 @@ impl<'a> EndEntityCert<'a> {
         )
     }
 
+    /// Backward-SemVer-compatible wrapper around `verify_is_valid_tls_client_cert_ext`.
+    ///
+    /// Errors that aren't representable as an `Error` are mapped to `Error::UnknownIssuer`.
+    pub fn verify_is_valid_tls_client_cert(
+        &self,
+        supported_sig_algs: &[&SignatureAlgorithm],
+        trust_anchors: &TlsClientTrustAnchors,
+        intermediate_certs: &[&[u8]],
+        time: Time,
+    ) -> Result<(), Error> {
+        self.verify_is_valid_tls_client_cert_ext(
+            supported_sig_algs,
+            trust_anchors,
+            intermediate_certs,
+            time,
+        )
+        .map_err(ErrorExt::into_error_lossy)
+    }
+
     /// Verifies that the end-entity certificate is valid for use by a TLS
     /// client.
     ///
@@ -145,7 +164,7 @@ impl<'a> EndEntityCert<'a> {
         &TlsClientTrustAnchors(trust_anchors): &TlsClientTrustAnchors,
         intermediate_certs: &[&[u8]],
         time: Time,
-    ) -> Result<(), Error> {
+    ) -> Result<(), ErrorExt> {
         verify_cert::build_chain(
             verify_cert::EKU_CLIENT_AUTH,
             supported_sig_algs,
@@ -154,7 +173,6 @@ impl<'a> EndEntityCert<'a> {
             &self.inner,
             time,
         )
-        .map_err(ErrorExt::into_error_lossy)
     }
 
     /// Verifies that the certificate is valid for the given DNS host name.
