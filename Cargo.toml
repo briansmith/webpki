@@ -57,7 +57,7 @@ alloc = ["ring/alloc"]
 std = ["alloc"]
 
 [dependencies]
-ring = { version = "0.17.2", default-features = false }
+ring = { version = "0.17.5-alpha.1", default-features = false }
 untrusted = "0.9"
 
 [dev-dependencies]
