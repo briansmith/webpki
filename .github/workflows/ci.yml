@@ -9,27 +9,21 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-      - uses: briansmith/actions-rs-toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          components: rustfmt
-      - uses: briansmith/actions-checkout@v2
+      - run: rustup --version
+
+      - uses: briansmith/actions-checkout@v4
         with:
           persist-credentials: false
+
       - run: cargo fmt --all -- --check
 
   clippy:
     runs-on: ubuntu-22.04
 
     steps:
-      - uses: briansmith/actions-rs-toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          components: clippy
+      - run: rustup --version
 
-      - uses: briansmith/actions-checkout@v2
+      - uses: briansmith/actions-checkout@v4
         with:
           persist-credentials: false
 
@@ -39,12 +33,9 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-      - uses: briansmith/actions-rs-toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
+      - run: rustup --version
 
-      - uses: briansmith/actions-cache@v2
+      - uses: briansmith/actions-cache@v3
         with:
           path: |
             ~/.cargo/bin/cargo-audit
@@ -54,7 +45,7 @@ jobs:
 
       - run: cargo install cargo-audit --vers "0.13.1"
 
-      - uses: briansmith/actions-checkout@v2
+      - uses: briansmith/actions-checkout@v4
         with:
           persist-credentials: false
 
@@ -66,12 +57,9 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-      - uses: briansmith/actions-rs-toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
+      - run: rustup --version
 
-      - uses: briansmith/actions-cache@v2
+      - uses: briansmith/actions-cache@v3
         with:
           path: |
             ~/.cargo/bin/cargo-deny
@@ -81,7 +69,7 @@ jobs:
 
       - run: cargo install cargo-deny --locked --vers "0.8.5"
 
-      - uses: briansmith/actions-checkout@v2
+      - uses: briansmith/actions-checkout@v4
         with:
           persist-credentials: false
 
@@ -91,24 +79,10 @@ jobs:
   rustdoc:
     runs-on: ubuntu-22.04
 
-    strategy:
-      matrix:
-        rust_channel:
-          - stable
-          - beta
-          - nightly
-
-        include:
-          - target: x86_64-unknown-linux-gnu
-
     steps:
-      - uses: briansmith/actions-rs-toolchain@v1
-        with:
-          override: true
-          target: ${{ matrix.target }}
-          toolchain: ${{ matrix.rust_channel }}
+      - run: rustup --version
 
-      - uses: briansmith/actions-checkout@v2
+      - uses: briansmith/actions-checkout@v4
         with:
           persist-credentials: false
 
@@ -119,12 +93,9 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-      - uses: briansmith/actions-rs-toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
+      - run: rustup --version
 
-      - uses: briansmith/actions-checkout@v2
+      - uses: briansmith/actions-checkout@v4
         with:
           persist-credentials: false
 
@@ -192,18 +163,15 @@ jobs:
       - if: ${{ contains(matrix.host_os, 'ubuntu') }}
         run: sudo apt-get update -y
 
-      - uses: briansmith/actions-checkout@v2
+      - uses: briansmith/actions-checkout@v4
         with:
           persist-credentials: false
 
+      - run: rustup toolchain add --profile=minimal ${{ matrix.rust_channel }}
+      - run: rustup target add --toolchain=${{ matrix.rust_channel }} ${{ matrix.target }}
+
       - if: ${{ !contains(matrix.host_os, 'windows') }}
         run: mk/install-build-tools.sh --target=${{ matrix.target }} ${{ matrix.features }}
-
-      - uses: briansmith/actions-rs-toolchain@v1
-        with:
-          override: true
-          target: ${{ matrix.target }}
-          toolchain: ${{ matrix.rust_channel }}
 
       - if: ${{ matrix.target == 'aarch64-pc-windows-msvc' }}
         run: |
@@ -212,21 +180,21 @@ jobs:
 
       - if: ${{ !contains(matrix.host_os, 'windows') }}
         run: |
-          mk/cargo.sh test -vv --target=${{ matrix.target }} ${{ matrix.cargo_options }} ${{ matrix.features }} ${{ matrix.mode }}
+          mk/cargo.sh +${{ matrix.rust_channel }} test -vv --target=${{ matrix.target }} ${{ matrix.cargo_options }} ${{ matrix.features }} ${{ matrix.mode }}
 
       - if: ${{ contains(matrix.host_os, 'windows') }}
         run: |
-          cargo test -vv --target=${{ matrix.target }} ${{ matrix.cargo_options }} ${{ matrix.features }} ${{ matrix.mode }}
+          cargo +${{ matrix.rust_channel }} test -vv --target=${{ matrix.target }} ${{ matrix.cargo_options }} ${{ matrix.features }} ${{ matrix.mode }}
 
       # rcgen-based tests require Rust 1.67.
       - if: ${{ !contains(matrix.host_os, 'windows') && !contains(matrix.rust_channel, '1.61.0') }}
         run: |
-          mk/cargo.sh test -p rcgen-tests -vv --target=${{ matrix.target }} ${{ matrix.cargo_options }} ${{ matrix.features }} ${{ matrix.mode }}
+          mk/cargo.sh +${{ matrix.rust_channel }} test -p rcgen-tests -vv --target=${{ matrix.target }} ${{ matrix.cargo_options }} ${{ matrix.features }} ${{ matrix.mode }}
 
       # rcgen-based tests require Rust 1.67, and uses *ring* 0.16 which doesn't build for aarch64-pc-windows-msvc.
       - if: ${{ contains(matrix.host_os, 'windows') && !contains(matrix.rust_channel, '1.61.0') && !contains(matrix.target, 'aarch64-pc-windows-msvc') }}
         run: |
-          cargo test -vv -p rcgen-tests --target=${{ matrix.target }} ${{ matrix.cargo_options }} ${{ matrix.features }} ${{ matrix.mode }}
+          cargo +${{ matrix.rust_channel }} test -vv -p rcgen-tests --target=${{ matrix.target }} ${{ matrix.cargo_options }} ${{ matrix.features }} ${{ matrix.mode }}
 
   coverage:
     runs-on: ${{ matrix.host_os }}
@@ -256,24 +224,21 @@ jobs:
       - if: ${{ contains(matrix.host_os, 'ubuntu') }}
         run: sudo apt-get update -y
 
-      - uses: briansmith/actions-checkout@v2
+      - uses: briansmith/actions-checkout@v4
         with:
           persist-credentials: false
 
+      - run: rustup toolchain add --profile=minimal ${{ matrix.rust_channel }}
+      - run: rustup target add --toolchain=${{ matrix.rust_channel }} ${{ matrix.target }}
+
       - if: ${{ !contains(matrix.host_os, 'windows') }}
         run: RING_COVERAGE=1 mk/install-build-tools.sh --target=${{ matrix.target }} ${{ matrix.features }}
-
-      - uses: briansmith/actions-rs-toolchain@v1
-        with:
-          override: true
-          target: ${{ matrix.target }}
-          toolchain: ${{ matrix.rust_channel }}
 
       - if: ${{ !contains(matrix.host_os, 'windows') }}
         run: |
           RING_COVERAGE=1 mk/cargo.sh +${{ matrix.rust_channel }} test --workspace -vv --target=${{ matrix.target }} ${{ matrix.cargo_options }} ${{ matrix.features }} ${{ matrix.mode }}
 
-      - uses: briansmith/codecov-codecov-action@v1
+      - uses: briansmith/codecov-codecov-action@v3
         with:
           directory: ./target/${{ matrix.target }}/debug/coverage/reports
           fail_ci_if_error: true
