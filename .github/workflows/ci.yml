@@ -205,9 +205,6 @@ jobs:
           target: ${{ matrix.target }}
           toolchain: ${{ matrix.rust_channel }}
 
-      - if: ${{ matrix.target == 'aarch64-apple-darwin' }}
-        run: echo "DEVELOPER_DIR=/Applications/Xcode_12.2.app/Contents/Developer" >> $GITHUB_ENV
-
       - if: ${{ matrix.target == 'aarch64-pc-windows-msvc' }}
         run: |
           echo "C:\Program Files (x86)\Microsoft Visual Studio\2022\Enterprise\VC\Tools\Llvm\x64\bin" >> $GITHUB_PATH
@@ -271,9 +268,6 @@ jobs:
           override: true
           target: ${{ matrix.target }}
           toolchain: ${{ matrix.rust_channel }}
-
-      - if: ${{ matrix.target == 'aarch64-apple-darwin' }}
-        run: echo "DEVELOPER_DIR=/Applications/Xcode_12.2.app/Contents/Developer" >> $GITHUB_ENV
 
       - if: ${{ !contains(matrix.host_os, 'windows') }}
         run: |
