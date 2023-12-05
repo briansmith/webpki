@@ -70,7 +70,13 @@ case $target in
   install_packages \
     qemu-user
   ;;
---target=arm-unknown-linux-gnueabihf)
+--target=arm-unknown-linux-gnueabi)
+  install_packages \
+    qemu-user \
+    gcc-arm-linux-gnueabi \
+    libc6-dev-armel-cross
+  ;;
+--target=arm-unknown-linux-gnueabihf|--target=armv7-unknown-linux-gnueabihf)
   install_packages \
     qemu-user \
     gcc-arm-linux-gnueabihf \
@@ -85,15 +91,62 @@ case $target in
 --target=i686-unknown-linux-musl|--target=x86_64-unknown-linux-musl)
   use_clang=1
   ;;
+--target=loongarch64-unknown-linux-gnu)
+  use_clang=1
+  ;;
 --target=mipsel-unknown-linux-gnu)
   install_packages \
     gcc-mipsel-linux-gnu \
     libc6-dev-mipsel-cross \
     qemu-user
   ;;
+--target=powerpc-unknown-linux-gnu)
+  use_clang=1
+  install_packages \
+    gcc-powerpc-linux-gnu \
+    libc6-dev-powerpc-cross \
+    qemu-user
+  ;;
+--target=powerpc64-unknown-linux-gnu)
+  use_clang=1
+  install_packages \
+    gcc-powerpc64-linux-gnu \
+    libc6-dev-ppc64-cross \
+    qemu-user
+  ;;
+--target=powerpc64le-unknown-linux-gnu)
+  use_clang=1
+  install_packages \
+    gcc-powerpc64le-linux-gnu \
+    libc6-dev-ppc64el-cross \
+    qemu-user
+  ;;
+--target=riscv64gc-unknown-linux-gnu)
+  use_clang=1
+  install_packages \
+    gcc-riscv64-linux-gnu \
+    libc6-dev-riscv64-cross \
+    qemu-user
+  ;;
+--target=s390x-unknown-linux-gnu)
+  # Clang is needed for code coverage.
+  use_clang=1
+  install_packages \
+    qemu-user \
+    gcc-s390x-linux-gnu \
+    libc6-dev-s390x-cross
+  ;;
 --target=wasm32-unknown-unknown)
   cargo install wasm-bindgen-cli --bin wasm-bindgen-test-runner
   use_clang=1
+  ;;
+--target=wasm32-wasi)
+  use_clang=1
+  git clone \
+      --branch linux-x86_64 \
+      --depth 1 \
+      https://github.com/briansmith/ring-toolchain \
+      target/tools/linux-x86_64
   ;;
 --target=*)
   ;;
@@ -102,7 +155,7 @@ esac
 case "$OSTYPE" in
 linux*)
   ubuntu_codename=$(lsb_release --codename --short)
-  llvm_version=15
+  llvm_version=16
   sudo apt-key add mk/llvm-snapshot.gpg.key
   sudo add-apt-repository "deb http://apt.llvm.org/$ubuntu_codename/ llvm-toolchain-$ubuntu_codename-$llvm_version main"
   sudo apt-get update
