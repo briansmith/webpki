@@ -136,11 +136,6 @@ jobs:
 
           - beta
 
-        exclude:
-          # 1.46.0 doesn't support `-Clink-self-contained`.
-          - target: x86_64-unknown-linux-musl
-            rust_channel: 1.46.0
-
         include:
           - target: aarch64-pc-windows-msvc
             host_os: windows-latest
