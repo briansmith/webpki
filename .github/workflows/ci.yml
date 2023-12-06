@@ -113,25 +113,16 @@ jobs:
           - --all-features
 
         target:
-          - aarch64-apple-ios
           - aarch64-apple-darwin
           - aarch64-linux-android
           - aarch64-pc-windows-msvc
           - aarch64-unknown-linux-gnu
-          - aarch64-unknown-linux-musl
-          - arm-unknown-linux-gnueabi
-          - armv7-linux-androideabi
           - armv7-unknown-linux-musleabihf
           - i686-pc-windows-msvc
-          - i686-unknown-linux-gnu
-          - i686-unknown-linux-musl
-          - powerpc-unknown-linux-gnu
           - riscv64gc-unknown-linux-gnu
           - wasm32-wasi
-          - x86_64-pc-windows-gnu
           - x86_64-pc-windows-msvc
           - x86_64-apple-darwin
-          - x86_64-unknown-linux-musl
           - x86_64-unknown-linux-gnu
 
         mode:
@@ -149,11 +140,6 @@ jobs:
           - target: aarch64-apple-darwin
             host_os: macos-13-xlarge
 
-          - target: aarch64-apple-ios
-            host_os: macos-13
-            # TODO: Run in the emulator.
-            cargo_options: --no-run
-
           - target: aarch64-linux-android
             host_os: ubuntu-22.04
             # TODO: https://github.com/briansmith/ring/issues/486
@@ -167,31 +153,11 @@ jobs:
           - target: aarch64-unknown-linux-gnu
             host_os: ubuntu-22.04
 
-          - target: aarch64-unknown-linux-musl
-            host_os: ubuntu-22.04
-
-          - target: arm-unknown-linux-gnueabi
-            host_os: ubuntu-22.04
-
-          - target: armv7-linux-androideabi
-            host_os: ubuntu-22.04
-            # TODO: https://github.com/briansmith/ring/issues/838
-            cargo_options: --no-run
-
           - target: armv7-unknown-linux-musleabihf
             host_os: ubuntu-22.04
 
           - target: i686-pc-windows-msvc
             host_os: windows-latest
-
-          - target: i686-unknown-linux-gnu
-            host_os: ubuntu-22.04
-
-          - target: i686-unknown-linux-musl
-            host_os: ubuntu-22.04
-
-          - target: powerpc-unknown-linux-gnu
-            host_os: ubuntu-22.04
 
           - target: riscv64gc-unknown-linux-gnu
             host_os: ubuntu-22.04
@@ -199,17 +165,11 @@ jobs:
           - target: wasm32-wasi
             host_os: ubuntu-22.04
 
-          - target: x86_64-pc-windows-gnu
-            host_os: windows-latest
-
           - target: x86_64-pc-windows-msvc
             host_os: windows-latest
 
           - target: x86_64-apple-darwin
             host_os: macos-13
-
-          - target: x86_64-unknown-linux-musl
-            host_os: ubuntu-22.04
 
           - target: x86_64-unknown-linux-gnu
             host_os: ubuntu-22.04
