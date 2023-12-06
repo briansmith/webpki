@@ -118,9 +118,12 @@ jobs:
           # portable.
           # Specifically choose `aarch64-pc-windows-msvc` since it was new in
           # *ring* 0.17.
+          - aarch64-apple-darwin
           - aarch64-pc-windows-msvc
           - arm-unknown-linux-gnueabihf
           - i686-pc-windows-msvc
+          - riscv64gc-unknown-linux-gnu
+          - wasm32-wasi
           - x86_64-unknown-linux-musl
           - x86_64-unknown-linux-gnu
 
@@ -137,6 +140,9 @@ jobs:
           - beta
 
         include:
+          - target: aarch64-apple-darwin
+            host_os: macos-13-xlarge
+
           - target: aarch64-pc-windows-msvc
             host_os: windows-latest
             # GitHub Actions doesn't have a way to run this target yet.
@@ -148,11 +154,29 @@ jobs:
           - target: i686-pc-windows-msvc
             host_os: windows-latest
 
+          - target: riscv64gc-unknown-linux-gnu
+            host_os: ubuntu-22.04
+
+          - target: wasm32-wasi
+            host_os: ubuntu-22.04
+
           - target: x86_64-unknown-linux-musl
             host_os: ubuntu-22.04
 
           - target: x86_64-unknown-linux-gnu
             host_os: ubuntu-22.04
+
+            # rcgen requires *ring* 0.16 which doesn't support this target.
+          - target: aarch64-pc-windows-msvc
+            skip_rcgen: true
+          - target: riscv64gc-unknown-linux-gnu
+            skip_rcgen: true
+          - target: wasm32-wasi
+            skip_rcgen: true
+
+          - rust_channel: 1.61.0
+            # rcgen requires Rust 1.67.
+            skip_rcgen: true
 
     steps:
       - if: ${{ contains(matrix.host_os, 'ubuntu') }}
@@ -181,13 +205,12 @@ jobs:
         run: |
           cargo +${{ matrix.rust_channel }} test -vv --target=${{ matrix.target }} ${{ matrix.cargo_options }} ${{ matrix.features }} ${{ matrix.mode }}
 
-      # rcgen-based tests require Rust 1.67.
-      - if: ${{ !contains(matrix.host_os, 'windows') && !contains(matrix.rust_channel, '1.61.0') }}
+      - if: ${{ !contains(matrix.host_os, 'windows') && !contains(matrix.skip_rcgen, 'true') }}
         run: |
           mk/cargo.sh +${{ matrix.rust_channel }} test -p rcgen-tests -vv --target=${{ matrix.target }} ${{ matrix.cargo_options }} ${{ matrix.features }} ${{ matrix.mode }}
 
       # rcgen-based tests require Rust 1.67, and uses *ring* 0.16 which doesn't build for aarch64-pc-windows-msvc.
-      - if: ${{ contains(matrix.host_os, 'windows') && !contains(matrix.rust_channel, '1.61.0') && !contains(matrix.target, 'aarch64-pc-windows-msvc') }}
+      - if: ${{ contains(matrix.host_os, 'windows') && !contains(matrix.skip_rcgen, 'true') }}
         run: |
           cargo +${{ matrix.rust_channel }} test -vv -p rcgen-tests --target=${{ matrix.target }} ${{ matrix.cargo_options }} ${{ matrix.features }} ${{ matrix.mode }}
 
