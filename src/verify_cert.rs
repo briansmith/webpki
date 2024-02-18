@@ -80,6 +80,7 @@ fn build_chain_inner(
 
     // TODO: revocation.
 
+    #[allow(clippy::blocks_in_conditions)]
     match loop_while_non_fatal_error(trust_anchors, |trust_anchor: &TrustAnchor| {
         let trust_anchor_subject = untrusted::Input::from(trust_anchor.subject);
         if !equal(cert.issuer, trust_anchor_subject) {
