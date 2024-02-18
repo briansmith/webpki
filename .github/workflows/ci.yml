@@ -141,7 +141,7 @@ jobs:
 
         include:
           - target: aarch64-apple-darwin
-            host_os: macos-13-xlarge
+            host_os: macos-14
 
           - target: aarch64-pc-windows-msvc
             host_os: windows-latest
