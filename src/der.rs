@@ -14,7 +14,7 @@
 
 use crate::{calendar, time, Error};
 pub use ring::io::{
-    der::{nested, Tag, CONSTRUCTED},
+    der::{nested, Tag},
     Positive,
 };
 
