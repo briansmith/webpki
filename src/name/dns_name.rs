@@ -785,11 +785,67 @@ mod tests {
                 untrusted::Input::from(reference),
             );
             assert_eq!(
-                actual_result,
-                expected_result,
-                "presented_dns_id_matches_reference_dns_id(\"{:?}\", IDRole::ReferenceID, \"{:?}\")",
-                presented,
-                reference
+                actual_result, expected_result,
+                "presented_id_matches_reference_id(\"{:?}\", \"{:?}\")",
+                presented, reference
+            );
+        }
+    }
+
+    const PRESENTED_MATCHES_CONTRAINT: &[(&[u8], &[u8], Option<bool>)] = &[
+        // No absolute presented IDs allowed
+        (b".", b"", None),
+        (b"www.example.com.", b"", None),
+        (b"www.example.com.", b"www.example.com.", None),
+        // No absolute contraints allowed
+        (b"www.example.com", b".", None),
+        (b"www.example.com", b"www.example.com.", None),
+        // No wildcard in constraints allowed
+        (b"www.example.com", b"*.example.com", None),
+        // No empty presented IDs allowed
+        (b"", b"", None),
+        // Empty constraints match everything allowed
+        (b"example.com", b"", Some(true)),
+        (b"*.example.com", b"", Some(true)),
+        // Constraints that start with a dot
+        (b"www.example.com", b".example.com", Some(true)),
+        (b"www.example.com", b".EXAMPLE.COM", Some(true)),
+        (b"www.example.com", b".axample.com", Some(false)),
+        (b"www.example.com", b".xample.com", Some(false)),
+        (b"www.example.com", b".exampl.com", Some(false)),
+        (b"badexample.com", b".example.com", Some(false)),
+        // Constraints that do not start with a dot
+        (b"www.example.com", b"example.com", Some(true)),
+        (b"www.example.com", b"EXAMPLE.COM", Some(true)),
+        (b"www.example.com", b"axample.com", Some(false)),
+        (b"www.example.com", b"xample.com", Some(false)),
+        (b"www.example.com", b"exampl.com", Some(false)),
+        (b"badexample.com", b"example.com", Some(false)),
+        // Presented IDs with wildcard
+        (b"*.example.com", b".example.com", Some(true)),
+        (b"*.example.com", b"example.com", Some(true)),
+        (b"*.example.com", b"www.example.com", Some(true)),
+        (b"*.example.com", b"www.EXAMPLE.COM", Some(true)),
+        (b"*.example.com", b"www.axample.com", Some(false)),
+        (b"*.example.com", b".xample.com", Some(false)),
+        (b"*.example.com", b"xample.com", Some(false)),
+        (b"*.example.com", b".exampl.com", Some(false)),
+        (b"*.example.com", b"exampl.com", Some(false)),
+        // Matching IDs
+        (b"www.example.com", b"www.example.com", Some(true)),
+    ];
+
+    #[test]
+    fn presented_matches_constraint_test() {
+        for &(presented, constraint, expected_result) in PRESENTED_MATCHES_CONTRAINT {
+            let actual_result = presented_id_matches_constraint(
+                untrusted::Input::from(presented),
+                untrusted::Input::from(constraint),
+            );
+            assert_eq!(
+                actual_result, expected_result,
+                "presented_id_matches_constraint(\"{:?}\", \"{:?}\")",
+                presented, constraint
             );
         }
     }
