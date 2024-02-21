@@ -239,4 +239,39 @@ impl<'a> EndEntityCert<'a> {
             untrusted::Input::from(signature),
         )
     }
+
+    /// Verifies that the end-entity certificate is valid for use by cert chain
+    ///
+    /// `required_eku` is the Certificate Extended Key Usage Oid in bytes.
+    /// If the certificate is not valid for `required_eku` then this
+    /// fails with `Error::CertNotValidForName`.
+    /// `supported_sig_algs` is the list of signature algorithms that are
+    /// trusted for use in certificate signatures; the end-entity certificate's
+    /// public key is not validated against this list. `trust_anchors` is the
+    /// list of root CAs to trust. `intermediate_certs` is the sequence of
+    /// intermediate certificates that the client sent in the TLS handshake.
+    /// `cert` is the purported end-entity certificate of the client. `time` is
+    /// the time for which the validation is effective (usually the current
+    /// time).
+    ///
+    pub fn verify_is_valid_cert_with_eku(
+        &self,
+        required_eku: &'static [u8],
+        supported_sig_algs: &[&SignatureAlgorithm],
+        trust_anchors: &[crate::TrustAnchor],
+        intermediate_certs: &[&[u8]],
+        time: Time,
+    ) -> Result<(), Error> {
+        let eku = verify_cert::KeyPurposeId::new(required_eku);
+
+        crate::verify_cert::build_chain(
+            eku,
+            supported_sig_algs,
+            trust_anchors,
+            intermediate_certs,
+            &self.inner,
+            time,
+            0,
+        )
+    }
 }
