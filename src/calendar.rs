@@ -62,11 +62,13 @@ pub fn time_from_ymdhms_utc(
     ))
 }
 
+const UNIX_EPOCH_YEAR: u64 = 1970;
+
 fn days_before_year_since_unix_epoch(year: u64) -> Result<u64, Error> {
     // We don't support dates before January 1, 1970 because that is the
     // Unix epoch. It is likely that other software won't deal well with
     // certificates that have dates before the epoch.
-    if year < 1970 {
+    if year < UNIX_EPOCH_YEAR {
         return Err(Error::BadDerTime);
     }
     let days_before_year_ad = days_before_year_ad(year);
@@ -105,8 +107,25 @@ const DAYS_BEFORE_UNIX_EPOCH_AD: u64 = 719162;
 mod tests {
     #[test]
     fn test_days_before_unix_epoch() {
-        use super::{days_before_year_ad, DAYS_BEFORE_UNIX_EPOCH_AD};
-        assert_eq!(DAYS_BEFORE_UNIX_EPOCH_AD, days_before_year_ad(1970));
+        use super::{days_before_year_ad, DAYS_BEFORE_UNIX_EPOCH_AD, UNIX_EPOCH_YEAR};
+        assert_eq!(
+            DAYS_BEFORE_UNIX_EPOCH_AD,
+            days_before_year_ad(UNIX_EPOCH_YEAR)
+        );
+    }
+
+    #[test]
+    fn test_days_before_year_since_unix_epoch() {
+        use super::{days_before_year_since_unix_epoch, Error, UNIX_EPOCH_YEAR};
+        assert_eq!(Ok(0), days_before_year_since_unix_epoch(UNIX_EPOCH_YEAR));
+        assert_eq!(
+            Ok(365),
+            days_before_year_since_unix_epoch(UNIX_EPOCH_YEAR + 1)
+        );
+        assert_eq!(
+            Err(Error::BadDerTime),
+            days_before_year_since_unix_epoch(UNIX_EPOCH_YEAR - 1)
+        );
     }
 
     #[test]
@@ -135,7 +154,37 @@ mod tests {
     #[allow(clippy::unreadable_literal)] // TODO: Make this clear.
     #[test]
     fn test_time_from_ymdhms_utc() {
-        use super::{time_from_ymdhms_utc, Time};
+        use super::{time_from_ymdhms_utc, Error, Time, UNIX_EPOCH_YEAR};
+
+        // 1969-12-31 00:00:00
+        assert_eq!(
+            Err(Error::BadDerTime),
+            time_from_ymdhms_utc(UNIX_EPOCH_YEAR - 1, 1, 1, 0, 0, 0)
+        );
+
+        // 1969-12-31 23:59:59
+        assert_eq!(
+            Err(Error::BadDerTime),
+            time_from_ymdhms_utc(UNIX_EPOCH_YEAR - 1, 12, 31, 23, 59, 59)
+        );
+
+        // 1970-01-01 00:00:00
+        assert_eq!(
+            Time::from_seconds_since_unix_epoch(0),
+            time_from_ymdhms_utc(UNIX_EPOCH_YEAR, 1, 1, 0, 0, 0).unwrap()
+        );
+
+        // 1970-01-01 00:00:01
+        assert_eq!(
+            Time::from_seconds_since_unix_epoch(1),
+            time_from_ymdhms_utc(UNIX_EPOCH_YEAR, 1, 1, 0, 0, 1).unwrap()
+        );
+
+        // 1971-01-01 00:00:00
+        assert_eq!(
+            Time::from_seconds_since_unix_epoch(365 * 86400),
+            time_from_ymdhms_utc(UNIX_EPOCH_YEAR + 1, 1, 1, 0, 0, 0).unwrap()
+        );
 
         // year boundary
         assert_eq!(
