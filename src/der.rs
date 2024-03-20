@@ -171,3 +171,78 @@ macro_rules! oid {
         [(40 * $first) + $second, $( $tail ),*]
     )
 }
+
+#[cfg(test)]
+mod tests {
+    fn bytes_reader(bytes: &[u8]) -> untrusted::Reader {
+        return untrusted::Reader::new(untrusted::Input::from(bytes));
+    }
+
+    #[test]
+    fn test_optional_boolean() {
+        use super::{optional_boolean, Error};
+
+        // Empty input results in false
+        assert_eq!(false, optional_boolean(&mut bytes_reader(&[])).unwrap());
+
+        // Optional, so another data type results in false
+        assert_eq!(
+            false,
+            optional_boolean(&mut bytes_reader(&[0x05, 0x00])).unwrap()
+        );
+
+        // Only 0x00 and 0xff are accepted values
+        assert_eq!(
+            Err(Error::BadDer),
+            optional_boolean(&mut bytes_reader(&[0x01, 0x01, 0x42]))
+        );
+
+        // True
+        assert_eq!(
+            true,
+            optional_boolean(&mut bytes_reader(&[0x01, 0x01, 0xff])).unwrap()
+        );
+
+        // False
+        assert_eq!(
+            false,
+            optional_boolean(&mut bytes_reader(&[0x01, 0x01, 0x00])).unwrap()
+        );
+    }
+
+    #[test]
+    fn test_bit_string_with_no_unused_bits() {
+        use super::{bit_string_with_no_unused_bits, Error};
+
+        // Unexpected type
+        assert_eq!(
+            Err(Error::BadDer),
+            bit_string_with_no_unused_bits(&mut bytes_reader(&[0x01, 0x01, 0xff]))
+        );
+
+        // Unexpected nonexistent type
+        assert_eq!(
+            Err(Error::BadDer),
+            bit_string_with_no_unused_bits(&mut bytes_reader(&[0x42, 0xff, 0xff]))
+        );
+
+        // Unexpected empty input
+        assert_eq!(
+            Err(Error::BadDer),
+            bit_string_with_no_unused_bits(&mut bytes_reader(&[]))
+        );
+
+        // Valid input with non-zero unused bits
+        assert_eq!(
+            Err(Error::BadDer),
+            bit_string_with_no_unused_bits(&mut bytes_reader(&[0x03, 0x03, 0x04, 0x12, 0x34]))
+        );
+
+        // Valid input
+        assert_eq!(
+            untrusted::Input::from(&[0x12, 0x34]),
+            bit_string_with_no_unused_bits(&mut bytes_reader(&[0x03, 0x03, 0x00, 0x12, 0x34]))
+                .unwrap()
+        );
+    }
+}
